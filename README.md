@@ -27,7 +27,7 @@ TBD
 
 ### Branching Strategy
 
-- **Main Branch** (`main` or `master`):  
+- **Main Branch** (`main`):  
   This is the production-ready branch. All code in this branch should be tested, stable, and deployable. Direct commits to this branch are restricted. Only pull requests that have passed review and testing should be merged here.
 
 - **Feature Branches** (`feature/your-feature-name`):  
