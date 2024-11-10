@@ -1,8 +1,23 @@
 ﻿# 24fa-cis5550-Noova
 
-## Description 
-TBD
+### Project Description
 
+This project involves building a fully functional search engine, utilizing components such as a Key-Value Store (KVS), web server, a spark-like flame, a UI, and a crawler. The goal is to ensure seamless data processing, effective web crawling, and responsive user interactions through the web interface.
+
+### TODO List
+
+1. **Ensure Key-Value Store (KVS) Functionality**
+   - Verify that the KVS operates as expected.
+   - Implement conversions between `pt-table` and memory tables to optimize storage and retrieval.
+
+2. **Add Web Server Functionality**
+   - Enhance the web server to handle user inputs via webpage forms.
+   - Ensure seamless communication between the frontend and backend, enabling effective user interactions with the search engine.
+
+3. **Improve Crawler Efficiency**
+   - Optimize the crawler's performance to make it more efficient in retrieving and processing web pages.
+   - Address current bottlenecks and refine algorithms to speed up data collection and indexing.
+   - 
 ## Timeline 
 TBD
 
