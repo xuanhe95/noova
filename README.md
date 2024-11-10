@@ -38,6 +38,15 @@ TBD
    SEAS Login: xuanhe@seas.upenn.edu  
    Github User ID: xuanhe95
 
+## Crawler URL start point
+https://www.wikipedia.org
+https://www.cnn.com
+https://www.bbc.com
+https://www.reddit.com
+https://www.imdb.com
+https://stackoverflow.com
+https://www.allrecipes.com
+
 ## Git Strategy
 
 ### Branching Strategy
