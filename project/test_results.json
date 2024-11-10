@@ -1,0 +1,3 @@
+{
+  "simple": { "testStatus": "FAIL", "testComments": "The file ./worker1/pt-index/well was not found in the KVS.", "maxPoints": 40, "points": 0 }
+}

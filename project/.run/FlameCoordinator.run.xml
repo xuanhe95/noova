@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="FlameCoordinator" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="cis5550.flame.Coordinator" />
+    <module name="Project" />
+    <option name="PROGRAM_PARAMETERS" value="9000 localhost:8000" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="cis5550.flame.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
