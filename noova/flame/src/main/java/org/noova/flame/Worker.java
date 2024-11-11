@@ -12,7 +12,7 @@ class Worker extends org.noova.generic.Worker {
     private static final Logger log = Logger.getLogger(Worker.class);
 
 	public static void main(String args[]) {
-        if (args.length != 2) {
+        if (args.length < 2) {
             System.err.println("Syntax: Worker <port> <coordinatorIP:port>");
             System.exit(1);
         }

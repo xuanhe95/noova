@@ -18,5 +18,6 @@
         <module>crawler</module>
         <module>indexer</module>
         <module>pagerank</module>
+        <module>gateway</module>
     </modules>
 </project>

@@ -6,16 +6,17 @@ This project involves building a fully functional search engine, utilizing compo
 
 ### How To Run
 
-First:
+First:\
  mvn clean package
 
-Then:
+Then:\
 ./run.sh 
 
-Then:
-java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Coordinator 8000
-java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Worker 8001 worker1 localhost:8000
-java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Coordinator 9000 localhost:8000
+Then:\
+\
+java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Coordinator 8000\
+java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Worker 8001 worker1 localhost:8000\
+java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Coordinator 9000 localhost:8000\
 java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Worker 9001 localhost:9000
 
 ### TODO List

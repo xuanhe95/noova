@@ -1,6 +1,7 @@
 package org.noova.kvs;
 
 import org.noova.tools.Logger;
+import org.noova.tools.PropertyLoader;
 import org.noova.webserver.Server;
 
 /**
@@ -10,16 +11,27 @@ public class Coordinator extends org.noova.generic.Coordinator {
 
     private static final Logger log = Logger.getLogger(Coordinator.class);
     public static void main(String[] args) {
-        if (args.length != 1) {
+        String rawPort;
+        int port;
+        if (args.length < 1) {
             log.error("Usage: Coordinator <port>");
-            System.exit(1);
+            log.info("[kvs] No arguments provided, using default values");
+            rawPort = PropertyLoader.getProperty("kvs.port");
+            if(rawPort == null){
+                log.error("No port provided, using default port 8000");
+                rawPort = "8000";
+            }
+            port = Integer.parseInt(rawPort);
+
+            // System.exit(1);
+        } else{
+            port = Integer.parseInt(args[0]);
         }
 
         try {
-            int port = Integer.parseInt(args[0]);
             Server.port(port);
 
-            log.info("Starting coordinator on port " + port);
+            log.info("[kvs] Starting coordinator on port " + port);
 
             registerRoutes();
 
