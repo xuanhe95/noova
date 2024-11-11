@@ -17,7 +17,8 @@ This project involves building a fully functional search engine, utilizing compo
 3. **Improve Crawler Efficiency**
    - Optimize the crawler's performance to make it more efficient in retrieving and processing web pages.
    - Address current bottlenecks and refine algorithms to speed up data collection and indexing.
-   - 
+  
+4. **我们可以基于session做个用户登陆 然后每个用户基于历史搜索做推荐/个性化排名**
 ## Timeline 
 TBD
 
