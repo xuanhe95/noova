@@ -4,20 +4,23 @@
 
 This project involves building a fully functional search engine, utilizing components such as a Key-Value Store (KVS), web server, a spark-like flame, a UI, and a crawler. The goal is to ensure seamless data processing, effective web crawling, and responsive user interactions through the web interface.
 
+### Prerequisites
+- [Maven](https://maven.apache.org/install.html): Build and dependency management tool.
+  ```bash
+  # On macOS, you can install Maven using Homebrew
+  brew install maven
 ### How To Run
+1. `./start.sh <KVSWorker #> <FlameWorker #>`
 
-First:\
- mvn clean package
-
-Then:\
-./run.sh 
-
-Then:\
-\
-java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Coordinator 8000\
-java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Worker 8001 worker1 localhost:8000\
-java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Coordinator 9000 localhost:8000\
-java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Worker 9001 localhost:9000
+OR
+1. `mvn clean package`
+2. `./run.sh `
+3. ```bash
+    java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Coordinator 8000
+    java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Worker 8001 worker1 localhost:8000
+    java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Coordinator 9000 localhost:8000
+    java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Worker 9001 localhost:9000
+    ```
 
 ### TODO List
 
@@ -35,8 +38,19 @@ java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:w
   
 4. **我们可以基于session做个用户登陆 然后每个用户基于历史搜索做推荐/个性化排名**
 5. **localhost 小bug**
-
 6. 
+
+### Potential Optimization Ideas
+- WebServer: use before filter to halt downstream index&rank process for cached query search
+### EC Ideas
+1. phrase search - add n-grams score
+2. autofill/spell check/other nlp-related tasks - [Stanford's CoreNLP library](https://stanfordnlp.github.io/CoreNLP/)
+3. Recommendation / surprise me /search suggestion based on mru cached query
+4. Infinite scrolling vs Pagination (w/ skips)
+5. extracts text content from files such as PDF, DOC(X), XLS(X), etc. - [Apache Tika](https://tika.apache.org/)
+
+
+
 ## Timeline 
 TBD
 
