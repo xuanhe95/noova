@@ -5,12 +5,13 @@
 This project involves building a fully functional search engine, utilizing components such as a Key-Value Store (KVS), web server, a spark-like flame, a UI, and a crawler. The goal is to ensure seamless data processing, effective web crawling, and responsive user interactions through the web interface.
 
 ### How To Run
+First:
+./run.sh 
+
+Then:
 java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Coordinator 8000
-
 java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Worker 8001 worker1 localhost:8000
-
 java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Coordinator 9000 localhost:8000
-
 java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Worker 9001 localhost:9000
 
 ### TODO List
