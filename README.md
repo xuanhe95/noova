@@ -33,6 +33,9 @@ java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:w
    - Address current bottlenecks and refine algorithms to speed up data collection and indexing.
   
 4. **我们可以基于session做个用户登陆 然后每个用户基于历史搜索做推荐/个性化排名**
+5. **localhost 小bug**
+
+6. 
 ## Timeline 
 TBD
 
