@@ -1,0 +1,12 @@
+package org.noova.webserver;
+
+import static org.noova.webserver.Server.*;
+class HelloWorldApp {
+    public static void main(String args[]) {
+        port(8080);
+        securePort(443);
+        get("/hello/:name", (req,res) ->
+        { return "Hello "+req.params("name"); } );
+        get("/", (req, res) -> {return "Hello World - This is Xuanhe";});
+    }
+}

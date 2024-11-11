@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/project/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/.run/FlameCoordinator.run.xml" beforeDir="false" afterPath="$PROJECT_DIR$/project/.run/FlameCoordinator.run.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/job-1.jar" beforeDir="false" afterPath="$PROJECT_DIR$/project/job-1.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/job-2.jar" beforeDir="false" afterPath="$PROJECT_DIR$/project/job-2.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/job-3.jar" beforeDir="false" afterPath="$PROJECT_DIR$/project/job-3.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/job-4.jar" beforeDir="false" afterPath="$PROJECT_DIR$/project/job-4.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/job-5.jar" beforeDir="false" afterPath="$PROJECT_DIR$/project/job-5.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/job-6.jar" beforeDir="false" afterPath="$PROJECT_DIR$/project/job-6.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/job-9.jar" beforeDir="false" afterPath="$PROJECT_DIR$/project/job-9.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/Coordinator$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/Coordinator$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/Coordinator.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/Coordinator.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameContext$RowToString.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameContext$RowToString.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameContext.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameContext.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameContextImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameContextImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePair.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePair.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDD$PairToPairIterable.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDD$PairToPairIterable.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDD$PairToStringIterable.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDD$PairToStringIterable.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDD$TwoStringsToString.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDD$TwoStringsToString.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDD.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDD.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDDImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlamePairRDDImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$IteratorToIterator.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$IteratorToIterator.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToBoolean.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToBoolean.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToIterable.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToIterable.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToPair.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToPair.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToPairIterable.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToPairIterable.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToString.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD$StringToString.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDD.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDDImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameRDDImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameSubmit.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/FlameSubmit.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/KeyGenerator.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/KeyGenerator.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/RouteRegistry.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/RouteRegistry.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/Worker.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/Worker.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/CogroupOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/CogroupOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FilterOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FilterOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FlatMapOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FlatMapOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FlatMapToPairOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FlatMapToPairOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FoldByKeyOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FoldByKeyOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FoldOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FoldOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FromTableOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/FromTableOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/GroupByOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/GroupByOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/IntersectionOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/IntersectionOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/JoinOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/JoinOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/MapParitionsOperation$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/MapParitionsOperation$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/MapParitionsOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/MapParitionsOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/MapToPairOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/MapToPairOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation$PairToPair.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation$PairToPair.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation$PairToRdd.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation$PairToRdd.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation$RddToPair.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation$RddToPair.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation$RddToRdd.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation$RddToRdd.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/Operation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/OperationContext.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/OperationContext.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/SampleOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/SampleOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/UnionOperation.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/flame/operation/UnionOperation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameCogroup.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameCogroup.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameCollect.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameCollect.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameFilter.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameFilter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameFlatMap.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameFlatMap.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameFoldByKey.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameFoldByKey.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameGroupBy.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameGroupBy.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameIntersection.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameIntersection.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameMapPartitions.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameMapPartitions.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameMapToPair.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameMapToPair.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameOutput.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameOutput.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameSample.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameSample.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameWordCount.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/FlameWordCount.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/GenericTest$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/GenericTest$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/GenericTest$Counter.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/GenericTest$Counter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/GenericTest$Response.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/GenericTest$Response.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/GenericTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/GenericTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4CoordinatorTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4CoordinatorTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4SelfCoordinatorTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4SelfCoordinatorTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4SelfWorkerTest$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4SelfWorkerTest$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4SelfWorkerTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4SelfWorkerTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4WorkerTest$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4WorkerTest$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4WorkerTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW4WorkerTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW5SelfTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW5SelfTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW5Test.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW5Test.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW6SelfTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW6SelfTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW6Test.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW6Test.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW6WordCountTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW6WordCountTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7SelfTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7SelfTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7Test.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7Test.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7Test2.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7Test2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7TestJob.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7TestJob.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7TestJob2.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/HW7TestJob2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/flame-cogroup.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/flame-filter.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/test/flame-map-partitions.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/HTTP$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/HTTP$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/HTTP$Response.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/HTTP$Response.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/HTTP.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/HTTP.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Hasher.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Hasher.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/KeyEncoder.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/KeyEncoder.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Loader.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Loader.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Logger.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Logger.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Partitioner$Partition.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Partitioner$Partition.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Partitioner.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Partitioner.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/SNIInspector.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/SNIInspector.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Serializer$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Serializer$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Serializer.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/tools/Serializer.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Daemon.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Daemon.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/DynamicResponse$Phase.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/DynamicResponse$Phase.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/DynamicResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/DynamicResponse.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/FileLocationHelper.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/FileLocationHelper.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/HelloWorldApp.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/HelloWorldApp.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Request.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Request.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/RequestImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/RequestImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Response.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Response.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Route.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Route.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Server$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Server$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Server$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Server$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Server$staticFiles.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Server$staticFiles.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Server.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Server.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Session.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/Session.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/cookie/Cookie.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/cookie/Cookie.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/cookie/CookieImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/cookie/CookieImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/cookie/SameSite.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/cookie/SameSite.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/filter/Filter.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/filter/Filter.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/filter/FilterManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/filter/FilterManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/BadRequestHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/BadRequestHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/ForbiddenHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/ForbiddenHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/HandlerStrategy$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/HandlerStrategy.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/HandlerStrategy.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/InternalServerErrorHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/InternalServerErrorHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/MethodNotAllowedHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/MethodNotAllowedHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/NotFoundHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/NotFoundHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/NotImplementedHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/NotImplementedHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/NotModifiedHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/NotModifiedHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/OKHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/OKHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/PartialContentHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/PartialContentHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/RangeNotSatisfiableHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/RangeNotSatisfiableHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/ResponseHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/ResponseHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/SuffixTool.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/SuffixTool.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/VersionNotSupportedHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/VersionNotSupportedHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/FoundHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/FoundHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/MovedPermanentlyHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/MovedPermanentlyHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/PermanentRedirectHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/PermanentRedirectHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/RedirectHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/RedirectHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/SeeOtherHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/SeeOtherHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/TemporaryRedirectHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/handler/redirect/TemporaryRedirectHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/header/ContentTypeFactory.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/header/ContentTypeFactory.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/header/ContentTypeHeader.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/header/ContentTypeHeader.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/header/Header.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/header/Header.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/header/HttpHeader.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/header/HttpHeader.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/host/Host.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/host/Host.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/host/HostManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/host/HostManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/host/ServerHost.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/host/ServerHost.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/host/VirtualHost.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/host/VirtualHost.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/http/HttpMethod.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/http/HttpMethod.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/http/HttpStatus.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/http/HttpStatus.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/http/HttpVersion.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/http/HttpVersion.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/ByteArrayIOStrategy.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/ByteArrayIOStrategy.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/FileIOStrategy.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/FileIOStrategy.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/IOStrategy.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/IOStrategy.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/NetworkConnection.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/NetworkConnection.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/NetworkIOStrategy.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/NetworkIOStrategy.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/SocketIOStrategy.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/io/SocketIOStrategy.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/GetHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/GetHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/HeadHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/HeadHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/MethodHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/MethodHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/MethodHandlerFactory$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/MethodHandlerFactory.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/MethodHandlerFactory.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/PostHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/PostHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/PutHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/method/PutHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/ParserState.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/ParserState.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/RawRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/RawRequest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/RequestParser.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/RequestParser.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/StateMachine$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/StateMachine.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/parser/StateMachine.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/pool/FixedThreadPool.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/pool/FixedThreadPool.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/pool/QueryTask.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/pool/QueryTask.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/pool/ThreadPool.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/pool/ThreadPool.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/pool/Worker.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/pool/Worker.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/route/RouteManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/route/RouteManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/route/RouteTable.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/route/RouteTable.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/route/Router.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/route/Router.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/session/SessionDaemon.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/session/SessionDaemon.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/session/SessionImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/session/SessionImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/session/SessionManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/session/SessionManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/ssl/SSLManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/project/out/production/HW7/cis5550/webserver/ssl/SSLManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project/test_results.json" beforeDir="false" afterPath="$PROJECT_DIR$/project/test_results.json" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/project/src/cis5550/kvs/Coordinator.java" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="2oftgIYxwQgmeNotYISV949IsnF" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.FlameCoordinator.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/UPENN/Courses/CIS5550/final_project/24fa-cis5550-Noova",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "terminal",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="24fa-cis5550-Noova" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="24fa-cis5550-Noova" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-28b599e66164-intellij.indexing.shared.core-IU-242.23726.103" />
+        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-IU-242.23726.103" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="" />
+      <created>1731272569387</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1731272569387</updated>
+      <workItem from="1731272570246" duration="996000" />
+      <workItem from="1731273587212" duration="68000" />
+      <workItem from="1731275929052" duration="54000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
