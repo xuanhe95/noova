@@ -5,7 +5,11 @@
 This project involves building a fully functional search engine, utilizing components such as a Key-Value Store (KVS), web server, a spark-like flame, a UI, and a crawler. The goal is to ensure seamless data processing, effective web crawling, and responsive user interactions through the web interface.
 
 ### How To Run
+
 First:
+ mvn clean package
+
+Then:
 ./run.sh 
 
 Then:
