@@ -107,8 +107,8 @@ for ((i=1; i<=FLAME_WORKER_COUNT; i++)); do
   sleep 0.5  # Sleep for 0.5 seconds
 done
 
-command_web="java -cp \"tools-1.0-SNAPSHOT.jar\" -jar webserver-1.0-SNAPSHOT.jar"
-echo "Starting WebServer process"
+command_web="java -cp \"tools-1.0-SNAPSHOT.jar\" -jar gateway-1.0-SNAPSHOT.jar"
+echo "Starting Gateway process"
 eval "$command_web" &
 pid=$!
 pids+=("$pid")  # Save the PID of the WebServer

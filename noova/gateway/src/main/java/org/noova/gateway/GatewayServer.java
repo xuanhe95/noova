@@ -6,6 +6,12 @@ import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
 import org.noova.webserver.Server;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
+import static org.noova.webserver.Server.get;
+
 
 public class GatewayServer {
 
@@ -32,5 +38,25 @@ public class GatewayServer {
         Server.port(port);
         Controller.registerRoutes();
 
+        get("/", (req, res) -> {
+            res.type("text/html");
+            return loadIndexHtml();
+        });
+    }
+
+    private static String loadIndexHtml() {
+        try {
+            // Load index.html as a resource from the classpath
+            InputStream inputStream = GatewayServer.class.getClassLoader().getResourceAsStream("static/index.html");
+
+            if (inputStream == null) {
+                throw new IOException("File not found in classpath: static/index.html");
+            }
+
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "<html><body><h1>Error loading page</h1></body></html>";
+        }
     }
 }
