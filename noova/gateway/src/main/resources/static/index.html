@@ -81,10 +81,10 @@
     </div>
     <div class="row justify-content-center">
         <div class="col-md-12">
-            <form action="/search/pagerank" method="GET">
+            <form id="searchForm">
                 <div class="search-box">
                     <span class="icon">&#128269;</span>
-                    <input type="text" name="keyword" placeholder="Search Noova..." required>
+                    <input type="text" name="keyword" id="search-query" placeholder="Search Noova..." required>
                 </div>
                 <div class="search-buttons">
                     <button class="btn" type="submit">Noova it</button>
@@ -99,7 +99,45 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script
-        src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#searchForm').submit(function(event) {
+            event.preventDefault(); // Prevent the form from submitting traditionally
+
+            const keyword = $('#search-query').val();
+            if (!keyword) {
+                alert("Please enter a search keyword.");
+                return;
+            }
+
+            // Perform an AJAX GET request to the /search/pagerank endpoint
+            $.ajax({
+                url: '/search/pagerank',
+                method: 'GET',
+                data: { keyword: keyword },
+                success: function(response) {
+                    displayResults(response);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error performing search:", error);
+                    $('#results').html('<p>An error occurred while fetching results.</p>');
+                }
+            });
+        });
+
+        function displayResults(data) {
+            const resultsContainer = $('#results');
+            resultsContainer.empty(); // Clear previous results
+
+            // Display each result in the response data
+            $.each(data, function(key, value) {
+                const resultItem = $('<div>').addClass('col-12 result-item');
+                resultItem.html(`<p><strong>${key}:</strong> ${value}</p>`);
+                resultsContainer.append(resultItem);
+            });
+        }
+    });
+</script>
 </body>
 </html>
