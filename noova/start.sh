@@ -101,6 +101,14 @@ for ((i=1; i<=FLAME_WORKER_COUNT; i++)); do
   echo "FlameWorker $i process PID: $pid"
 done
 
+command_web="java -cp \"tools-1.0-SNAPSHOT.jar\" -jar webserver-1.0-SNAPSHOT.jar"
+echo "Starting WebServer process"
+eval "$command_web" &
+pid=$!
+pids+=("$pid")  # Save the PID of the WebServer
+echo "WebServer process PID: $pid"
+sleep 1
+
 # Wait for all processes to complete
 for pid in "${pids[@]}"; do
   wait $pid
