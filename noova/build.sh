@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Run Maven clean package
+echo "Running 'mvn clean package'..."
+mvn clean package
+
 OUTPUT_DIR="all-jars"
 mkdir -p "$OUTPUT_DIR"
 echo "Collecting JAR files from submodules..."

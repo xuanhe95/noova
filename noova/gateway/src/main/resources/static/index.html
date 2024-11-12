@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noova</title>
+    <link rel="icon" href="/static/icon.ico" type="image/x-icon">
+    <link
+            href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+            rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+        }
+
+        .search-container {
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .search-logo {
+            font-size: 48px;
+            color: #4285f4;
+            font-weight: bold;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            padding: 8px 16px;
+            box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+            margin-top: 20px;
+        }
+
+        .search-box input[type="text"] {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 18px;
+            padding: 8px;
+        }
+
+        .search-box .icon {
+            color: #4285f4;
+            margin-right: 10px;
+        }
+
+        .search-buttons {
+            margin-top: 20px;
+        }
+
+        .search-buttons .btn {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #5f6368;
+            background-color: #f8f9fa;
+            border: 1px solid #dfe1e5;
+            border-radius: 4px;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-buttons .btn:hover {
+            border-color: #dadce0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+<div class="search-container">
+    <div class="search-logo">
+        <img src="https://i.ibb.co/BBPHLJP/logo.png" alt="Search Logo">
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <form action="/hello/:name" method="GET">
+                <div class="search-box">
+                    <span class="icon">&#128269;</span>
+                    <input type="text" name="query" placeholder="Search Noova..." required>
+                </div>
+                <div class="search-buttons">
+                    <button class="btn" type="submit">Noova it</button>
+                    <button class="btn" type="button" onclick="window.location.href='/random'">Recommendation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="results" class="row justify-content-center">
+        <!-- Search results will be displayed here -->
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script
+        src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

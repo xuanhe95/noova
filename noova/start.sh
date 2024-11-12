@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Run Maven clean package
-echo "Running 'mvn clean package'..."
-mvn clean package
-
 # Run rmPort.sh script
 echo "Running './rmPort.sh'..."
 ./rmPort.sh
