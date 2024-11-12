@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Run Maven clean package
+echo "Running 'mvn clean package'..."
+mvn clean package
+
+# Run rmPort.sh script
+echo "Running './rmPort.sh'..."
+./rmPort.sh
+
 # Parameter settings: Receive the number of different types of Workers
 KVS_WORKER_COUNT=$1            # Receive the number of KVSWorkers from command-line arguments
 FLAME_WORKER_COUNT=$2          # Receive the number of FlameWorkers from command-line arguments
