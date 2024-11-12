@@ -15,7 +15,7 @@ public class ReplicaManager {
 
     private static final Logger log = Logger.getLogger(ReplicaManager.class);
     public static final String REPLICA_PATH = "/replica";
-    public static final int REPLICA_NUM = 2;
+    public static final int REPLICA_NUM = 0;
 
     public static void put(String uri, Route route){
         ForwardingRouteDecorator forwardingRoute = new ForwardingRouteDecorator(route);

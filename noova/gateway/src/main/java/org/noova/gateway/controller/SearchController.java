@@ -1,6 +1,7 @@
 package org.noova.gateway.controller;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.noova.gateway.service.SearchService;
 import org.noova.tools.Logger;
 import org.noova.webserver.Request;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 
 /**
  * @author Xuanhe Zhang
@@ -19,6 +21,8 @@ public class SearchController implements IController {
     private static final Logger log = Logger.getLogger(SearchController.class);
 
     private static SearchController instance;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private SearchController() {
     }
@@ -34,16 +38,29 @@ public class SearchController implements IController {
     private void searchByKeyword(Request req, Response res) throws IOException {
         log.info("[search] Searching by keyword");
         String keyword = req.queryParams("keyword");
-        Map<String, Set<Integer>> urls = SearchService.getInstance().searchByKeyword(keyword);
-
-        StringBuilder result = new StringBuilder();
-
-        urls.forEach((normalizedUrl, position) -> {
-            result.append(normalizedUrl).append(": ").append(position).append("\n");
+        log.info("[search] Searching by keyword: " + keyword);
+        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeyword(keyword);
+        urlsWithPositions.forEach((normalizedUrl, position) -> {
+            log.info("[search] Found keyword: " + keyword + " at " + normalizedUrl + ": " + position);
         });
-
-        res.body(result.toString());
+        String json = OBJECT_MAPPER.writeValueAsString(urlsWithPositions);
+        res.body(json);
+        res.type("application/json");
     }
+
+    @Route(path = "/search/pagerank", method = "GET")
+    private void searchByPageRank(Request req, Response res) throws IOException {
+        log.info("[search] Searching by page rank");
+        String keyword = req.queryParams("keyword");
+        log.info("[search] Searching by keyword: " + keyword);
+        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeyword(keyword);
+        SortedMap<Double, String> sortedUrls = SearchService.getInstance().sortByPageRank(urlsWithPositions);
+
+        String json = OBJECT_MAPPER.writeValueAsString(sortedUrls);
+        res.body(json);
+        res.type("application/json");
+    }
+
 
     @Route(path = "/search/predict", method = "GET")
     private void searchByKeywordPredict(Request req, Response res) throws IOException {

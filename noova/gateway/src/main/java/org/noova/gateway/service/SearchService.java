@@ -34,6 +34,7 @@ public class SearchService implements IService {
     }
 
     public List<String> searchByKeyword(String keyword, String startRow, String endRowExclusive) throws IOException {
+
         List<String> result = new ArrayList<>();
 
         Iterator<Row> it = KVS.scan(PropertyLoader.getProperty("table.crawler"), startRow, endRowExclusive);
@@ -51,11 +52,21 @@ public class SearchService implements IService {
 
     public Map<String, Set<Integer>> searchByKeyword(String keyword) throws IOException {
 
-        keyword = Hasher.hash(keyword);
+        if(keyword == null || keyword.isEmpty()) {
+            log.warn("[search] Empty keyword");
+            return new HashMap<>();
+        }
+
+        //keyword = Hasher.hash(keyword);
 
         Map<String, Set<Integer>> result = new HashMap<>();
         Row row = KVS.getRow(PropertyLoader.getProperty("table.index"), keyword);
+        if(row == null) {
+            log.warn("[search] No row found for keyword: " + keyword);
+            return result;
+        }
         log.info("[search] Found row: " + keyword);
+        log.info("[search] Columns: " + row.columns());
         row.columns().forEach(column -> {
             String urls = row.get(column);
             String[] urlArray = urls.split(",");
@@ -78,6 +89,43 @@ public class SearchService implements IService {
         });
         return result;
     }
+
+    public SortedMap<Double, String> sortByPageRank(Map<String, Set<Integer>> urlsWithPositions){
+
+        SortedMap<Double, String> result = new TreeMap<>(Comparator.reverseOrder());
+        urlsWithPositions.forEach((normalizedUrl, positions) -> {
+            try {
+                double pagerank = getPagerank(normalizedUrl);
+                log.info("[search] Found pagerank: " + pagerank + " for URL: " + normalizedUrl);
+                result.put(pagerank, normalizedUrl);
+            } catch (IOException e) {
+                log.error("[search] Error getting pagerank for URL: " + normalizedUrl);
+            }
+        });
+
+        return result;
+    }
+
+    public double getPagerank(String url) throws IOException {
+       String hashedUrl = Hasher.hash(url);
+
+         List<String> result = new ArrayList<>();
+         // get the row from the pagerank table
+        Row row = KVS.getRow(PropertyLoader.getProperty("table.pagerank"), hashedUrl);
+        if(row == null) {
+            log.warn("[search] No row found for URL: " + hashedUrl);
+            return 0.0;
+        }
+        log.info("[search] Found row: " + hashedUrl);
+        String rank = row.get("rank");
+        if(rank == null) {
+            log.warn("[search] No rank found for URL: " + hashedUrl);
+            return 0.0;
+        }
+
+        return Double.parseDouble(rank);
+    }
+
 /*
  *   TODO: predict the user's input based on the keyword
  *    For example, if the user types "c", the system should predict "cat", "car", "computer", etc.

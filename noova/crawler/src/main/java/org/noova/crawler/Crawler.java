@@ -46,6 +46,7 @@ public class Crawler implements Serializable {
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
+        System.out.println("Crawler is running");
         if (args == null || args.length < 1) {
             log.error("Usage: Crawler <seed-url>");
             ctx.output("Seed URL is not found");
@@ -56,11 +57,14 @@ public class Crawler implements Serializable {
         String blacklistTable;
 
         if (args.length > 1) {
-            log.warn("find blacklist table...");
+            log.warn("[crawler] find blacklist table...");
             blacklistTable = args[1];
         } else {
+            log.info("[crawler] No blacklist table found");
             blacklistTable = null;
         }
+
+        log.info("[crawler] Starting crawler with seed URL: " + seedUrl);
 
         FlameRDD urlQueue = ctx.parallelize(List.of(seedUrl));
 

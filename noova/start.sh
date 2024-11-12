@@ -90,12 +90,13 @@ sleep 1
 # Start the specified number of KVSWorker processes
 for ((i=1; i<=KVS_WORKER_COUNT; i++)); do
   port=$((8000 + i))
-  command="java -cp \"kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar\" org.noova.kvs.Worker $port \"kvs-worker$i\" localhost:8000"
+  command="java -cp \"kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar\" org.noova.kvs.Worker $port \"worker$i\" localhost:8000"
   echo "Starting KVSWorker process (port $port)"
   eval "$command" &
   pid=$!
   pids+=("$pid")  # Save the PID of each KVSWorker
   echo "KVSWorker $i process PID: $pid"
+  sleep 0.5  # Sleep for 0.5 seconds
 done
 
 # Start the specified number of FlameWorker processes
@@ -107,6 +108,7 @@ for ((i=1; i<=FLAME_WORKER_COUNT; i++)); do
   pid=$!
   pids+=("$pid")  # Save the PID of each FlameWorker
   echo "FlameWorker $i process PID: $pid"
+  sleep 0.5  # Sleep for 0.5 seconds
 done
 
 command_web="java -cp \"tools-1.0-SNAPSHOT.jar\" -jar webserver-1.0-SNAPSHOT.jar"

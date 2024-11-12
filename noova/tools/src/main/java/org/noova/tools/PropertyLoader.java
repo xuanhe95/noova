@@ -12,7 +12,7 @@ public class PropertyLoader {
         try (FileInputStream fis = new FileInputStream(PROPERTIES_FILE)) {
             Properties properties = new Properties();
             properties.load(fis);
-            log.info("[property loader] Getting property: " + key);
+            log.info("[property loader] Getting property: " + key + " = " + properties.getProperty(key));
             return properties.getProperty(key);
         } catch (Exception e) {
             return null;

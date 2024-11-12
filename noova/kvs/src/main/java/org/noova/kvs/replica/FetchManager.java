@@ -19,7 +19,7 @@ public class FetchManager {
 
     private static final Logger log = Logger.getLogger(FetchManager.class);
 
-    public static final int REPLICA_MAINTENANCE_NUM = 2;
+    public static final int REPLICA_MAINTENANCE_NUM = 0;
     private static final long MAINTENANCE_INTERVAL = 30000;
 
     private static boolean running = false;

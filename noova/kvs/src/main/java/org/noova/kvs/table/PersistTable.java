@@ -22,11 +22,11 @@ public class PersistTable implements Table {
 
     private static final Logger log = Logger.getLogger(PersistTable.class);
 
-    private static final int SUBDIR_LENGTH = 20;
+    private static final int SUBDIR_LENGTH = 2;
 
     private static final String SUBDIR_PREFIX = "__";
 
-    private static final int MAX_DIR_LENGTH = 5;
+    private static final int MAX_DIR_LENGTH = 1000;
 
     String key;
 
@@ -113,6 +113,7 @@ public class PersistTable implements Table {
 
         // this if for EC, if the key is too long, we need to create a subdir
         if(encodedKey.length() > MAX_DIR_LENGTH){
+            log.error("[persist table] key is too long, create subdir");
             String subdir = SUBDIR_PREFIX + encodedKey.substring(0, SUBDIR_LENGTH);
             File subFile = new File(rootFilePath + "/" + subdir);
             if(!subFile.exists()){
@@ -122,6 +123,8 @@ public class PersistTable implements Table {
                 }
             }
             tableFile = new File(subFile, encodedKey);
+        } else{
+            log.error("[persist table] key is not too long");
         }
 
         log.info("get rootFile: " + tableFile.getAbsolutePath());

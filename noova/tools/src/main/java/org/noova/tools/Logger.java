@@ -8,8 +8,17 @@ import java.util.HashMap;
 public class Logger {
 
   protected static HashMap<String,Logger> prefixToLogger = null;
-  protected static PrintWriter logfile = null;
-  protected static Logger defaultLogger = null;
+  protected static PrintWriter logfile;
+
+    static {
+        try {
+            logfile = new PrintWriter(new File("log.txt"), "UTF-8");
+        } catch (FileNotFoundException | UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected static Logger defaultLogger = null;
   protected static SimpleDateFormat dateFormat = null;
 
   protected static final int ALL = 6;
