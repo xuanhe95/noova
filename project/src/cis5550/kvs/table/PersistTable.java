@@ -25,7 +25,7 @@ public class PersistTable implements Table {
 
     private static final String SUBDIR_PREFIX = "__";
 
-    private static final int MAX_DIR_LENGTH = 5;
+    private static final int MAX_DIR_LENGTH = 1000;
 
     String key;
 

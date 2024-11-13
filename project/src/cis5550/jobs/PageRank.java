@@ -29,8 +29,11 @@ public class PageRank {
     static double convergenceRatioInPercentage = 100.0;
     public static void run(FlameContext ctx, String[] args) {
 
-
         try {
+            ctx.getKVS().delete(PAGE_RANK_TABLE);
+            ctx.getKVS().delete("sink");
+            ctx.getKVS().delete("linkset");
+
             convergenceThreshold = Double.parseDouble(args[0]);
 
             if(args.length > 1){

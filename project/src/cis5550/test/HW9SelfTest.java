@@ -970,21 +970,21 @@ public class HW9SelfTest extends GenericTest {
 
 		if ((args.length == 0) || args[0].equals("auto") || args[0].equals("all")) {
 			(new KVSClient("localhost:8000")).delete("pt-index");
-//			tests.add("indexer");
-//			tests.add("casereg");
-//			tests.add("dupwords");
-//			tests.add("tagfilter");
-//			tests.add("punct");
-//			tests.add("white");
-//			tests.add("complex");
-//			tests.add("pagerank");
-//			tests.add("linknorm");
-//			tests.add("thresh");
-//			tests.add("srcsink");
-//			tests.add("larger");
-//			tests.add("ec1");
-//			tests.add("ec2");
-//			tests.add("ec3");
+			tests.add("indexer");
+			tests.add("casereg");
+			tests.add("dupwords");
+			tests.add("tagfilter");
+			tests.add("punct");
+			tests.add("white");
+			tests.add("complex");
+			tests.add("pagerank");
+			tests.add("linknorm");
+			tests.add("thresh");
+			tests.add("srcsink");
+			tests.add("larger");
+			tests.add("ec1");
+			tests.add("ec2");
+			tests.add("ec3");
 			// close stemmer to check
 			tests.add("simple");
 		}
