@@ -9,18 +9,29 @@ This project involves building a fully functional search engine, utilizing compo
   ```bash
   # On macOS, you can install Maven using Homebrew
   brew install maven
+
+### Libaray used
+JQuery https://jquery.com/
+Bootstrap https://getbootstrap.com/
+
 ### How To Run
-1. `./start.sh <KVSWorker #> <FlameWorker #>`
+1. `./build.sh
+   This script will run maven command to create the jar for each component.
+2. `./start.sh <KVSWorker #> <FlameWorker #>`
 
 OR
-1. `mvn clean package`
-2. `./run.sh `
-3. ```bash
+ ```bash
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Coordinator 8000
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Worker 8001 worker1 localhost:8000
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Coordinator 9000 localhost:8000
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Worker 9001 localhost:9000
-    ```
+```
+3. `Run Crawler/Pagerank/Indexer
+```bash
+    java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.FlameSubmit localhost:9000 crawler-1.0-SNAPSHOT.jar  org.noova.crawler.Crawler http://simple.crawltest.cis5550.net/
+    java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.FlameSubmit localhost:9000 indexer-1.0-SNAPSHOT.jar org.noova.indexer.Indexer
+    java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.FlameSubmit localhost:9000 pagerank-1.0-SNAPSHOT.jar org.noova.pagerank.PageRank 0.01
+ ```
 
 ### TODO List
 
@@ -37,8 +48,6 @@ OR
    - Address current bottlenecks and refine algorithms to speed up data collection and indexing.
   
 4. **我们可以基于session做个用户登陆 然后每个用户基于历史搜索做推荐/个性化排名**
-5. **localhost 小bug**
-6. 
 
 ### Potential Optimization Ideas
 - WebServer: use before filter to halt downstream index&rank process for cached query search
