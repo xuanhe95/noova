@@ -3,3 +3,4 @@ project/project
 *.class
 #noova/worker1
 project/worker1
+server.log

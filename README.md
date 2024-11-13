@@ -15,9 +15,10 @@ JQuery https://jquery.com/
 Bootstrap https://getbootstrap.com/
 
 ### How To Run
-1. `./build.sh
-   This script will run maven command to create the jar for each component.
-2. `./start.sh <KVSWorker #> <FlameWorker #>`
+1. Run maven command to create the jar for each component\
+    `./build.sh`
+2. Start coordinators and workers in Flame and KVS\
+   `./start.sh <KVSWorker #> <FlameWorker #>`
 
 OR
  ```bash
@@ -26,7 +27,7 @@ OR
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Coordinator 9000 localhost:8000
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.Worker 9001 localhost:9000
 ```
-3. `Run Crawler/Pagerank/Indexer
+3. Run Crawler/Pagerank/Indexer
 ```bash
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.FlameSubmit localhost:9000 crawler-1.0-SNAPSHOT.jar  org.noova.crawler.Crawler http://simple.crawltest.cis5550.net/
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.FlameSubmit localhost:9000 indexer-1.0-SNAPSHOT.jar org.noova.indexer.Indexer
@@ -57,7 +58,7 @@ OR
 3. Recommendation / surprise me /search suggestion based on mru cached query
 4. Infinite scrolling vs Pagination (w/ skips)
 5. extracts text content from files such as PDF, DOC(X), XLS(X), etc. - [Apache Tika](https://tika.apache.org/)
-
+6. Multilanguage support
 
 
 ## Timeline 

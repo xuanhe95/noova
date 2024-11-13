@@ -159,6 +159,11 @@ public class Crawler implements Serializable {
         }
     }
 
+    public static String filterNonLanguageCharacters(String text) {
+        // 保留 Unicode 语言字符和空格，去除数字、符号和标点
+        return text.replaceAll("[^\\p{L}\\s]", "");
+    }
+
     private static boolean checkUrlFormat(String normalizedUrl) {
         String lowerCaseUrl = normalizedUrl.toLowerCase();
 
@@ -262,6 +267,9 @@ public class Crawler implements Serializable {
 
             // for EC
             String text = matcher.group(2).strip();
+
+            // filter non-lang char
+            text = filterNonLanguageCharacters(text);
 
 
             String normalizedLink = normalizeURL(href, normalizedUrl);

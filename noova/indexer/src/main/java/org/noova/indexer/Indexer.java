@@ -55,7 +55,9 @@ public class Indexer {
 
                 String lowerCase = noPunctuation.toLowerCase().strip();
 
-                String[] words = lowerCase.split(" +");
+                // filter non-lang chars
+                String filteredContent = filterNonLanguageCharacters(lowerCase);
+                String[] words = filteredContent.split(" +");
 
                 if(words.length == 0 || words[0].isEmpty()) {
                     log.warn("[indexer] No words found");
@@ -156,6 +158,11 @@ public class Indexer {
         }
 
 
+    }
+
+    public static String filterNonLanguageCharacters(String text) {
+        // 保留 Unicode 语言字符和空格，去除数字、符号和标点
+        return text.replaceAll("[^\\p{L}\\s]", "");
     }
 
 
