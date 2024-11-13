@@ -14,4 +14,9 @@ done
 
 echo "All JAR files have been copied to $OUTPUT_DIR"
 
+cp log.properties "$OUTPUT_DIR"
+cp config.properties "$OUTPUT_DIR"
+
+echo "Copied configs file to $OUTPUT_DIR"
+
 # only copy so far, run process TBD
