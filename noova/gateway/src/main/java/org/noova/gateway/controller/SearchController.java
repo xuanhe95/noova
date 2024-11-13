@@ -70,4 +70,14 @@ public class SearchController implements IController {
         List<String> urls = SearchService.getInstance().predict(keyword, Integer.parseInt(limit));
         res.body(urls.toString());
     }
+
+    @Route(path = "/search/predict/word", method = "GET")
+    private void searchByWordPredict(Request req, Response res) throws IOException {
+        log.info("[search] Predicting by word");
+        String keyword = req.queryParams("keyword");
+        String limit = req.queryParams("limit") == null ? "10" : req.queryParams("limit");
+        //List<String> urls = SearchService.getInstance().predictWord(keyword, Integer.parseInt(limit));
+        //res.body(urls.toString());
+    }
+
 }

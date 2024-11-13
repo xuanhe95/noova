@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class TrieManager {
 
-    private static StorageStrategy storageStrategy = StorageStrategy.getInstance();
+    private static final StorageStrategy STORAGE_STRATEGY = StorageStrategy.getInstance();
     private static final Logger log = Logger.getLogger(TrieManager.class);
     private static TrieManager instance = null;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -32,7 +32,7 @@ public class TrieManager {
         log.info("[trie] Building trie: " + originalTableName);
 
 
-        var it = storageStrategy.scan(originalTableName);
+        var it = STORAGE_STRATEGY.scan(originalTableName);
         if(it == null){
             log.error("[build trie] No data found");
         }
@@ -63,7 +63,7 @@ public class TrieManager {
         }
         log.info("[trie] Json converted");
 
-        storageStrategy.save(
+        STORAGE_STRATEGY.save(
                 PropertyLoader.getProperty("table.trie"),
                 rowName,
                 PropertyLoader.getProperty("table.default.value"),
@@ -81,7 +81,7 @@ public class TrieManager {
 
 
 
-        String json = storageStrategy.get(
+        String json = STORAGE_STRATEGY.get(
                 PropertyLoader.getProperty("table.trie"),
                 rowName,
                 PropertyLoader.getProperty("table.default.value")

@@ -51,6 +51,17 @@ public class Trie implements Serializable {
         return currentNode.isWord;
     }
 
+    public boolean containsAfter(String prefix, char c) {
+        TrieNode currentNode = TIRE_ROOT;
+        for (char ch : prefix.toCharArray()) {
+            if (!currentNode.children.containsKey(ch)) {
+                return false;
+            }
+            currentNode = currentNode.children.get(ch);
+        }
+        return currentNode.children.containsKey(c);
+    }
+
     public boolean startsWith(String prefix) {
         TrieNode currentNode = TIRE_ROOT;
         for (char c : prefix.toCharArray()) {

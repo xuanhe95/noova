@@ -1,6 +1,7 @@
 package org.noova.gateway.service;
 
 import com.fasterxml.jackson.databind.annotation.JsonAppend;
+import org.noova.gateway.markov.EfficientMarkovWord;
 import org.noova.gateway.storage.StorageStrategy;
 import org.noova.gateway.trie.Trie;
 import org.noova.gateway.trie.TrieManager;
@@ -179,4 +180,5 @@ public class SearchService implements IService {
     public List<String> predict(String prefix, int limit) {
         return trie.getWordsWithPrefix(prefix, limit);
     }
+
 }
