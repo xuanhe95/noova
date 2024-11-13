@@ -1,8 +1,7 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="org.noova.kvs.Worker1" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="org.noova.kvs.Worker" />
+  <configuration default="false" name="KVSCoordinator" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="org.noova.kvs.Coordinator" />
     <module name="kvs" />
-    <option name="PROGRAM_PARAMETERS" value="8001 worker1 localhost:8000" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="org.noova.kvs.*" />

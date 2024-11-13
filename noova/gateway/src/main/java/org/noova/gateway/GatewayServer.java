@@ -2,6 +2,7 @@ package org.noova.gateway;
 
 
 import org.noova.gateway.controller.Controller;
+import org.noova.gateway.trie.Trie;
 import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
 import org.noova.webserver.Server;

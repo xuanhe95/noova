@@ -60,7 +60,7 @@ public class Server {
         try(ServerSocket serverSocket = new ServerSocket(port)){
             serverLoop(serverSocket);
         } catch (Exception e) {
-            log.error("Error accepting connection");
+            log.error("[server] Error accepting connection: " + port);
         }
     }
 

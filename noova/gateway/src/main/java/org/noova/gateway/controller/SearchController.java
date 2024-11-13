@@ -66,7 +66,8 @@ public class SearchController implements IController {
     private void searchByKeywordPredict(Request req, Response res) throws IOException {
         log.info("[search] Predicting by keyword");
         String keyword = req.queryParams("keyword");
-        List<String> urls = SearchService.getInstance().predict(keyword);
+        String limit = req.queryParams("limit") == null ? "10" : req.queryParams("limit");
+        List<String> urls = SearchService.getInstance().predict(keyword, Integer.parseInt(limit));
         res.body(urls.toString());
     }
 }

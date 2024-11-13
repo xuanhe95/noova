@@ -23,15 +23,21 @@ class Coordinator extends org.noova.generic.Coordinator {
 
 	public static void main(String args[]) {
 
-    // Check the command-line arguments
 
-    if (args.length != 2) {
+      int myPort;
+      // Check the command-line arguments
+
+    if (args.length < 2) {
       System.err.println("Syntax: Coordinator <port> <kvsCoordinator>");
-      System.exit(1);
+      //System.exit(1);
+      myPort = Integer.valueOf(PropertyLoader.getProperty("flame.port"));
+        kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
+    } else{
+      myPort = Integer.valueOf(args[0]);
+      kvs = new KVSClient(args[1]);
     }
    
-    int myPort = Integer.valueOf(args[0]);
-    kvs = new KVSClient(args[1]);
+
 
     logger.info("Flame coordinator ("+version+") starting on port "+myPort);
 
