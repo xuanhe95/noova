@@ -13,7 +13,7 @@ public class Indexer {
     private static final String TABLE_PREFIX = "pt-";
     static final String INDEX_TABLE = TABLE_PREFIX+"index";
 
-    private static final boolean ENABLE_PORTER_STEMMING = false;
+    private static final boolean ENABLE_PORTER_STEMMING = true;
 
 
     public static void run(FlameContext ctx, String[] args) {

@@ -31,6 +31,9 @@ public class PageRank {
 
 
         try {
+            ctx.getKVS().delete(PAGE_RANK_TABLE);
+            ctx.getKVS().delete("sink");
+            ctx.getKVS().delete("linkset");
             convergenceThreshold = Double.parseDouble(args[0]);
 
             if(args.length > 1){
