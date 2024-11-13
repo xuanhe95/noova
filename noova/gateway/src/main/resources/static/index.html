@@ -130,11 +130,10 @@
             const resultsContainer = $('#results');
             resultsContainer.empty(); // Clear previous results
 
-            // Display each result in the response data
             $.each(data, function(key, value) {
                 const resultItem = $('<div>').addClass('col-12 result-item');
-                resultItem.html(`<p><strong>${key}:</strong> ${value}</p>`);
-                resultsContainer.append(resultItem);
+                resultItem.html(`<p><strong>${key}:</strong> <a href="${value}" target="_blank">${value}</a></p>`);
+                $('#results').append(resultItem);
             });
         }
     });
