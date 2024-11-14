@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# clear files in all-jars/worker#
+
 # Navigate to the all-jars directory
 cd all-jars || { echo "Directory 'all-jars' does not exist"; exit 1; }
 

@@ -1,19 +1,26 @@
 <component name="libraryTable">
-  <library name="Project">
+  <library name="project">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/job-1.jar!/" />
-      <root url="jar://$PROJECT_DIR$/job-6.jar!/" />
-      <root url="jar://$PROJECT_DIR$/job-8.jar!/" />
-      <root url="jar://$PROJECT_DIR$/job-3.jar!/" />
-      <root url="jar://$PROJECT_DIR$/job-10.jar!/" />
-      <root url="jar://$PROJECT_DIR$/job-9.jar!/" />
-      <root url="jar://$PROJECT_DIR$/job-4.jar!/" />
-      <root url="jar://$PROJECT_DIR$/__worker9001-current.jar!/" />
-      <root url="jar://$PROJECT_DIR$/__worker9002-current.jar!/" />
-      <root url="jar://$PROJECT_DIR$/job-2.jar!/" />
-      <root url="jar://$PROJECT_DIR$/job-7.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-14.jar!/" />
+      <root url="jar://$PROJECT_DIR$/crawler.jar!/" />
       <root url="jar://$PROJECT_DIR$/job-5.jar!/" />
       <root url="jar://$PROJECT_DIR$/job-11.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-8.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-6.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/indexer.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/__worker9001-current.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-10.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-12.jar!/" />
+      <root url="jar://$PROJECT_DIR$/pagerank.jar!/" />
+      <root url="jar://$PROJECT_DIR$/__worker9002-current.jar!/" />
+      <root url="jar://$PROJECT_DIR$/job-7.jar!/" />
+      <root url="jar://$PROJECT_DIR$/tests.zip!/" />
+      <root url="jar://$PROJECT_DIR$/job-9.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

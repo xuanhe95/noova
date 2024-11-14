@@ -34,7 +34,7 @@ public class PageRank {
             ctx.getKVS().delete(PAGE_RANK_TABLE);
             ctx.getKVS().delete("sink");
             ctx.getKVS().delete("linkset");
-            convergenceThreshold = Double.parseDouble(args[0]);
+            convergenceThreshold = args.length>0?Double.parseDouble(args[0]):0.01; // use default convergence threshold if not specified
 
             if(args.length > 1){
                 convergenceRatioInPercentage = Double.parseDouble(args[1]);
