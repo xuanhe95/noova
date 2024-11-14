@@ -7,6 +7,9 @@
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameContextImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameContextImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/table/PersistTable.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/table/PersistTable.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/rmWorker.sh" beforeDir="false" afterPath="$PROJECT_DIR$/noova/rmWorker.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -125,7 +128,7 @@
       <workItem from="1731304633683" duration="1599000" />
       <workItem from="1731467545698" duration="1513000" />
       <workItem from="1731533498272" duration="6362000" />
-      <workItem from="1731539893400" duration="14890000" />
+      <workItem from="1731539893400" duration="29033000" />
     </task>
     <servers />
   </component>

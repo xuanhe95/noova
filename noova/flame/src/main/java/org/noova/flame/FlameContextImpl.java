@@ -77,6 +77,11 @@ public class FlameContextImpl implements FlameContext, Serializable {
 //    }
 
     private List<Throwable> parallelize(Vector<Partition> partitions, String uri, byte[] uploadOrNull, Vector<String[]> kvsWorkers, String input, String output, Map<String, String> queryParams) {
+        // handling NullPointerException when crawling
+        if (partitions == null) {
+            log.error("Partitions vector is null.");
+            return Collections.emptyList();
+        }
         Thread[] threads = new Thread[partitions.size()];
         List<Throwable> exceptions = new ArrayList<>();
         for(int i = 0; i < partitions.size(); i++){

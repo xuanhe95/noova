@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# clear files in all-jars/worker#
+# __CLEAR__ files in all-jars/worker# for debugging Crawler
 
 # Navigate to the all-jars directory
 cd all-jars || { echo "Directory 'all-jars' does not exist"; exit 1; }

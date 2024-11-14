@@ -35,7 +35,6 @@ public class Crawler implements Serializable {
     private static final boolean ENABLE_LOOP_INTERVAL = true;
     private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
-//    private static String seedDomain;
 
     private static final Map<String, SoftReference<String>> URL_CACHE = new WeakHashMap<>();
 
@@ -44,6 +43,11 @@ public class Crawler implements Serializable {
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
         System.out.println("Crawler is running");
+
+        // each worker work on separate ranges in parallel, e.g., on separate cores.
+        int CONCURRENCY_LEVEL=10;
+        ctx.setConcurrencyLevel(CONCURRENCY_LEVEL);
+
         if (args == null || args.length < 1) {
             log.error("Usage: Crawler <seed-url>");
             ctx.output("Seed URL is not found");
@@ -54,8 +58,8 @@ public class Crawler implements Serializable {
 
         // limit to seed url's domain for crawling first 200k pages
         final String seedDomain = new URI(seedUrl).getHost();
-        System.out.println("seed url init: " + seedUrl);
-        System.out.println("seed domain init: " + seedDomain);
+        log.info("[crawler] seed url init: "+ seedUrl);
+        log.info("[crawler] seed domain init: "+ seedDomain);
 
         String blacklistTable;
 
@@ -99,21 +103,39 @@ public class Crawler implements Serializable {
 
         log.warn("[crawler] Processing URL: " + normalizedUrl);
         try {
+            // filter for invalid url
             if(!checkUrlFormat(normalizedUrl)){
                 log.warn("[crawler] URL " + normalizedUrl + " is not a valid URL. Skipping.");
                 return new ArrayList<>();
             }
 
+            // filter for dup url
             if (isAccessed(ctx, normalizedUrl)) {
                 log.warn("[accessed] URL " + normalizedUrl + " has been processed before. Skipping.");
                 return new ArrayList<>();
             }
 
+            // filter for domain name
+            URL url = new URI(normalizedUrl).toURL();
+            if (url.getHost() == null) {
+                log.warn("[crawler] Invalid URL: " + normalizedUrl);
+                return new ArrayList<>();
+            }
+            // skip if not in the same domain as seed url
+            String urlDomain = url.getHost();
+            log.info("[crawler] url domain: "+urlDomain);
+            if (!urlDomain.equals(seedDomain)) {
+                log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + seedDomain + ". Skipping.");
+                return new ArrayList<>();
+            }
+
+            // filter for blacklisted url
             if (!checkBlackList(ctx, normalizedUrl, blacklistTable)) {
                 log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist. Skipping.");
                 return new ArrayList<>();
             }
 
+            // filter based on disallow
             if (!checkRobotRules(ctx, normalizedUrl)) {
                 log.warn("[crawler] URL " + normalizedUrl + " is disallowed by robots.txt. Skipping.");
                 return new ArrayList<>();
@@ -125,21 +147,6 @@ public class Crawler implements Serializable {
 //                return new ArrayList<>();
 //            }
 
-            URL url = new URI(normalizedUrl).toURL();
-
-            if (url.getHost() == null) {
-                log.warn("[crawler] Invalid URL: " + normalizedUrl);
-                return new ArrayList<>();
-            }
-
-            // skip if not in the same domain as seed
-            String urlDomain = url.getHost();
-            System.out.println("url domain: "+ urlDomain);
-            System.out.println("seed: "+ seedDomain);
-            if (!urlDomain.equals(seedDomain)) {
-                log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + seedDomain + ". Skipping.");
-                return new ArrayList<>();
-            }
 
 //            String protocol = url.getProtocol();
 //            // check if the protocol is http or https
@@ -179,7 +186,7 @@ public class Crawler implements Serializable {
     private static boolean checkUrlFormat(String normalizedUrl) {
         String lowerCaseUrl = normalizedUrl.toLowerCase();
 
-        Set<String> invalidSuffixFormats = Set.of(".jpg", ".jpeg", ".gif", ".png", ".txt");
+        Set<String> invalidSuffixFormats = Set.of(".jpg", ".jpeg", ".gif", ".png", ".txt", "webp", "svg");
         Set<String> validPrefixFormats = Set.of("http://", "https://");
         for(String suffix : invalidSuffixFormats){
             if(lowerCaseUrl.endsWith(suffix)){
@@ -277,7 +284,6 @@ public class Crawler implements Serializable {
         Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(page);
 
-
         Map<String, StringBuilder> anchorMap = new HashMap<>();
 
         while (matcher.find()) {
@@ -285,6 +291,9 @@ public class Crawler implements Serializable {
 
             // for EC
             String text = matcher.group(2).strip();
+
+            // remove html tags
+            text = text.replaceAll("<[^>]*>", "").strip();
 
             // filter non-lang char
             text = filterNonLanguageCharacters(text);
@@ -306,7 +315,7 @@ public class Crawler implements Serializable {
                 continue;
             }
 
-            if(!checkUrlFormat(normalizedLink)){
+            if(!checkUrlFormat(normalizedLink)){ // this should filter out invalid hyperlinks?
                 log.warn("[crawler] URL " + normalizedLink + " is not a valid URL. Skipping.");
                 continue;
             }

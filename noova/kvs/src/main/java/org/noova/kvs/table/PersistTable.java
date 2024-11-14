@@ -231,10 +231,25 @@ public class PersistTable implements Table {
 
     @Override
     public int count() {
-        List<File> files = getAllFiles();
-        files.removeIf(File::isHidden);
-        return files.size();
+//        List<File> files = getAllFiles();
+//        files.removeIf(File::isHidden);
+//        return files.size();
+
+        File[] files = this.rootFile.listFiles();
+//        return files==null? 0: files.length;
+
+        // count files with content
+        int validFileCount = 0;
+        if (files != null) {
+            for (File file : files) {
+                if (file.length() > 0) {
+                    validFileCount++;
+                }
+            }
+        }
+        return validFileCount;
     }
+
 
 //    public List<String> getTableKeys() {
 //        File[] files = rootFile.listFiles();
