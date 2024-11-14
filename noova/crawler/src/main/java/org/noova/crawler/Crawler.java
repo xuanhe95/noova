@@ -35,7 +35,7 @@ public class Crawler implements Serializable {
     private static final boolean ENABLE_LOOP_INTERVAL = true;
     private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
-    private static String seedDomain;
+//    private static String seedDomain;
 
     private static final Map<String, SoftReference<String>> URL_CACHE = new WeakHashMap<>();
 
@@ -53,7 +53,9 @@ public class Crawler implements Serializable {
         String seedUrl = args[0];
 
         // limit to seed url's domain for crawling first 200k pages
-        seedDomain = new URI(seedUrl).getHost();
+        final String seedDomain = new URI(seedUrl).getHost();
+        System.out.println("seed url init: " + seedUrl);
+        System.out.println("seed domain init: " + seedDomain);
 
         String blacklistTable;
 
@@ -73,7 +75,7 @@ public class Crawler implements Serializable {
 
         while (urlQueue.count() != 0) {
             urlQueue = urlQueue.flatMap(rawUrl -> {
-                return processUrl(ctx, rawUrl, blacklistTable);
+                return processUrl(ctx, rawUrl, blacklistTable, seedDomain);
             });
             if(ENABLE_LOOP_INTERVAL){
                 Thread.sleep(LOOP_INTERVAL);
@@ -86,19 +88,12 @@ public class Crawler implements Serializable {
 
     }
 
-    private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable) throws Exception {
+    private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, String seedDomain) throws Exception {
 
 
         String normalizedUrl = normalizeURL(rawUrl, rawUrl);
         if(normalizedUrl == null){
             log.warn("[crawler] URL " + rawUrl + " is not a valid URL. Skipping.");
-            return new ArrayList<>();
-        }
-
-        // skip if not in the same domain as seed
-        String urlDomain = new URI(normalizedUrl).getHost();
-        if (!urlDomain.equals(seedDomain)) {
-            log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + seedDomain + ". Skipping.");
             return new ArrayList<>();
         }
 
@@ -134,6 +129,15 @@ public class Crawler implements Serializable {
 
             if (url.getHost() == null) {
                 log.warn("[crawler] Invalid URL: " + normalizedUrl);
+                return new ArrayList<>();
+            }
+
+            // skip if not in the same domain as seed
+            String urlDomain = url.getHost();
+            System.out.println("url domain: "+ urlDomain);
+            System.out.println("seed: "+ seedDomain);
+            if (!urlDomain.equals(seedDomain)) {
+                log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + seedDomain + ". Skipping.");
                 return new ArrayList<>();
             }
 

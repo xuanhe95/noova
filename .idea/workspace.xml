@@ -5,19 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/project/.idea/codeStyles/Project.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/project/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/flame_1_0_SNAPSHOT.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/PageRank.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/PageRank.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/rmWorker.sh" beforeDir="false" afterPath="$PROJECT_DIR$/noova/rmWorker.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/.idea/libraries/Project.xml" beforeDir="false" afterPath="$PROJECT_DIR$/project/.idea/libraries/Project.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/project/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/project/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/Project.iml" beforeDir="false" afterPath="$PROJECT_DIR$/project/Project.iml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -136,7 +125,7 @@
       <workItem from="1731304633683" duration="1599000" />
       <workItem from="1731467545698" duration="1513000" />
       <workItem from="1731533498272" duration="6362000" />
-      <workItem from="1731539893400" duration="12682000" />
+      <workItem from="1731539893400" duration="14890000" />
     </task>
     <servers />
   </component>
