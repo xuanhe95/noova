@@ -1,0 +1,76 @@
+www.imdb.com Baiduspider:Disallow 16 /list/*
+/user/*
+ *:Disallow 702 /OnThisDay
+/ads/
+/ap/
+/mymovies/
+/r/
+/register
+/registration/
+/search/name-text
+/search/title-text
+/find
+/find$
+/find/
+/tvschedule
+/updates
+/watch/_ajax/option
+/_json/video/mon
+/_json/getAdsForMediaViewer/
+/list/ls*/_ajax
+/list/ls*/export
+/*/*/rg*/mediaviewer/rm*/tr
+/*/rg*/mediaviewer/rm*/tr
+/*/mediaviewer/*/tr
+/title/tt*/mediaviewer/rm*/tr
+/name/nm*/mediaviewer/rm*/tr
+/gallery/rg*/mediaviewer/rm*/tr
+/tr/
+/title/tt*/watchoptions
+/search/title/?title_type=feature,tv_movie,tv_miniseries,documentary,short,video,tv_short&release_date=,2020-12-31&lists=%21ls538187658,%21ls539867036,%21ls538186228&view=simple&sort=num_votes,asc&aft
+/name/nm*/filmotype/*
+/user/ur*/ratings
+/user/ur*/checkins
+/_json/*
+ bingbot:Disallow 22 /showtimes/location/*
+ last-access 13 1731558642330 robots.txt 1198 # robots.txt for https://www.imdb.com properties
+User-agent: *
+Disallow: /OnThisDay
+Disallow: /ads/
+Disallow: /ap/
+Disallow: /mymovies/
+Disallow: /r/
+Disallow: /register
+Disallow: /registration/
+Disallow: /search/name-text
+Disallow: /search/title-text
+Disallow: /find
+Disallow: /find$
+Disallow: /find/
+Disallow: /tvschedule
+Disallow: /updates
+Disallow: /watch/_ajax/option
+Disallow: /_json/video/mon
+Disallow: /_json/getAdsForMediaViewer/
+Disallow: /list/ls*/_ajax
+Disallow: /list/ls*/export
+Disallow: /*/*/rg*/mediaviewer/rm*/tr
+Disallow: /*/rg*/mediaviewer/rm*/tr
+Disallow: /*/mediaviewer/*/tr
+Disallow: /title/tt*/mediaviewer/rm*/tr
+Disallow: /name/nm*/mediaviewer/rm*/tr
+Disallow: /gallery/rg*/mediaviewer/rm*/tr
+Disallow: /tr/
+Disallow: /title/tt*/watchoptions
+Disallow: /search/title/?title_type=feature,tv_movie,tv_miniseries,documentary,short,video,tv_short&release_date=,2020-12-31&lists=%21ls538187658,%21ls539867036,%21ls538186228&view=simple&sort=num_votes,asc&aft
+Disallow: /name/nm*/filmotype/*
+Disallow: /user/ur*/ratings
+Disallow: /user/ur*/checkins
+Disallow: /_json/*
+
+User-agent: Baiduspider
+Disallow: /list/*
+Disallow: /user/*
+
+User-agent: bingbot
+Disallow: /showtimes/location/* 

@@ -10,10 +10,7 @@ import org.noova.tools.URLParser;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -196,7 +193,10 @@ public class Crawler implements Serializable {
         conn.connect();
         updateHostLastAccessTime(ctx, url.getHost());
         int responseCode = conn.getResponseCode();
-//        conn = (HttpURLConnection) url.openConnection();
+
+
+
+        //        conn = (HttpURLConnection) url.openConnection();
 //        conn.setRequestMethod("GET");
 //        conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
 //        conn.connect();
@@ -210,20 +210,23 @@ public class Crawler implements Serializable {
 
 
             byte[] rawPage = conn.getInputStream().readAllBytes();
-            String page = new String(rawPage);
 
-            String hashedPage = Hasher.hash(page);
+            String page = new String(rawPage);
+            String[] normalizedPages = normalizePage(page);
+            String normalizedPage = String.join(" ", normalizedPages);
+
+            String hashedPage = Hasher.hash(normalizedPage);
 
             Row pageRow = ctx.getKVS().getRow(CANONICAL_PAGE_TABLE, hashedPage);
 
 
             if (pageRow == null || pageRow.get("canonicalURL") == null || pageRow.get("canonicalURL").equals(normalizedUrl)) {
                 log.info("[crawler] Creating new canonical URL: " + normalizedUrl);
-                row.put("page", page);
+                row.put("page", normalizedPage);
 
                 pageRow = new Row(hashedPage);
                 pageRow.put("canonicalURL", normalizedUrl);
-                pageRow.put("page", page);
+                pageRow.put("page", normalizedPage);
 
                 log.info("[crawler] kvs addr: " + ctx.getKVS().getCoordinator());
 
@@ -347,6 +350,10 @@ public class Crawler implements Serializable {
             row.put("contentType", contentType);
         }
 
+        InetAddress ip = InetAddress.getByName(url.getHost());
+        log.info("[crawler] IP: " + ip.getHostAddress());
+        row.put("ip", ip.getHostAddress());
+
         if (responseCode == 301 || responseCode == 302 || responseCode == 303 || responseCode == 307 || responseCode == 308) {
             log.info("[redirect] Redirect " + responseCode + " is detected. URL: " + normalizedUrl);
             String location = conn.getHeaderField("Location");
@@ -370,6 +377,19 @@ public class Crawler implements Serializable {
         } else {
             return requestGet(ctx, normalizedUrl, row, blacklistTable);
         }
+    }
+
+    private static String[] normalizePage(String page){
+        String noHtml = page.replaceAll("<[^>]*>", " ").strip();
+
+
+        String noPunctuation = noHtml.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
+
+
+        String lowerCase = noPunctuation.toLowerCase().strip();
+
+        String[] words = lowerCase.split(" +");
+        return words;
     }
 
     private static boolean checkLastAccessTime(FlameContext ctx, String normalizedUrl, String hostName) throws IOException {
