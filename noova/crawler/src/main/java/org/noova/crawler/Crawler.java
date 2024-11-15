@@ -39,6 +39,7 @@ public class Crawler implements Serializable {
     private static final Map<String, SoftReference<String>> URL_CACHE = new WeakHashMap<>();
 
     private static final Map<String, SoftReference<String>> ROBOT_CACHE = new WeakHashMap<>();
+    private static final boolean ENABLE_ANCHOR_EXTRACTION = false;
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
@@ -180,7 +181,7 @@ public class Crawler implements Serializable {
 
     public static String filterNonLanguageCharacters(String text) {
         // 保留 Unicode 语言字符和空格，去除数字、符号和标点
-        return text.replaceAll("[^\\p{L}\\s]", "");
+        return text.replaceAll("[^\\p{L}\\s]", " ");
     }
 
     private static boolean checkUrlFormat(String normalizedUrl) {
@@ -322,7 +323,10 @@ public class Crawler implements Serializable {
 
             log.info("[crawler] add link: " + normalizedLink);
 
-            anchorMap.put(normalizedLink, anchorMap.getOrDefault(normalizedLink, new StringBuilder()).append(text).append("<br>"));
+            if(ENABLE_ANCHOR_EXTRACTION){
+                anchorMap.put(normalizedLink, anchorMap.getOrDefault(normalizedLink, new StringBuilder()).append(text).append("<br>"));
+            }
+
 
             if(isAccessed(ctx, normalizedLink)){
                 log.info("[crawler] URL " + normalizedLink + " is accessed before. Ignore.");
@@ -332,21 +336,25 @@ public class Crawler implements Serializable {
             links.add(normalizedLink);
         }
 
-        anchorMap.forEach((link, anchor) -> {
-            try {
-                Row targetRow = ctx.getKVS().getRow(CRAWLER_TABLE, Hasher.hash(link));
-                if(targetRow == null) {
-                    targetRow = new Row(Hasher.hash(link));
+        if(ENABLE_ANCHOR_EXTRACTION){
+            anchorMap.forEach((link, anchor) -> {
+                try {
+                    Row targetRow = ctx.getKVS().getRow(CRAWLER_TABLE, Hasher.hash(link));
+                    if(targetRow == null) {
+                        targetRow = new Row(Hasher.hash(link));
+                    }
+                    // String anchorKey = "anchor:" + KeyGenerator.get().substring(0, 5) + "<!--" + normalizedUrl + "-->";
+                    String anchorKey = "anchor:" + normalizedUrl;
+                    targetRow.put(anchorKey, anchor.toString());
+                    ctx.getKVS().putRow(CRAWLER_TABLE, targetRow);
+                } catch (IOException e) {
+                    log.error("[crawler] Error while adding anchor to the row: " + link, e);
+                    // throw new RuntimeException(e);
                 }
-                // String anchorKey = "anchor:" + KeyGenerator.get().substring(0, 5) + "<!--" + normalizedUrl + "-->";
-                String anchorKey = "anchor:" + normalizedUrl;
-                targetRow.put(anchorKey, anchor.toString());
-                ctx.getKVS().putRow(CRAWLER_TABLE, targetRow);
-            } catch (IOException e) {
-                log.error("[crawler] Error while adding anchor to the row: " + link, e);
-                // throw new RuntimeException(e);
-            }
-        });
+            });
+        }
+
+
         return links;
     }
 
@@ -404,7 +412,29 @@ public class Crawler implements Serializable {
     }
 
     private static String[] normalizePage(String page){
-        String noHtml = page.replaceAll("<[^>]*>", " ").strip();
+
+        // match <p> and <h1> to <h6> tags
+
+        Pattern pattern = Pattern.compile("(?s)<(p|h[1-6]).*?>(.*?)</\\1>");
+
+
+        Matcher matcher = pattern.matcher(page);
+
+        StringBuilder htmlContent = new StringBuilder();
+
+        // only keep the content inside <body> tag
+        while (matcher.find()) {
+            htmlContent.append(matcher.group(2)).append(" ");
+
+
+        }
+
+        String content = filterNonLanguageCharacters(htmlContent.toString());
+
+        // remove script tags
+        content = content.replaceAll("(?s)<script.*?>.*?</script>", " ").strip();
+
+        String noHtml = content.replaceAll("<[^>]*>", " ").strip();
 
 
         String noPunctuation = noHtml.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();

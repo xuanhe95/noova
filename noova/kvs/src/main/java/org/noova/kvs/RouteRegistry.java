@@ -27,7 +27,7 @@ public class RouteRegistry {
 
     static void registerRenameTable() {
         // rename
-        ReplicaManager.put(
+        Server.put(
                 "/rename/:table",
                 (req, res) -> {
                     String tableKey = req.params("table");
@@ -72,7 +72,7 @@ public class RouteRegistry {
     }
 
     static void registerDeleteTable(){
-        ReplicaManager.put(
+        Server.put(
                 "/delete/:table",
                 (req, res) -> {
                     String tableKey = req.params("table");
@@ -96,7 +96,7 @@ public class RouteRegistry {
 
     static void registerPutData() {
         // put data
-        ReplicaManager.put(
+        Server.put(
                 "/data/:table/:row/:column",
                 (req, res) -> {
 
@@ -174,7 +174,7 @@ public class RouteRegistry {
 //    });
     static void registerStreamPut(){
         // put row
-        ReplicaManager.put(
+        Server.put(
                 "/data/:table",
                 (req, res) -> {
                     String tableKey = req.params("table");

@@ -7,7 +7,7 @@ import java.io.OutputStream;
 /**
  * @author Xuanhe Zhang
  */
-public interface IOStrategy {
+public interface IOStrategy extends AutoCloseable {
 
     InputStream in() throws IOException;
     OutputStream out() throws IOException;

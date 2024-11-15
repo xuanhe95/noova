@@ -5,7 +5,7 @@ import java.io.*;
 /**
  * @author Xuanhe Zhang
  */
-public class FileIOStrategy implements IOStrategy{
+public class FileIOStrategy implements IOStrategy, AutoCloseable{
     private final File file;
     private FileOutputStream outputStream;
     private FileInputStream inputStream;

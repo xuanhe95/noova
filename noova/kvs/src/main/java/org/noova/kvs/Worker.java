@@ -14,6 +14,7 @@ import java.util.Scanner;
 public class Worker extends org.noova.generic.Worker {
 
     private static final Logger log = Logger.getLogger(Worker.class);
+    private static final boolean ENABLE_FETCH_MANAGER = false;
 
     private static TableManager tableManager;
 
@@ -68,7 +69,10 @@ public class Worker extends org.noova.generic.Worker {
 
         startPingThread(coordinatorAddr, id, port);
         NodeManager.startNodeThread();
-        FetchManager.startFetchThread();
+
+        if(ENABLE_FETCH_MANAGER) {
+            FetchManager.startFetchThread();
+        }
     }
 
 
