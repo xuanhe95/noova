@@ -14,6 +14,8 @@ public class FlamePairRDDImpl implements FlamePairRDD {
     String id;
     FlameContextImpl context;
 
+    boolean destroyed = false;
+
     public FlamePairRDDImpl(String id, FlameContext context){
         this.id = id;
         this.context = (FlameContextImpl) context;
@@ -23,11 +25,11 @@ public class FlamePairRDDImpl implements FlamePairRDD {
     // collect() should return a list that contains all the elements in the PairRDD.
     @Override
     public List<FlamePair> collect() throws Exception {
+        checkDestroyed();
 
         Iterator<Row> rows = context.getKVS().scan(id);
         log.info("[collect] table " + id);
         List<FlamePair> pairs = new ArrayList<>();
-
         AtomicInteger count = new AtomicInteger(0);
 
         rows.forEachRemaining(row -> {
@@ -57,7 +59,7 @@ public class FlamePairRDDImpl implements FlamePairRDD {
     // last invocation.
     @Override
     public FlamePairRDD foldByKey(String zeroElement, TwoStringsToString lambda) throws Exception {
-
+        checkDestroyed();
         String encodedZeroElement = KeyEncoder.encode(zeroElement);
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("accumulator", encodedZeroElement);
@@ -73,6 +75,7 @@ public class FlamePairRDDImpl implements FlamePairRDD {
 
     @Override
     public void saveAsTable(String tableNameArg) throws Exception {
+        checkDestroyed();
         log.info("[save as table] Renaming table " + id + " to " + tableNameArg);
         context.getKVS().rename(id, tableNameArg);
         this.id = tableNameArg;
@@ -80,6 +83,7 @@ public class FlamePairRDDImpl implements FlamePairRDD {
 
     @Override
     public FlameRDD flatMap(PairToStringIterable lambda) throws Exception {
+        checkDestroyed();
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("pair", "true");
         String output = context.invokeOperation(id, "/rdd/flatMap", Serializer.objectToByteArray(lambda), queryParams);
@@ -88,11 +92,15 @@ public class FlamePairRDDImpl implements FlamePairRDD {
 
     @Override
     public void destroy() throws Exception {
+        checkDestroyed();
+        log.warn("[destroy] Deleting table " + id);
+        destroyed = true;
         context.getKVS().delete(id);
     }
 
     @Override
     public FlamePairRDD flatMapToPair(PairToPairIterable lambda) throws Exception {
+        checkDestroyed();
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("pair", "true");
         String output = context.invokeOperation(id, "/rdd/flatMapToPair", Serializer.objectToByteArray(lambda), queryParams);
@@ -101,6 +109,7 @@ public class FlamePairRDDImpl implements FlamePairRDD {
 
 
     public FlamePairRDD join(FlamePairRDD other) throws Exception {
+        checkDestroyed();
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("input1", id);
         queryParams.put("input2", ((FlamePairRDDImpl) other).id);
@@ -116,6 +125,8 @@ public class FlamePairRDDImpl implements FlamePairRDD {
     // a pair with key fruit and value [apple,banana],[cherry,date,fig]. This method is
     // extra credit in HW7; if you do not implement it, please return 'null'.
     public FlamePairRDD cogroup(FlamePairRDD other) throws Exception {
+        checkDestroyed();
+
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("input1", id);
         queryParams.put("input2", ((FlamePairRDDImpl) other).id);
@@ -124,10 +135,17 @@ public class FlamePairRDDImpl implements FlamePairRDD {
     }
 
     public FlamePairRDD intersection(FlamePairRDD other) throws Exception {
+        checkDestroyed();
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("input1", id);
         queryParams.put("input2", ((FlamePairRDDImpl) other).id);
         String output = context.invokeOperation(id, "/rdd/intersection", null, queryParams);
         return new FlamePairRDDImpl(output, context);
+    }
+
+    private void checkDestroyed() throws Exception {
+        if(destroyed){
+            throw new Exception("RDD has been destroyed");
+        }
     }
 }

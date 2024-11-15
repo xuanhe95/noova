@@ -16,48 +16,35 @@ public class FlameRDDImpl implements FlameRDD {
     private String id;
     private final FlameContextImpl context;
 
+    private boolean destroyed = false;
+
     public FlameRDDImpl(String id, FlameContext context) {
         this.id = id;
         this.context = (FlameContextImpl) context;
     }
-//    Now implement the
-//    collect() method in FlameRDDImpl; this should simply scan the table (using
-//    KVSClient.scan()) and return a list with all the elements in the value column. Now the collect
-//    test should work.
-
     public String getId() {
+        checkDestroyed();
         return id;
     }
 
 
     public int count() throws Exception {
+        checkDestroyed();
         return context.getKVS().count(id);
     }
 
     public void saveAsTable(String tableNameArg) throws Exception {
-
-
-//        if(this.id.startsWith("pt-")){
-//            tableNameArg = "pt-" + tableNameArg;
-//            log.info("[save as table] Persist Table");
-//        }
-
+        checkDestroyed();
         log.info("[save as table] Renaming table " + id + " to " + tableNameArg);
-        //context.getKVS().rename(id, tableNameArg);
 
-
-//        Iterator<Row> it = context.getKVS().scan(id);
-//
-//        while(it != null & it.hasNext()){
-//            Row row = it.next();
-//            log.info("[save as table] key: " + row.key() + " value: " + row.get(FLAME_RDD_VALUE));
-//            context.getKVS().put(tableNameArg, row.key(), FLAME_RDD_VALUE, row.get(FLAME_RDD_VALUE));
-//        }
         context.getKVS().rename(id, tableNameArg);
         this.id = tableNameArg;
     }
 
+
+
     public FlameRDD distinct() throws Exception {
+        checkDestroyed();
         String output = KeyGenerator.getJob();
 
         Iterator<Row> iterator = context.getKVS().scan(id);
@@ -78,10 +65,15 @@ public class FlameRDDImpl implements FlameRDD {
     }
 
     public void destroy() throws Exception {
+        checkDestroyed();
+
+        log.warn("[destroy] Deleting table " + id);
+        destroyed = true;
         context.getKVS().delete(id);
     }
 
     public Vector<String> take(int num) throws Exception {
+        checkDestroyed();
         Iterator<Row> iterator = context.getKVS().scan(id);
         Vector<String> list = new Vector<>();
         for(int i = 0; i < num; i++){
@@ -95,6 +87,7 @@ public class FlameRDDImpl implements FlameRDD {
     }
 
     public String fold(String zeroElement, FlamePairRDD.TwoStringsToString lambda) throws Exception {
+        checkDestroyed();
         String encodedZeroElement = KeyEncoder.encode(zeroElement);
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("accumulator", encodedZeroElement);
@@ -114,6 +107,7 @@ public class FlameRDDImpl implements FlameRDD {
 
     @Override
     public List<String> collect() throws Exception {
+        checkDestroyed();
         int workers = context.getKVS().numWorkers();
         log.info("Number of workers: " + workers);
         int total= context.getKVS().count(id);
@@ -148,12 +142,14 @@ public class FlameRDDImpl implements FlameRDD {
 
     @Override
     public FlameRDD flatMap(StringToIterable lambda) throws Exception {
+        checkDestroyed();
         byte[] serializedLambda = Serializer.objectToByteArray(lambda);
         String output = context.invokeOperation(id, "/rdd/flatMap", serializedLambda, new HashMap<String, String>());
         return new FlameRDDImpl(output, context);
     }
 
     public FlamePairRDD flatMapToPair(StringToPairIterable lambda) throws Exception {
+        checkDestroyed();
         byte[] serializedLambda = Serializer.objectToByteArray(lambda);
         String output = context.invokeOperation(id, "/rdd/flatMapToPair", serializedLambda, new HashMap<String, String>());
         return new FlamePairRDDImpl(output, context);
@@ -161,6 +157,7 @@ public class FlameRDDImpl implements FlameRDD {
 
     @Override
     public FlamePairRDD mapToPair(StringToPair lambda) throws Exception {
+        checkDestroyed();
         byte[] serializedLambda = Serializer.objectToByteArray(lambda);
         String output = context.invokeOperation(id, "/rdd/mapToPair", serializedLambda, new HashMap<String, String>());
         return new FlamePairRDDImpl(output, context);
@@ -168,11 +165,7 @@ public class FlameRDDImpl implements FlameRDD {
 
     @Override
     public FlameRDD intersection(FlameRDD r) throws Exception {
-//        Map<String, String> queryParams = new HashMap<>();
-//        queryParams.put("input1", id);
-//        queryParams.put("input2", ((FlameRDDImpl) r).getId());
-//        String output = context.invokeOperation(id, "/rdd/intersection", null, queryParams);
-//        return new FlameRDDImpl(output, context);
+        checkDestroyed();
         FlamePairRDDImpl pair1 = (FlamePairRDDImpl) this.mapToPair(s -> new FlamePair(s, s));
         FlamePairRDDImpl pair2 = (FlamePairRDDImpl) r.mapToPair(s -> new FlamePair(s, s));
 
@@ -185,6 +178,7 @@ public class FlameRDDImpl implements FlameRDD {
 
     @Override
     public FlameRDD sample(double f) throws Exception {
+        checkDestroyed();
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("fraction", KeyEncoder.encode(String.valueOf(f)));
         String output = context.invokeOperation(id, "/rdd/sample", null, queryParams);
@@ -193,6 +187,7 @@ public class FlameRDDImpl implements FlameRDD {
 
     @Override
     public FlamePairRDD groupBy(StringToString lambda) throws Exception {
+        checkDestroyed();
         byte[] serializedLambda = Serializer.objectToByteArray(lambda);
         String output = context.invokeOperation(id, "/rdd/groupBy", serializedLambda, new HashMap<String, String>());
         FlamePairRDD groupBy = new FlamePairRDDImpl(output, context);
@@ -207,30 +202,33 @@ public class FlameRDDImpl implements FlameRDD {
 
     @Override
     public FlameRDD filter(StringToBoolean lambda) throws Exception {
+        checkDestroyed();
         byte[] serializedLambda = Serializer.objectToByteArray(lambda);
         String output = context.invokeOperation(id, "/rdd/filter", serializedLambda, new HashMap<String, String>());
         return new FlameRDDImpl(output, context);
     }
-    // mapPartitions() should take a lambda that is given an Iterator<String>
-    // and returns another Iterator<String>. The lambda should be invoked once
-    // on each worker, with an iterator that contains the RDD elements
-    // that worker is working on (see KVSClient.scan()); the elements
-    // in the iterator that the lambda returns should be stored in
-    // another RDD, which mapPartitions() should return. This method is
-    // extra credit on HW7 and should return 'null' if you did not do this EC.
+
     @Override
     public FlameRDD mapPartitions(IteratorToIterator lambda) throws Exception {
+        checkDestroyed();
         byte[] serializedLambda = Serializer.objectToByteArray(lambda);
         String output = context.invokeOperation(id, "/rdd/mapPartitions", serializedLambda, new HashMap<String, String>());
         return new FlameRDDImpl(output, context);
     }
 
     public FlameRDD union(FlameRDD r) throws Exception {
+        checkDestroyed();
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("input1", id);
         queryParams.put("input2", ((FlameRDDImpl) r).getId());
         String output = context.invokeOperation(id, "/rdd/union", null, queryParams);
         return new FlameRDDImpl(output, context);
+    }
+
+    private void checkDestroyed() {
+        if(destroyed){
+            throw new IllegalStateException("RDD has been destroyed");
+        }
     }
 
 }
