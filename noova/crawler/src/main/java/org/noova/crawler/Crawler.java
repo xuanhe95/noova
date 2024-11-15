@@ -32,7 +32,7 @@ public class Crawler implements Serializable {
     private static final String RULE_DISALLOW = "Disallow";
     private static final String RULE_ALLOW = "Allow";
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
-    private static final boolean ENABLE_LOOP_INTERVAL = true;
+    private static final boolean ENABLE_LOOP_INTERVAL = false;
     private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
 
