@@ -21,6 +21,8 @@ public class PageRank implements Serializable {
 
     private static final String PAGE_RANK_TABLE = PropertyLoader.getProperty("table.pagerank");
 
+    private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
+
     private static final String URL_PAGE_DELIMITER = "___";
 
     private static final String URL_DELIMITER = " ";
@@ -52,7 +54,7 @@ public class PageRank implements Serializable {
             log.info("[page rank] Overall Convergence Threshold: " + convergenceRatioInPercentage);
 
 
-            FlameRDD rdd = ctx.fromTable("pt-crawl", row -> row.get("url") + URL_PAGE_DELIMITER + row.get("page"));
+            FlameRDD rdd = ctx.fromTable(CRAWL_TABLE, row -> row.get("url") + URL_PAGE_DELIMITER + row.get("page"));
             FlamePairRDD stateTable = rdd.mapToPair(s -> {
                 // log.info("[page rank] Mapping: " + s);
                 String[] parts = s.split(URL_PAGE_DELIMITER);
@@ -95,15 +97,15 @@ public class PageRank implements Serializable {
                 return new FlamePair(hashedUrl, state.toString());
             });
 
-            AtomicInteger count = new AtomicInteger(1);
+            // AtomicInteger count = new AtomicInteger(1);
             log.info("[page rank] Starting iterations");
             stateTable = updateTable(stateTable);
             log.info("Updated table");
             while(!isConverged(stateTable)) {
-                log.info("Iteration: " + count.incrementAndGet());
+                // log.info("Iteration: " + count.incrementAndGet());
                 stateTable = updateTable(stateTable);
             }
-            log.info("[page rank] Converged after " + count.get() + " iterations");
+            // log.info("[page rank] Converged after " + count.get() + " iterations");
 
             stateTable.flatMapToPair(pair -> {
                 log.info("[output] Pair: " + pair);
@@ -179,13 +181,13 @@ public class PageRank implements Serializable {
             return pairs;
         });
 
-        log.info("collecting transfer table");
-        AtomicInteger count = new AtomicInteger(0);
-        rdd.collect().forEach(pair -> {
-            count.getAndIncrement();
-            log.info("[transfer] Pair: " + pair);
-        });
-        log.info("[transfer] Collected " + count.get() + " rows");
+//        log.info("collecting transfer table");
+//        AtomicInteger count = new AtomicInteger(0);
+//        rdd.collect().forEach(pair -> {
+//            count.getAndIncrement();
+//            log.info("[transfer] Pair: " + pair);
+//        });
+//        log.info("[transfer] Collected " + count.get() + " rows");
 
         return rdd.foldByKey("0", (s, t) -> {
             double v1 = Double.parseDouble(s);
