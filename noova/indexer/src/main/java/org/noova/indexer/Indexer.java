@@ -14,21 +14,42 @@ public class Indexer implements Serializable {
     private static final Logger log = Logger.getLogger(Indexer.class);
     static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
     private static final boolean ENABLE_PORTER_STEMMING = true;
+    private static final boolean ENABLE_IP_INDEX = true;
+    private static final String DELIMITER = PropertyLoader.getProperty("default.delimiter");
+
+
+
 
     public static void run(FlameContext ctx, String[] args) {
 
+
         try {
-            FlameRDD rdd = ctx.fromTable(PropertyLoader.getProperty("table.crawler"), row -> row.get("url") + "___" + row.get("page"));
+            FlameRDD rdd = ctx.fromTable(
+                    PropertyLoader.getProperty("table.crawler"),
+                    row -> {
+
+                        String url = row.get(PropertyLoader.getProperty("table.crawler.url"));
+                        String page = row.get(PropertyLoader.getProperty("table.crawler.page"));
+                        String ip = row.get(PropertyLoader.getProperty("table.crawler.ip"));
+
+                        if(ENABLE_IP_INDEX){
+                            return url + DELIMITER + page + DELIMITER + ip;
+                        }
+                        return url + DELIMITER + page;
+                    }
+            );
             FlamePairRDD data = rdd.mapToPair(s -> {
-                String[] parts = s.split("___");
+                String[] parts = s.split(DELIMITER);
+
                 if(parts.length < 2) {
                     log.info("[indexer] No page found");
                     return new FlamePair(parts[0], "");
                 }
-                log.info("[indexer] url " + parts[0]);
-                return new FlamePair(parts[0], parts[1]);
+                String url = parts[0];
+                String page = parts[1];
+                log.info("[indexer] url " + url);
+                return new FlamePair(url, page);
             });
-
 
             data.flatMapToPair(pair -> {
                 String url = pair._1();
@@ -126,6 +147,30 @@ public class Indexer implements Serializable {
 
                 return String.join(",", leftSide);
             }).saveAsTable(INDEX_TABLE);
+
+
+            // save ip table
+            if(ENABLE_IP_INDEX){
+                FlamePairRDD ipTable = rdd.mapToPair(s->{
+                    String[] parts = s.split(DELIMITER);
+                    if(parts.length < 3) {
+                        log.info("[indexer] No page found");
+                        return new FlamePair(parts[0], "");
+                    }
+                    String url = parts[0];
+                    String ip = parts[2];
+                    log.info("[indexer] url " + url);
+                    return new FlamePair(url, ip);
+                });
+
+                ipTable.foldByKey("", (s, t) -> {
+                    if(s.isEmpty()) {
+                        return t;
+                    }
+                    return s + "," + t;
+                }).saveAsTable(PropertyLoader.getProperty("table.url"));
+
+            }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
