@@ -26,8 +26,6 @@ public class FlameRDDImpl implements FlameRDD {
         checkDestroyed();
         return id;
     }
-
-
     public int count() throws Exception {
         checkDestroyed();
         return context.getKVS().count(id);

@@ -4,20 +4,22 @@ import org.noova.flame.*;
 import org.noova.kvs.Row;
 import org.noova.tools.Hasher;
 import org.noova.tools.Logger;
+import org.noova.tools.PropertyLoader;
 import org.noova.tools.URLParser;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PageRank {
+public class PageRank implements Serializable {
     private static final Logger log = Logger.getLogger(PageRank.class);
     private static final double DECAY_RATE = 0.85;
     private static final double WEIGHTED_FACTOR = 0.15;
 
-    private static final String PAGE_RANK_TABLE = "pt-pageranks";
+    private static final String PAGE_RANK_TABLE = PropertyLoader.getProperty("table.pagerank");
 
     private static final String URL_PAGE_DELIMITER = "___";
 
@@ -119,9 +121,6 @@ public class PageRank {
             });
 
             log.info("[page rank] Finished");
-
-
-
 
         } catch (Exception e) {
             throw new RuntimeException(e);

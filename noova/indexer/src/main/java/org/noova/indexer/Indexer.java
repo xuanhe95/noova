@@ -5,28 +5,26 @@ import org.noova.flame.FlamePair;
 import org.noova.flame.FlamePairRDD;
 import org.noova.flame.FlameRDD;
 import org.noova.tools.Logger;
+import org.noova.tools.PropertyLoader;
 
+import java.io.Serializable;
 import java.util.*;
 
-public class Indexer {
+public class Indexer implements Serializable {
     private static final Logger log = Logger.getLogger(Indexer.class);
-    private static final String TABLE_PREFIX = "pt-";
-    static final String INDEX_TABLE = TABLE_PREFIX+"index";
-
+    static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
     private static final boolean ENABLE_PORTER_STEMMING = true;
-
 
     public static void run(FlameContext ctx, String[] args) {
 
         try {
-            FlameRDD rdd = ctx.fromTable("pt-crawl", row -> row.get("url") + "___" + row.get("page"));
+            FlameRDD rdd = ctx.fromTable(PropertyLoader.getProperty("table.crawler"), row -> row.get("url") + "___" + row.get("page"));
             FlamePairRDD data = rdd.mapToPair(s -> {
                 String[] parts = s.split("___");
                 if(parts.length < 2) {
                     log.info("[indexer] No page found");
                     return new FlamePair(parts[0], "");
                 }
-                System.out.println("[indexer] url " + parts[0]);
                 log.info("[indexer] url " + parts[0]);
                 return new FlamePair(parts[0], parts[1]);
             });
@@ -36,27 +34,11 @@ public class Indexer {
                 String url = pair._1();
                 String page = pair._2();
 
-                System.out.println("[indexer] url pair: " + url);
-
                 log.info("[indexer] Indexing: " + url);
-
 
                 //List<String> links = Crawler.parsePageLinks(ctx, page, url, null);
 
-
-
-                String noHtml = page.replaceAll("<[^>]*>", " ").strip();
-
-                log.info("[indexer] No HTML: " + noHtml);
-
-                String noPunctuation = noHtml.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
-
-                log.info("[indexer] No Punctuation: " + noPunctuation);
-
-                String lowerCase = noPunctuation.toLowerCase().strip();
-
-                // filter non-lang chars
-                String filteredContent = filterNonLanguageCharacters(lowerCase);
+                String filteredContent = filterPage(page);
                 String[] words = filteredContent.split(" +");
 
                 if(words.length == 0 || words[0].isEmpty()) {
@@ -66,11 +48,7 @@ public class Indexer {
 
                 List<FlamePair> pairs = new ArrayList<>();
 
-
-                //Map<String, Integer> wordCount = new HashMap<>();
-
                 Map<String, List<Integer>> wordLocations = new HashMap<>();
-
 
                 for (int i = 0; i < words.length; i++) {
 
@@ -79,8 +57,6 @@ public class Indexer {
                         log.warn("[indexer] Empty word");
                     }
                     log.info("[indexer] Word: " + word);
-                    //int count = wordCount.getOrDefault(word, 0);
-                    //wordCount.put(word, count + 1);
 
                     List<Integer> locations = wordLocations.getOrDefault(word, new ArrayList<>());
                     locations.add(i);
@@ -125,8 +101,6 @@ public class Indexer {
                     pairs.add(new FlamePair(word, url + ":" + builder));
                 }
 
-
-
                 return pairs;
             }).foldByKey("", (s, t) -> {
                 if(s.isEmpty()) {
@@ -156,13 +130,27 @@ public class Indexer {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-
     }
 
-    public static String filterNonLanguageCharacters(String text) {
-        // 保留 Unicode 语言字符和空格，去除数字、符号和标点
-        return text.replaceAll("[^\\p{L}\\s]", "");
+    public static String filterPage(String page) {
+        if(page == null) {
+            return "";
+        }
+
+        String filtedText = page.toLowerCase().strip();
+
+        filtedText = filtedText.replaceAll("<[^>]*>", " ").strip();
+
+        log.info("[indexer] No HTML: " + filtedText);
+
+        filtedText = filtedText.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
+
+        log.info("[indexer] No Punctuation: " + filtedText);
+
+        // filter out non-letters
+        filtedText = filtedText.replaceAll("[^\\p{L}\\s]", " ").strip();
+
+        return filtedText;
     }
 
 

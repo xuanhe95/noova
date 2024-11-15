@@ -15,7 +15,7 @@ public class PropertyLoader {
             log.info("[property loader] Getting property: " + key + " = " + properties.getProperty(key));
             return properties.getProperty(key);
         } catch (Exception e) {
-            return null;
+            throw new RuntimeException("Error loading properties file", e);
         }
     }
 
