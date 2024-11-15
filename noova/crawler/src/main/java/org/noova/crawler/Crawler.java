@@ -46,8 +46,8 @@ public class Crawler implements Serializable {
         System.out.println("Crawler is running");
 
         // each worker work on separate ranges in parallel, e.g., on separate cores.
-        int CONCURRENCY_LEVEL=10;
-        ctx.setConcurrencyLevel(CONCURRENCY_LEVEL);
+        int concurrencyLevel=100;
+        ctx.setConcurrencyLevel(concurrencyLevel);
 
         if (args == null || args.length < 1) {
             log.error("Usage: Crawler <seed-url>");
@@ -196,7 +196,7 @@ public class Crawler implements Serializable {
     private static boolean checkUrlFormat(String normalizedUrl) {
         String lowerCaseUrl = normalizedUrl.toLowerCase();
 
-        Set<String> invalidSuffixFormats = Set.of(".jpg", ".jpeg", ".gif", ".png", ".txt", "webp", "svg");
+        Set<String> invalidSuffixFormats = Set.of(".jpg", ".jpeg", ".gif", ".png", ".txt", ".webp", ".svg");
         Set<String> validPrefixFormats = Set.of("http://", "https://");
         for(String suffix : invalidSuffixFormats){
             if(lowerCaseUrl.endsWith(suffix)){
