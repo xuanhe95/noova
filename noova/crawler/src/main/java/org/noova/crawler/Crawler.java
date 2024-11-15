@@ -244,8 +244,10 @@ public class Crawler implements Serializable {
             byte[] rawPage = conn.getInputStream().readAllBytes();
 
             String page = new String(rawPage);
-            String[] normalizedPages = normalizePage(page);
-            String normalizedPage = String.join(" ", normalizedPages);
+            //String[] normalizedPages = normalizePage(page);
+            //String normalizedPage = String.join(" ", normalizedPages);
+
+            String normalizedPage = filterPage(page);
 
             String hashedPage = Hasher.hash(normalizedPage);
 
@@ -419,6 +421,40 @@ public class Crawler implements Serializable {
             return requestGet(ctx, normalizedUrl, row, blacklistTable);
         }
     }
+
+    public static String filterPage(String page) {
+        if(page == null) {
+            return "";
+        }
+        // match <p> and <h1> to <h6> tags
+        Pattern pattern = Pattern.compile("(?s)<(p|h[1-6]).*?>(.*?)</\\1>");
+        Matcher matcher = pattern.matcher(page);
+        StringBuilder htmlContent = new StringBuilder();
+        // only keep the content inside <body> tag
+        while (matcher.find()) {
+            htmlContent.append(matcher.group(2)).append(" ");
+        }
+
+
+        String filtedText = htmlContent.toString();
+
+        filtedText = filtedText.toLowerCase().strip();
+
+        filtedText = filtedText.replaceAll("<[^>]*>", " ").strip();
+
+        log.info("[indexer] No HTML: " + filtedText);
+
+        filtedText = filtedText.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
+
+        log.info("[indexer] No Punctuation: " + filtedText);
+
+        // filter out non-letters
+        filtedText = filtedText.replaceAll("[^\\p{L}\\s]", " ").strip();
+
+        return filtedText;
+    }
+
+
 
     private static String[] normalizePage(String page){
 
