@@ -86,8 +86,9 @@ public class FlamePairRDDImpl implements FlamePairRDD {
         return new FlameRDDImpl(output, context);
     }
 
+    @Override
     public void destroy() throws Exception {
-
+        context.getKVS().delete(id);
     }
 
     @Override

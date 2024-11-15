@@ -56,7 +56,7 @@ public interface FlamePairRDD {
     public void destroy() throws Exception;
 
     // flatMapToPair() is analogous to flatMap(), except that the lambda returns pairs
-    // instead of strings, and tha tthe output is a PairRDD instead of a normal RDD.
+    // instead of strings, and tha the output is a PairRDD instead of a normal RDD.
 
     public FlamePairRDD flatMapToPair(PairToPairIterable lambda) throws Exception;
 

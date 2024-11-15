@@ -182,6 +182,10 @@ public class TransitTable implements Table{
     @Override
     public void clear(){
         // clear the table
+        MANAGER_MAP.forEach(
+                (key, value) -> value = null
+        );
+
         MANAGER_MAP.clear();
     }
 

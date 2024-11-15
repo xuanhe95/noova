@@ -78,7 +78,7 @@ public class FlameRDDImpl implements FlameRDD {
     }
 
     public void destroy() throws Exception {
-
+        context.getKVS().delete(id);
     }
 
     public Vector<String> take(int num) throws Exception {

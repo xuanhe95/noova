@@ -34,10 +34,10 @@ public class Crawler implements Serializable {
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
     private static final boolean ENABLE_LOOP_INTERVAL = false;
     private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
+    private static final boolean ENABLE_VERTICAL_CRAWL = true;
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
 
     private static final Map<String, SoftReference<String>> URL_CACHE = new WeakHashMap<>();
-
     private static final Map<String, SoftReference<String>> ROBOT_CACHE = new WeakHashMap<>();
     private static final boolean ENABLE_ANCHOR_EXTRACTION = false;
 
@@ -55,12 +55,21 @@ public class Crawler implements Serializable {
             return;
         }
 
-        String seedUrl = args[0];
+        //String seedUrl = args[0];
 
         // limit to seed url's domain for crawling first 200k pages
-        final String seedDomain = new URI(seedUrl).getHost();
-        log.info("[crawler] seed url init: "+ seedUrl);
-        log.info("[crawler] seed domain init: "+ seedDomain);
+        //final String seedDomain = new URI(seedUrl).getHost();
+
+
+        List<String> seedUrls = List.of(args);
+        Set<String> seedDomains = new HashSet<>();
+        for(String url : seedUrls){
+            seedDomains.add(new URI(url).getHost());
+        }
+
+
+        log.info("[crawler] seed url init: "+ seedUrls);
+        log.info("[crawler] seed domain init: "+ seedDomains);
 
         String blacklistTable;
 
@@ -72,15 +81,15 @@ public class Crawler implements Serializable {
             blacklistTable = null;
         }
 
-        log.info("[crawler] Starting crawler with seed URL: " + seedUrl);
+        log.info("[crawler] Starting crawler with seed URL: " + seedUrls);
 
-        FlameRDD urlQueue = ctx.parallelize(List.of(seedUrl));
+        FlameRDD urlQueue = ctx.parallelize(seedUrls);
 
         log.info("[crawler] Starting crawler with seed URL: " + Arrays.toString(args));
 
         while (urlQueue.count() != 0) {
             urlQueue = urlQueue.flatMap(rawUrl -> {
-                return processUrl(ctx, rawUrl, blacklistTable, seedDomain);
+                return processUrl(ctx, rawUrl, blacklistTable, seedDomains);
             });
             if(ENABLE_LOOP_INTERVAL){
                 Thread.sleep(LOOP_INTERVAL);
@@ -93,7 +102,7 @@ public class Crawler implements Serializable {
 
     }
 
-    private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, String seedDomain) throws Exception {
+    private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, Set<String> seedDomains) throws Exception {
 
 
         String normalizedUrl = normalizeURL(rawUrl, rawUrl);
@@ -125,8 +134,8 @@ public class Crawler implements Serializable {
             // skip if not in the same domain as seed url
             String urlDomain = url.getHost();
             log.info("[crawler] url domain: "+urlDomain);
-            if (!urlDomain.equals(seedDomain)) {
-                log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + seedDomain + ". Skipping.");
+            if (ENABLE_VERTICAL_CRAWL && !seedDomains.contains(urlDomain)) {
+                log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + seedDomains + ". Skipping.");
                 return new ArrayList<>();
             }
 
