@@ -66,6 +66,8 @@ public class Worker extends org.noova.generic.Worker {
         RouteRegistry.registerCreateTable();
         // hashcode
         RouteRegistry.registerHashCode();
+        // clean up locks
+        RouteRegistry.registerCleanup();
 
         startPingThread(coordinatorAddr, id, port);
         NodeManager.startNodeThread();
@@ -142,9 +144,5 @@ public class Worker extends org.noova.generic.Worker {
     public static TableManager getTableManager() {
         return tableManager;
     }
-
-
-
-
 
 }

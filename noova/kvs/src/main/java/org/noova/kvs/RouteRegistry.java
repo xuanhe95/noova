@@ -16,9 +16,11 @@ import org.noova.webserver.http.HttpStatus;
 import java.io.ByteArrayInputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
+import java.util.WeakHashMap;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -29,17 +31,15 @@ public class RouteRegistry {
     private static final boolean ENABLE_CONDITIONAL_PUT = false; // add macro
 
     // use table locks for delete, rename, read, create, stream put
-    private static final ConcurrentHashMap<String, ReentrantReadWriteLock> tableLocks = new ConcurrentHashMap<>();
-    private static ReentrantReadWriteLock getTableLock(String tableKey){
-        return tableLocks.computeIfAbsent(tableKey, key->new ReentrantReadWriteLock());
+    private static final Map<String, ReentrantReadWriteLock> tableLocks = Collections.synchronizedMap(new WeakHashMap<>());
+    private static ReentrantReadWriteLock getTableLock(String tableKey) {
+        return tableLocks.computeIfAbsent(tableKey, key -> new ReentrantReadWriteLock());
     }
 
     // use row locks for put
-    private static final ConcurrentHashMap<String, ConcurrentHashMap<String, ReentrantReadWriteLock>> rowLocks = new ConcurrentHashMap<>();
+    private static final Map<String, ReentrantReadWriteLock> rowLocks = Collections.synchronizedMap(new WeakHashMap<>());
     private static ReentrantReadWriteLock getRowLock(String tableKey, String rowKey) {
-        return rowLocks
-                .computeIfAbsent(tableKey, k -> new ConcurrentHashMap<>())
-                .computeIfAbsent(rowKey, k -> new ReentrantReadWriteLock());
+        return rowLocks.computeIfAbsent(tableKey + ":" + rowKey, key -> new ReentrantReadWriteLock());
     }
 
     static void registerRenameTable() {
@@ -107,7 +107,7 @@ public class RouteRegistry {
                     log.info("deleting table: " + tableKey);
 
                     // get write locks
-                    ReentrantReadWriteLock lock = getTableLock(tableKey);
+                    ReentrantReadWriteLock lock = getTableLock(tableKey); // rm deleted table lock from concurr hashmap
                     lock.writeLock().lock();
                     try {
                         Table table = TableManager.getInstance().getTable(tableKey);
@@ -123,8 +123,9 @@ public class RouteRegistry {
                         return "OK";
                     } finally {
                         lock.writeLock().unlock();
-                        tableLocks.remove(tableKey); // rm deleted table lock from concurr hashmap
+                        tableLocks.remove(tableKey);
                     }
+
                 });
     }
 
@@ -547,6 +548,23 @@ public class RouteRegistry {
 
 
                 });
+    }
+
+    public static void cleanup() {
+        tableLocks.clear();
+        rowLocks.clear();
+        log.info("Cleared all table locks and reset for a fresh start.");
+    }
+
+    static void registerCleanup() {
+        Server.get(
+                "/cleanup",
+                (req, res) -> {
+                    cleanup();
+                    res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
+                    return "Locks cleared successfully.";
+                }
+        );
     }
 
     static String decodeRowKey(Request req){

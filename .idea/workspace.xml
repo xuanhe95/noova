@@ -5,9 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/noova/rmLocks.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/RouteRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/RouteRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/Worker.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/Worker.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -81,7 +83,7 @@
     "git-widget-placeholder": "main",
     "jdk.selected.JAVA_MODULE": "openjdk-19",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/ritazhang/Desktop/upenn-mcit/555/Noova/noova/kvs/src/test/java/org/noova/kvs",
+    "last_opened_file_path": "/Users/ritazhang/Desktop/upenn-mcit/555/Noova/noova/sample",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -98,6 +100,8 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/noova/sample" />
+      <recent name="$PROJECT_DIR$/noova/sample/worker1" />
       <recent name="$PROJECT_DIR$/noova/kvs/src/test/java/org/noova/kvs" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
@@ -105,7 +109,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Application.FlameSubmit">
     <configuration name="FlameSubmit" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.flame.FlameSubmit" />
       <module name="flame" />
@@ -204,6 +208,8 @@
       <workItem from="1731467545698" duration="1513000" />
       <workItem from="1731533498272" duration="6362000" />
       <workItem from="1731539893400" duration="29033000" />
+      <workItem from="1731781630206" duration="29000" />
+      <workItem from="1731781701776" duration="3615000" />
     </task>
     <servers />
   </component>

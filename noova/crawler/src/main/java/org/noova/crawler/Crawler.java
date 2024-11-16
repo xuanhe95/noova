@@ -3,6 +3,7 @@ package org.noova.crawler;
 import org.noova.flame.FlameContext;
 import org.noova.flame.FlameRDD;
 import org.noova.kvs.Row;
+import org.noova.kvs.RouteRegistry;
 import org.noova.tools.Hasher;
 import org.noova.tools.Logger;
 import org.noova.tools.URLParser;
@@ -14,6 +15,7 @@ import java.net.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class Crawler implements Serializable {
 
@@ -46,8 +48,7 @@ public class Crawler implements Serializable {
         System.out.println("Crawler is running");
 
         // each worker work on separate ranges in parallel, e.g., on separate cores.
-        int concurrencyLevel=6;
-        ctx.setConcurrencyLevel(concurrencyLevel);
+        ctx.setConcurrencyLevel(6);
 
         if (args == null || args.length < 1) {
             log.error("Usage: Crawler <seed-url>");
@@ -79,6 +80,10 @@ public class Crawler implements Serializable {
 
         log.info("[crawler] Starting crawler with seed URL before parallelize: " + seedUrls);
 
+        //! rm locks cache for debugging crawler
+//        RouteRegistry.cleanup();
+//        log.info("[crawler] cleaning up locks in RouteRegistry");
+
         FlameRDD urlQueue = ctx.parallelize(seedUrls);
 
         log.info("[crawler] Starting crawler with seed URL: " + Arrays.toString(args));
@@ -96,6 +101,9 @@ public class Crawler implements Serializable {
         log.info("[crawler] Crawler finished");
 
         ctx.output("OK");
+
+        //! rm locks cache for debugging crawler
+//        RouteRegistry.cleanup();
 
     }
 
@@ -122,8 +130,8 @@ public class Crawler implements Serializable {
 
             // filter for domain name
             URL url = new URI(normalizedUrl).toURL();
-            if (url.getHost() == null) {
-                log.warn("[crawler] Invalid URL: " + normalizedUrl);
+            if (url.getHost() == null||url.getPort() < -1 || url.getPort() > 65535) {
+                log.warn("[crawler] Invalid host or port in URL: " + normalizedUrl);
                 return new ArrayList<>();
             }
             // skip if not in the same domain as seed url
@@ -566,25 +574,31 @@ public class Crawler implements Serializable {
             rawUrl = baseUrl.substring(0, baseUrl.lastIndexOf("/")) + rawUrl;
         }
 
-        String[] parts = URLParser.parseURL(rawUrl);
+        try{
+            String[] parts = URLParser.parseURL(rawUrl);
 
-        String protocol;
-        String host;
-        String port;
-        String path;
+            String protocol;
+            String host;
+            String port;
+            String path;
 
-        if (parts[0] == null && parts[1] == null) {
-            protocol = URLParser.parseURL(baseUrl)[0] == null ? "http" : URLParser.parseURL(baseUrl)[0];
-            host = URLParser.parseURL(baseUrl)[1];
-            port = URLParser.parseURL(baseUrl)[2] == null ? "http".equals(protocol) ? "80" : "443" : URLParser.parseURL(baseUrl)[2];
-            path = parts[3];
-        } else {
-            protocol = parts[0] == null ? "http" : parts[0];
-            host = parts[1] == null ? URLParser.parseURL(baseUrl)[1] : parts[1];
-            port = parts[2] == null ? "http".equals(protocol) ? "80" : "443" : parts[2];
-            path = parts[3];
+            if (parts[0] == null && parts[1] == null) {
+                protocol = URLParser.parseURL(baseUrl)[0] == null ? "http" : URLParser.parseURL(baseUrl)[0];
+                host = URLParser.parseURL(baseUrl)[1];
+                port = URLParser.parseURL(baseUrl)[2] == null ? "http".equals(protocol) ? "80" : "443" : URLParser.parseURL(baseUrl)[2];
+                path = parts[3];
+            } else {
+                protocol = parts[0] == null ? "http" : parts[0];
+                host = parts[1] == null ? URLParser.parseURL(baseUrl)[1] : parts[1];
+                port = parts[2] == null ? "http".equals(protocol) ? "80" : "443" : parts[2];
+                path = parts[3];
+            }
+            return protocol + "://" + host + ":" + port + path;
+        } catch(Exception e){
+            log.error("[normalizeURL] Malformed URL: " + rawUrl, e);
+            return null;
         }
-        return protocol + "://" + host + ":" + port + path;
+
     }
 
     private static void updateHostLastAccessTime(FlameContext ctx, String hostName) throws IOException {
@@ -756,6 +770,14 @@ public class Crawler implements Serializable {
     private static boolean checkRobotRules(FlameContext ctx, String normalizedUrl)  {
         try {
             URL url = new URI(normalizedUrl).toURL();
+
+            // check port
+            int port = url.getPort();
+            if (port != -1 && (port < 1 || port > 65535)) {
+                log.warn("[checkRobotRules] Invalid port in URL: " + normalizedUrl);
+                return true; // allow processing if malformed?
+            }
+
             // check if the host is in the table
             Row row = ctx.getKVS().getRow(HOSTS_TABLE, url.getHost());
             if (row == null) {
@@ -824,9 +846,15 @@ public class Crawler implements Serializable {
     }
 
     private static boolean startWithPattern(String normalizedUrlPath, String pattern) {
-        String regex = pattern.replace(".", "\\.").replace("*", ".*");
-        regex = "^" + regex + ".*";
-        return normalizedUrlPath.matches(regex);
+        try{
+            String regex = pattern.replace(".", "\\.").replace("*", ".*");
+            regex = "^" + regex + ".*";
+            return normalizedUrlPath.matches(regex);
+        } catch (PatternSyntaxException e) {
+            log.error("[crawler] Invalid pattern in robots.txt: " + pattern, e);
+            return false;
+        }
+
     }
 
 }
