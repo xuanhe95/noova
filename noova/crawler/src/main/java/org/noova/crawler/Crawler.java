@@ -633,6 +633,13 @@ public class Crawler implements Serializable {
                     userAgent = line.split(":")[1].strip();
 
                 } else if(userAgent != null && line.strip().toLowerCase().startsWith(RULE_DISALLOW.toLowerCase())) {
+                    /* for case disallow: empty
+                    User-agent: Pinterest
+                    Disallow:
+                     */
+                    if (line.split(":").length==1){
+                        continue;
+                    }
                     String path = line.split(":")[1].strip();
 
                     StringBuilder rule = rules.getOrDefault(RULE_DISALLOW, new StringBuilder()).append(path).append("\n");
