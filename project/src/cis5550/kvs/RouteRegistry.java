@@ -83,7 +83,7 @@ public class RouteRegistry {
 
                     Table table = TableManager.getInstance().getTable(tableKey);
                     if(table == null){
-                        log.error("Table not found");
+                        log.error("[delete]Table not found");
                         res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
                         return null;
                     }
@@ -301,7 +301,7 @@ public class RouteRegistry {
                 Version<Row> version = tableManager.getRow(tableKey, rowKey, versionKey);
 
                 if(version == null) {
-                    log.error("Version not found");
+                    log.warn("Version not found");
                     res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
                     return null;
                 }
@@ -330,7 +330,7 @@ public class RouteRegistry {
 
                     Table table = tableManager.getTable(tableKey);
                     if(table == null){
-                        log.error("Table not found");
+                        log.error("[count]Table not found");
                         res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
                         return null;
                     }
@@ -389,7 +389,7 @@ public class RouteRegistry {
 
 
                     if(version == null) {
-                        log.error("Version not found");
+                        log.warn("Version not found");
                         res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
                         return null;
                     }

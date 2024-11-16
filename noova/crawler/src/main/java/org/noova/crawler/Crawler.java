@@ -26,13 +26,13 @@ public class Crawler implements Serializable {
     private static final String TRANSIT_ACCESSED_LINK_TABLE = "accessed";
     private static final long DEFAULT_ACCESS_INTERVAL = 1000;
     private static final long DEFAULT_CRAWL_DELAY_IN_SECOND = 1;
-    private static final long LOOP_INTERVAL = 1000;
+    private static final long LOOP_INTERVAL = 10;
     private static final String CANONICAL_PAGE_TABLE = TABLE_PREFIX + "canonical";
     public static final String ROBOTS_TXT_PATH = "robots.txt";
     private static final String RULE_DISALLOW = "Disallow";
     private static final String RULE_ALLOW = "Allow";
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
-    private static final boolean ENABLE_LOOP_INTERVAL = false;
+    private static final boolean ENABLE_LOOP_INTERVAL = true;
     private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
     private static final boolean ENABLE_VERTICAL_CRAWL = true;
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
@@ -46,7 +46,7 @@ public class Crawler implements Serializable {
         System.out.println("Crawler is running");
 
         // each worker work on separate ranges in parallel, e.g., on separate cores.
-        int concurrencyLevel=100;
+        int concurrencyLevel=6;
         ctx.setConcurrencyLevel(concurrencyLevel);
 
         if (args == null || args.length < 1) {
@@ -57,16 +57,12 @@ public class Crawler implements Serializable {
 
         //String seedUrl = args[0];
 
-        // limit to seed url's domain for crawling first 200k pages
-        //final String seedDomain = new URI(seedUrl).getHost();
-
-
+        // limit to seed urls' domain for crawling first 200k pages
         List<String> seedUrls = List.of(args);
         Set<String> seedDomains = new HashSet<>();
         for(String url : seedUrls){
             seedDomains.add(new URI(url).getHost());
         }
-
 
         log.info("[crawler] seed url init: "+ seedUrls);
         log.info("[crawler] seed domain init: "+ seedDomains);
@@ -81,11 +77,12 @@ public class Crawler implements Serializable {
             blacklistTable = null;
         }
 
-        log.info("[crawler] Starting crawler with seed URL: " + seedUrls);
+        log.info("[crawler] Starting crawler with seed URL before parallelize: " + seedUrls);
 
         FlameRDD urlQueue = ctx.parallelize(seedUrls);
 
         log.info("[crawler] Starting crawler with seed URL: " + Arrays.toString(args));
+        log.info("[crawler] urlQueue count: " + urlQueue.count());
 
         while (urlQueue.count() != 0) {
             urlQueue = urlQueue.flatMap(rawUrl -> {
@@ -103,8 +100,6 @@ public class Crawler implements Serializable {
     }
 
     private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, Set<String> seedDomains) throws Exception {
-
-
         String normalizedUrl = normalizeURL(rawUrl, rawUrl);
         if(normalizedUrl == null){
             log.warn("[crawler] URL " + rawUrl + " is not a valid URL. Skipping.");
@@ -257,10 +252,13 @@ public class Crawler implements Serializable {
             if (pageRow == null || pageRow.get("canonicalURL") == null || pageRow.get("canonicalURL").equals(normalizedUrl)) {
                 log.info("[crawler] Creating new canonical URL: " + normalizedUrl);
                 row.put("page", normalizedPage);
+//                row.put("page", page);
 
                 pageRow = new Row(hashedPage);
                 pageRow.put("canonicalURL", normalizedUrl);
                 pageRow.put("page", normalizedPage);
+//                pageRow.put("page", page);
+
 
                 log.info("[crawler] kvs addr: " + ctx.getKVS().getCoordinator());
 

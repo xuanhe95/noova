@@ -25,6 +25,7 @@ public class TableManager implements ITableManager {
     private static String storageDir;
     private TableManager(){
         storageDir = Worker.getStorageDir();
+        log.info("TableManager storageDir: "+storageDir);
         // scan the storage directory to load the persist tables
         scanPersistTables();
     }
@@ -78,6 +79,8 @@ public class TableManager implements ITableManager {
             log.info("[table manager] get persist table: " + tableKey);
             //TABLE_MAP.put(tableKey, new PersistTable(tableKey, storageDir));
         }
+
+        log.info("[table manager] get transit table: " + tableKey);
 
         return TABLE_MAP.getOrDefault(tableKey , null);
     }

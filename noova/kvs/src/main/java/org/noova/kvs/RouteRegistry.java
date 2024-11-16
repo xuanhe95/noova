@@ -19,11 +19,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class RouteRegistry {
 
     private static final Logger log = Logger.getLogger(RouteRegistry.class);
     private static final TableManager tableManager = TableManager.getInstance();
+
+    // use locks table synchronization
+    private static final ConcurrentHashMap<String, ReentrantReadWriteLock> tableLocks = new ConcurrentHashMap<>();
+    private static ReentrantReadWriteLock getTableLock(String tableKey){
+        return tableLocks.computeIfAbsent(tableKey, key->new ReentrantReadWriteLock());
+    }
 
     static void registerRenameTable() {
         // rename
@@ -40,35 +48,45 @@ public class RouteRegistry {
                         return null;
                     }
 
-                    Table table = TableManager.getInstance().getTable(tableKey);
-                    if (table == null) {
-                        log.error("[rename] Table not found");
-                        res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
-                        return null;
-                    }
+                    // get write locks for each table
+                    ReentrantReadWriteLock oldLock = getTableLock(tableKey);
+                    ReentrantReadWriteLock newLock = getTableLock(newTableKey);
+                    oldLock.writeLock().lock();
+                    newLock.writeLock().lock();
 
-                    Table newTable = TableManager.getInstance().getTable(newTableKey);
-                    if (newTable != null) {
-                        log.error("[rename] New table " +  newTableKey + " already exists");
-                        //res.status(HttpStatus.CONFLICT.getCode(), HttpStatus.CONFLICT.getMessage());
-                        //return null;
-                    }
+                    try {
+                        Table table = TableManager.getInstance().getTable(tableKey);
+                        if (table == null) {
+                            log.error("[rename] Table not found");
+                            res.status(HttpStatus.NOT_FOUND.getCode() , HttpStatus.NOT_FOUND.getMessage());
+                            return null;
+                        }
 
-                    boolean ok = TableManager.getInstance().rename(tableKey, newTableKey);
+                        Table newTable = TableManager.getInstance().getTable(newTableKey);
+                        if (newTable != null) {
+                            log.error("[rename] New table " + newTableKey + " already exists");
+                            //res.status(HttpStatus.CONFLICT.getCode(), HttpStatus.CONFLICT.getMessage());
+                            //return null;
+                        }
+
+                        boolean ok = TableManager.getInstance().rename(tableKey , newTableKey);
 
 
-                    if (ok) {
-                        log.info("[rename] Table " + tableKey + " renamed to " + newTableKey);
-                        res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
-                        return "OK";
-                    } else {
-                        log.error("[rename] Table rename failed");
-                        res.status(HttpStatus.INTERNAL_SERVER_ERROR.getCode(), HttpStatus.INTERNAL_SERVER_ERROR.getMessage());
-                        return "FAIL";
+                        if (ok) {
+                            log.info("[rename] Table " + tableKey + " renamed to " + newTableKey);
+                            res.status(HttpStatus.OK.getCode() , HttpStatus.OK.getMessage());
+                            return "OK";
+                        } else {
+                            log.error("[rename] Table rename failed");
+                            res.status(HttpStatus.INTERNAL_SERVER_ERROR.getCode() , HttpStatus.INTERNAL_SERVER_ERROR.getMessage());
+                            return "FAIL";
+                        }
+                    } finally {
+                        newLock.writeLock().unlock(); // release locks
+                        oldLock.writeLock().unlock();
+                        tableLocks.put(newTableKey, tableLocks.remove(tableKey)); // update locks's key
                     }
                 });
-
-
     }
 
     static void registerDeleteTable(){
@@ -79,17 +97,25 @@ public class RouteRegistry {
 
                     log.info("deleting table: " + tableKey);
 
-                    Table table = TableManager.getInstance().getTable(tableKey);
-                    if(table == null){
-                        log.error("Table not found");
-                        res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
-                        return null;
+                    // get rwitw locks
+                    ReentrantReadWriteLock lock = getTableLock(tableKey);
+                    lock.writeLock().lock();
+                    try {
+                        Table table = TableManager.getInstance().getTable(tableKey);
+                        if(table == null){
+                            log.error("[routeReg delete]Table not found");
+                            res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
+                            return null;
+                        }
+
+                        TableManager.getInstance().delete(tableKey);
+
+                        res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
+                        return "OK";
+                    } finally {
+                        lock.writeLock().unlock();
+                        tableLocks.remove(tableKey); // rm deleted table lock from concurr hashmap
                     }
-
-                    TableManager.getInstance().delete(tableKey);
-
-                    res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
-                    return "OK";
                 });
     }
 
@@ -100,34 +126,39 @@ public class RouteRegistry {
                 "/data/:table/:row/:column",
                 (req, res) -> {
 
-                    synchronized (Worker.class) {
+                    // split synchronized parts?
+//                    synchronized (Worker.class) {
 
-                        String tableKey = req.params("table");
-                        String rowKey = decodeRowKey(req);
-                        String columnKey = req.params("column");
-                        byte[] data = req.bodyAsBytes();
+                    String tableKey = req.params("table");
+                    String rowKey = decodeRowKey(req);
+                    String columnKey = req.params("column");
+                    byte[] data = req.bodyAsBytes();
 
-                        log.warn("[PUT] | " +  tableKey + " | " + rowKey + " | " + columnKey + " | " + new String(data));
+                    log.warn("[PUT] | " +  tableKey + " | " + rowKey + " | " + columnKey + " | " + new String(data));
 
-                        // for EC
-                        // revised from query params to params
-                        String ifColumn = req.params("ifcolumn");
-                        String equals = req.params("equals");
+                    // for EC
+                    // revised from query params to params
+                    String ifColumn = req.params("ifcolumn");
+                    String equals = req.params("equals");
 
-                        if (ifColumn != null && equals != null) {
-                            byte[] originalValue = TableManager.getInstance().getValue(tableKey, rowKey, ifColumn);
-                            if (originalValue == null) {
-                                return "FAIL";
-                            }
-                            if (new String(originalValue).equals(equals)) {
-                                log.info("updating value: " + tableKey + " row: " + rowKey + " column: " + columnKey + " data: " + new String(data));
-                                TableManager.getInstance().putValue(tableKey, rowKey, columnKey, data);
+                    if (ifColumn != null && equals != null) {
+                        byte[] originalValue = TableManager.getInstance().getValue(tableKey, rowKey, ifColumn);
+                        if (originalValue == null) {
+                            return "FAIL";
+                        }
+                        if (new String(originalValue).equals(equals)) {
+                            log.info("updating value: " + tableKey + " row: " + rowKey + " column: " + columnKey + " data: " + new String(data));
+                            TableManager.getInstance().putValue(tableKey, rowKey, columnKey, data);
 
-                                return "OK";
-                            } else {
-                                return "FAIL";
-                            }
+                            return "OK";
                         } else {
+                            return "FAIL";
+                        }
+                    } else {
+                        // using table locks
+                        ReentrantReadWriteLock lock = getTableLock(tableKey);
+                        lock.writeLock().lock(); // get write lock
+                        try{
                             Table table = tableManager.addTable(tableKey);
                             if (table instanceof TransitTable) {
                                 log.info("[PUT] Transit");
@@ -151,8 +182,12 @@ public class RouteRegistry {
                             }
 
                             return "OK";
+                        } finally {
+                            lock.writeLock().unlock(); // release write lock
                         }
+
                     }
+//                    }
                 }
         );
     }
@@ -179,13 +214,19 @@ public class RouteRegistry {
                 (req, res) -> {
                     String tableKey = req.params("table");
                     log.info("[stream put] | " + tableKey);
-                    ByteArrayInputStream in = new ByteArrayInputStream(req.bodyAsBytes());
-                    while(true){
-                        Row row = Row.readFrom(in);
-                        if(row == null){
-                            return "OK";
+                    ReentrantReadWriteLock lock = getTableLock(tableKey);
+                    lock.writeLock().lock(); // Acquire write lock
+                    try {
+                        ByteArrayInputStream in = new ByteArrayInputStream(req.bodyAsBytes());
+                        while (true) {
+                            Row row = Row.readFrom(in);
+                            if (row == null) {
+                                return "OK";
+                            }
+                            tableManager.putRow(tableKey , row);
                         }
-                        tableManager.putRow(tableKey, row);
+                    } finally {
+                        lock.writeLock().unlock();
                     }
                 }
         );
@@ -226,28 +267,36 @@ public class RouteRegistry {
 
                     log.info("[stream read] | " + tableKey + " | start: " + startRow + " | endExclusive: " + endRowExclusive);
 
-                    Table table = tableManager.getTable(tableKey);
 
-                    if(table == null) {
-                        log.warn("[stream read] Table not found");
-                        res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
-                        return null;
-                    }
+                    ReentrantReadWriteLock lock = getTableLock(tableKey);
+                    lock.readLock().lock();
+                    try{
+                        Table table = tableManager.getTable(tableKey);
 
-                    List<Row> rows = table.getRows(startRow, endRowExclusive);
+                        if(table == null) {
+                            log.warn("[stream read] Table not found");
+                            res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
+                            return null;
+                        }
 
-                    StringBuilder builder = new StringBuilder();
+                        List<Row> rows = table.getRows(startRow, endRowExclusive);
 
-                    for(Row row : rows) {
-                        log.info("Row: " + row.key());
-                        builder.append(new String(row.toByteArray()));
+                        StringBuilder builder = new StringBuilder();
+
+                        for(Row row : rows) {
+                            log.info("Row: " + row.key());
+                            builder.append(new String(row.toByteArray()));
+                            builder.append("\n");
+                        }
                         builder.append("\n");
+
+                        res.body(builder.toString());
+
+                        return null;
+                    } finally {
+                        lock.readLock().unlock();
                     }
-                    builder.append("\n");
 
-                    res.body(builder.toString());
-
-                    return null;
                 });
 
     }
@@ -299,7 +348,7 @@ public class RouteRegistry {
                 Version<Row> version = tableManager.getRow(tableKey, rowKey, versionKey);
 
                 if(version == null) {
-                    log.error("Version not found");
+                    log.warn("Version not found");
                     res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
                     return null;
                 }
@@ -326,17 +375,33 @@ public class RouteRegistry {
 
                     log.info("getting count of table: " + tableKey);
 
-                    Table table = tableManager.getTable(tableKey);
-                    if(table == null){
-                        log.error("Table not found");
-                        res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
-                        return null;
+                    ReentrantReadWriteLock lock = getTableLock(tableKey);
+                    lock.readLock().lock();
+                    try{
+                        Table table=tableManager.getTable(tableKey);
+                        if (table == null){
+                            log.error("[regCount]Table not found");
+                            res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
+                            return null;
+                        }
+                        int count = table.count();
+
+                        res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
+                        return Integer.toString(count);
+                    } finally {
+                        lock.readLock().unlock();
                     }
 
-                    int count = table.count();
 
-                    res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
-                    return Integer.toString(count);
+//                    synchronized (tableManager){
+//                        if (tableManager.getTable(tableKey) == null){
+//                            log.error("[regCount]Table not found");
+//                            res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
+//                            return null;
+//                        }
+//                    }
+
+
                 });
     }
 
@@ -387,7 +452,7 @@ public class RouteRegistry {
 
 
                     if(version == null) {
-                        log.error("Version not found");
+                        log.warn("Version not found");
                         res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
                         return null;
                     }

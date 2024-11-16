@@ -1,8 +1,11 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="FlameCoordinator" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="cis5550.flame.Coordinator" />
-    <module name="Project" />
+    <option name="ALTERNATIVE_JRE_PATH" value="19" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="MAIN_CLASS_NAME" value="org.noova.flame.Coordinator" />
+    <module name="flame" />
     <option name="PROGRAM_PARAMETERS" value="9000 localhost:8000" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="cis5550.flame.*" />
