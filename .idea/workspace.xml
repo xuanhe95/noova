@@ -5,20 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_annotations_2_18_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_core_2_18_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_databind_2_18_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__junit_junit_4_13_1.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Maven__org_hamcrest_hamcrest_core_1_3.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/RouteRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/RouteRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/table/TableManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/table/TableManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/.run/FlameCoordinator.run.xml" beforeDir="false" afterPath="$PROJECT_DIR$/project/.run/FlameCoordinator.run.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/.run/FlameWorker1.run.xml" beforeDir="false" afterPath="$PROJECT_DIR$/project/.run/FlameWorker1.run.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/.run/FlameWorker2.run.xml" beforeDir="false" afterPath="$PROJECT_DIR$/project/.run/FlameWorker2.run.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/src/cis5550/kvs/RouteRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/project/src/cis5550/kvs/RouteRegistry.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

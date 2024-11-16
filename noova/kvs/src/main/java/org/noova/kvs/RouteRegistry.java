@@ -26,11 +26,20 @@ public class RouteRegistry {
 
     private static final Logger log = Logger.getLogger(RouteRegistry.class);
     private static final TableManager tableManager = TableManager.getInstance();
+    private static final boolean ENABLE_CONDITIONAL_PUT = false; // add macro
 
-    // use locks table synchronization
+    // use table locks for delete, rename, read, create, stream put
     private static final ConcurrentHashMap<String, ReentrantReadWriteLock> tableLocks = new ConcurrentHashMap<>();
     private static ReentrantReadWriteLock getTableLock(String tableKey){
         return tableLocks.computeIfAbsent(tableKey, key->new ReentrantReadWriteLock());
+    }
+
+    // use row locks for put
+    private static final ConcurrentHashMap<String, ConcurrentHashMap<String, ReentrantReadWriteLock>> rowLocks = new ConcurrentHashMap<>();
+    private static ReentrantReadWriteLock getRowLock(String tableKey, String rowKey) {
+        return rowLocks
+                .computeIfAbsent(tableKey, k -> new ConcurrentHashMap<>())
+                .computeIfAbsent(rowKey, k -> new ReentrantReadWriteLock());
     }
 
     static void registerRenameTable() {
@@ -97,7 +106,7 @@ public class RouteRegistry {
 
                     log.info("deleting table: " + tableKey);
 
-                    // get rwitw locks
+                    // get write locks
                     ReentrantReadWriteLock lock = getTableLock(tableKey);
                     lock.writeLock().lock();
                     try {
@@ -126,9 +135,6 @@ public class RouteRegistry {
                 "/data/:table/:row/:column",
                 (req, res) -> {
 
-                    // split synchronized parts?
-//                    synchronized (Worker.class) {
-
                     String tableKey = req.params("table");
                     String rowKey = decodeRowKey(req);
                     String columnKey = req.params("column");
@@ -141,24 +147,25 @@ public class RouteRegistry {
                     String ifColumn = req.params("ifcolumn");
                     String equals = req.params("equals");
 
-                    if (ifColumn != null && equals != null) {
-                        byte[] originalValue = TableManager.getInstance().getValue(tableKey, rowKey, ifColumn);
-                        if (originalValue == null) {
-                            return "FAIL";
-                        }
-                        if (new String(originalValue).equals(equals)) {
-                            log.info("updating value: " + tableKey + " row: " + rowKey + " column: " + columnKey + " data: " + new String(data));
-                            TableManager.getInstance().putValue(tableKey, rowKey, columnKey, data);
+                    // using row locks
+                    ReentrantReadWriteLock lock = getRowLock(tableKey, rowKey);
+                    lock.writeLock().lock(); // get write lock
 
-                            return "OK";
+                    try {
+                        if (ENABLE_CONDITIONAL_PUT && ifColumn != null && equals != null) {
+                            byte[] originalValue = TableManager.getInstance().getValue(tableKey , rowKey , ifColumn);
+                            if (originalValue == null) {
+                                return "FAIL";
+                            }
+                            if (new String(originalValue).equals(equals)) {
+                                log.info("updating value: " + tableKey + " row: " + rowKey + " column: " + columnKey + " data: " + new String(data));
+                                TableManager.getInstance().putValue(tableKey , rowKey , columnKey , data);
+
+                                return "OK";
+                            } else {
+                                return "FAIL";
+                            }
                         } else {
-                            return "FAIL";
-                        }
-                    } else {
-                        // using table locks
-                        ReentrantReadWriteLock lock = getTableLock(tableKey);
-                        lock.writeLock().lock(); // get write lock
-                        try{
                             Table table = tableManager.addTable(tableKey);
                             if (table instanceof TransitTable) {
                                 log.info("[PUT] Transit");
@@ -167,27 +174,24 @@ public class RouteRegistry {
                                 Version<Row> version = table.putRow(rowKey);
                                 Row row = version.getValue();
                                 String ver = version.getVersion();
+                                res.header("version" , ver);
 
-                                res.header("version", ver);
-
-                                row.put(columnKey, data);
+                                row.put(columnKey , data);
 
                             } else {
                                 log.info("[PUT] Persist");
                                 Row row = table.putRow(rowKey).getValue();
 
-                                row.put(columnKey, data);
+                                row.put(columnKey , data);
 
-                                tableManager.putRow(tableKey, row);
+                                tableManager.putRow(tableKey , row);
                             }
 
                             return "OK";
-                        } finally {
-                            lock.writeLock().unlock(); // release write lock
                         }
-
+                    } finally {
+                        lock.writeLock().unlock(); // release write lock
                     }
-//                    }
                 }
         );
     }
@@ -267,7 +271,7 @@ public class RouteRegistry {
 
                     log.info("[stream read] | " + tableKey + " | start: " + startRow + " | endExclusive: " + endRowExclusive);
 
-
+                    // get read lock
                     ReentrantReadWriteLock lock = getTableLock(tableKey);
                     lock.readLock().lock();
                     try{
@@ -375,6 +379,7 @@ public class RouteRegistry {
 
                     log.info("getting count of table: " + tableKey);
 
+                    // get read lock
                     ReentrantReadWriteLock lock = getTableLock(tableKey);
                     lock.readLock().lock();
                     try{
@@ -520,17 +525,27 @@ public class RouteRegistry {
 
                     log.info("[create] | " + tableKey);
 
-                    Table table = TableManager.getInstance().getTable(tableKey);
-                    if(table != null){
-                        log.error("Table already exists");
-                        res.status(HttpStatus.CONFLICT.getCode(), HttpStatus.CONFLICT.getMessage());
-                        return null;
+                    // get write lock
+                    ReentrantReadWriteLock lock = getTableLock(tableKey);
+                    lock.writeLock().lock();
+
+                    try{
+                        Table table = TableManager.getInstance().getTable(tableKey);
+                        if(table != null){
+                            log.error("Table already exists");
+                            res.status(HttpStatus.CONFLICT.getCode(), HttpStatus.CONFLICT.getMessage());
+                            return null;
+                        }
+
+                        TableManager.getInstance().addTable(tableKey);
+
+                        res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
+                        return "OK";
+                    } finally {
+                        lock.writeLock().unlock(); // release lock
                     }
 
-                    TableManager.getInstance().addTable(tableKey);
 
-                    res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
-                    return "OK";
                 });
     }
 
