@@ -14,6 +14,7 @@ import org.noova.tools.PropertyLoader;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Xuanhe Zhang
@@ -33,6 +34,9 @@ public class SearchService implements IService {
     private static final boolean ENABLE_TRIE_CACHE = PropertyLoader.getProperty("cache.trie.enable").equals("true");
 
     private static final KVS KVS = storageStrategy.getKVS();
+
+
+    private static final int totalDocuments = 815; // TBD, hardcoded for now
 
 
     private SearchService() {
@@ -180,5 +184,142 @@ public class SearchService implements IService {
     public List<String> predict(String prefix, int limit) {
         return trie.getWordsWithPrefix(prefix, limit);
     }
+
+
+    public Map<String, Set<Integer>> searchByKeywords(String keywords) throws IOException {
+        String[] terms = keywords.split("\\s+"); //TBD: auto correction logic and security checks
+        Map<String, Set<Integer>> aggregatedResults = new HashMap<>();
+
+        for (String term : terms) {
+            Map<String, Set<Integer>> urlsForTerm = searchByKeyword(term);
+            urlsForTerm.forEach((url, positions) -> {
+                aggregatedResults.computeIfAbsent(url, k -> new HashSet<>()).addAll(positions);
+            });
+        }
+
+        return aggregatedResults;
+    }
+
+    public Map<String, Double> calculateQueryTFIDF(String query) throws IOException {
+        List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
+        Map<String, Double> queryTfidf = new HashMap<>();
+
+        for (String term : queryTokens) {
+            int df = documentFrequency(term);
+            if (df > 0) {
+                double idf = Math.log((double) totalDocuments / (1 + df));
+                double tf = Collections.frequency(queryTokens, term) / (double) queryTokens.size();
+//                log.info("[search] tf: "+ tf + " idf: " +idf + " df: "+ df);
+                queryTfidf.put(term, tf * idf);
+            }
+        }
+        return queryTfidf;
+    }
+
+    public Map<String, Double> calculateDocumentTFIDF(String url, Set<Integer> positions) throws IOException {
+        Map<String, Double> docTfidf = new HashMap<>();
+
+        String hashedUrl = Hasher.hash(url);
+        Row row = KVS.getRow(PropertyLoader.getProperty("table.crawler"), hashedUrl);
+        log.info("[search] Found row: " + hashedUrl + " for URL: " + url + "row: " + row);
+        if (row == null) {
+            log.warn("[search] calculateDocumentTFIDF No content found for URL: " + url);
+            return docTfidf;
+        }
+
+        String pageContent = row.get("page");
+        if (pageContent == null) {
+            log.warn("[search] calculateDocumentTFIDF No page content in 'page' column for URL: " + url);
+            return docTfidf;
+        }
+
+        List<String> terms = Arrays.asList(pageContent.toLowerCase().split("\\s+"));
+        int docLength = terms.size();
+
+        Map<String, Long> termFrequencies = terms.stream().collect(Collectors.groupingBy(term -> term, Collectors.counting()));
+
+        for (Map.Entry<String, Long> entry : termFrequencies.entrySet()) {
+            String term = entry.getKey();
+            long tf = entry.getValue();
+
+            int df = documentFrequency(term);
+            if (df > 0) {
+                double idf = Math.log((double) totalDocuments / (1 + df));
+                double tfidfValue = (tf / (double) docLength) * idf;
+                docTfidf.put(term, tfidfValue);
+                log.info("[search] calculateDocumentTFIDF tf: "+ tf + " docLength: " + docLength + " idf: " +idf + " df: "+ df);
+
+            }
+        }
+
+        return docTfidf;
+    }
+
+    public double cosineSimilarity(Map<String, Double> vec1, Map<String, Double> vec2) {
+        double dotProduct = 0.0;
+        double norm1 = 0.0;
+        double norm2 = 0.0;
+
+        for (String term : vec1.keySet()) {
+            dotProduct += vec1.get(term) * vec2.getOrDefault(term, 0.0);
+            norm1 += Math.pow(vec1.get(term), 2);
+        }
+
+        for (double value : vec2.values()) {
+            norm2 += Math.pow(value, 2);
+        }
+
+        if (norm1 == 0 || norm2 == 0) return 0.0;
+        return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
+    }
+
+    private int documentFrequency(String term) throws IOException {
+        Row row = KVS.getRow(PropertyLoader.getProperty("table.index"), term);
+        Map<String, Set<Integer>> result = new HashMap<>();
+
+        row.columns().forEach(column -> {
+            result.putAll(parseUrlWithPositions(row.get(column)));
+        });
+
+//        log.info("[search] Found row: " + row + " result: " + result + " number of file: " + result.size());
+        return result.size();
+    }
+
+    public String getPageContent(String url) throws IOException {
+        String hashedUrl = Hasher.hash(url);
+        Row row = KVS.getRow(PropertyLoader.getProperty("table.crawler"), hashedUrl);
+        log.info("[search] getPageContent: " + hashedUrl + " for URL: " + url + "row: " + row);
+
+        if (row == null) {
+            return "";
+        }else{
+            return row.get("page");
+        }
+    }
+
+    public String ExtractContextSnippet(String content, Set<Integer> positions, int wordLimit) {
+        if (content == null || content.isEmpty() || positions.isEmpty()) {
+            return "";
+        }
+
+        // Use the first position from the set as the starting point
+        int position = positions.iterator().next();
+
+        // Tokenize the page content into words
+        String[] words = content.split("\\s+");
+
+        // Calculate start and end indexes for a 30-word window around the position
+        int start = Math.max(0, position - wordLimit / 2);
+        int end = Math.min(words.length, start + wordLimit);
+
+        // Build the snippet string
+        StringBuilder snippet = new StringBuilder();
+        for (int i = start; i < end; i++) {
+            snippet.append(words[i]).append(" ");
+        }
+
+        return snippet.toString().trim();
+    }
+
 
 }
