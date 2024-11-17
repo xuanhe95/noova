@@ -84,15 +84,51 @@ public class Crawler implements Serializable {
 //        RouteRegistry.cleanup();
 //        log.info("[crawler] cleaning up locks in RouteRegistry");
 
-        FlameRDD urlQueue = ctx.parallelize(seedUrls);
+//        FlameRDD urlQueue = ctx.parallelize(seedUrls);
+
+        // adding checkpoints
+        FlameRDD urlQueue;
+        if (ctx.getKVS().existsRow("pt-checkpoint", "")) {
+            // load from checkpoint if it exists
+            log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
+            urlQueue = ctx.fromTable("pt-checkpoint", row -> row.get("url"));
+        } else {
+            // start with seed URLs if no checkpoint exists
+            log.info("[crawler] No checkpoint found. Starting with seed URLs.");
+            urlQueue = ctx.parallelize(seedUrls);
+        }
 
         log.info("[crawler] Starting crawler with seed URL: " + Arrays.toString(args));
         log.info("[crawler] urlQueue count: " + urlQueue.count());
 
-        while (urlQueue.count() != 0) {
+        // save checkpoint on Ctrl+C
+        FlameRDD finalUrlQueue = urlQueue;
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                log.info("[crawler] Shutdown detected. Saving checkpoint...");
+                ctx.getKVS().delete("pt-checkpoint");
+                finalUrlQueue.saveAsTable("pt-checkpoint");
+                log.info("[crawler] Checkpoint saved successfully during shutdown.");
+            } catch (Exception e) {
+                log.error("[crawler] Error saving checkpoint during shutdown.", e);
+            }
+        }));
+
+        while (urlQueue.count() > 0) {
             urlQueue = urlQueue.flatMap(rawUrl -> {
-                return processUrl(ctx, rawUrl, blacklistTable, seedDomains);
+                try {
+                    return processUrl(ctx, rawUrl, blacklistTable, seedDomains);
+                } catch (Exception e) {
+                    log.error("Error processing URL: " + rawUrl, e);
+                    return List.of();
+                }
             });
+
+            // checkpoint the current queue
+            log.info("[crawler] Saving checkpoint for URL queue...");
+            ctx.getKVS().delete("pt-checkpoint"); // del previous checkpoint
+            urlQueue.saveAsTable("pt-checkpoint"); // save current queue as checkpoint
+
             if(ENABLE_LOOP_INTERVAL){
                 Thread.sleep(LOOP_INTERVAL);
             }
@@ -275,7 +311,7 @@ public class Crawler implements Serializable {
             } else {
                 String canonicalURL = pageRow.get("canonicalURL");
                 log.warn("[crawler] Page is duplicated with + " + canonicalURL + ". Creating canonical URL: " + normalizedUrl);
-                row.put("canonicalURL", pageRow.get("canonicalURL"));
+//                row.put("canonicalURL", pageRow.get("canonicalURL"));
                 ctx.getKVS().putRow(CRAWLER_TABLE, row);
             }
 
@@ -432,32 +468,68 @@ public class Crawler implements Serializable {
         if(page == null) {
             return "";
         }
-        // match <p> and <h1> to <h6> tags
-        Pattern pattern = Pattern.compile("(?s)<(p|h[1-6]).*?>(.*?)</\\1>");
-        Matcher matcher = pattern.matcher(page);
-        StringBuilder htmlContent = new StringBuilder();
-        // only keep the content inside <body> tag
-        while (matcher.find()) {
-            htmlContent.append(matcher.group(2)).append(" ");
-        }
 
+        // comprehensive html filter
+        // filter script style tag
+        page = page.replaceAll("(?s)<script.*?>.*?</script>", " ").strip();
+        page = page.replaceAll("(?s)<style.*?>.*?</style>", " ").strip();
 
-        String filtedText = htmlContent.toString();
+        // filter event handler
+        page = page.replaceAll("on\\w+\\s*=\\s*\"[^\"]*\"", " ").strip();
+        page = page.replaceAll("on\\w+\\s*=\\s*'[^']*'", " ").strip();
 
-        filtedText = filtedText.toLowerCase().strip();
+        // filter html comments
+        page = page.replaceAll("(?s)<!--.*?-->", " ").strip();
 
-        filtedText = filtedText.replaceAll("<[^>]*>", " ").strip();
+        // filter hidden tags
+        page = page.replaceAll("(?s)<(meta|head|noscript|iframe|embed|object|applet|link|base|area|map|param|track|wbr)[^>]*>.*?</\\1>", " ").strip();
+        page = page.replaceAll("(?s)<(meta|head|noscript|iframe|embed|object|applet|link|base|area|map|param|track|wbr)[^>]*>", " ").strip();
 
-        log.info("[indexer] No HTML: " + filtedText);
+        // filter div, p, h1-6, br
+        page = page.replaceAll("(?i)<(div|p|h[1-6]|br)[^>]*>", "\n").strip();
 
-        filtedText = filtedText.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
+        // filter remaining html tags
+        page = page.replaceAll("<[^>]*>", " ").strip();
 
-        log.info("[indexer] No Punctuation: " + filtedText);
+        // normalize whitespace
+        page = page.replaceAll("\\s+", " ").strip();
+
+        // misc- filter boilerplate content like 'about us'
+        page = page.replaceAll("(?i)\\b(privacy policy|terms of service|about us)\\b", " ").strip();
+
+        page = page.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
 
         // filter out non-letters
-        filtedText = filtedText.replaceAll("[^\\p{L}\\s]", " ").strip();
+        page = page.replaceAll("[^\\p{L}\\s]", " ").strip();
 
-        return filtedText;
+        page = page.toLowerCase();
+
+
+//        // match <p> and <h1> to <h6> tags
+//        Pattern pattern = Pattern.compile("(?s)<(p|h[1-6]).*?>(.*?)</\\1>");
+//        Matcher matcher = pattern.matcher(page);
+//        StringBuilder htmlContent = new StringBuilder();
+//        // only keep the content inside <body> tag
+//        while (matcher.find()) {
+//            htmlContent.append(matcher.group(2)).append(" ");
+//        }
+//        String filtedText = htmlContent.toString();
+//
+//        filtedText = filtedText.toLowerCase().strip();
+//
+//        filtedText = filtedText.replaceAll("<[^>]*>", " ").strip();
+//
+//        log.info("[indexer] No HTML: " + filtedText);
+//
+//        filtedText = filtedText.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
+//
+//        log.info("[indexer] No Punctuation: " + filtedText);
+//
+//        // filter out non-letters
+//        filtedText = filtedText.replaceAll("[^\\p{L}\\s]", " ").strip();
+
+
+        return page;
     }
 
 
@@ -593,6 +665,7 @@ public class Crawler implements Serializable {
                 port = parts[2] == null ? "http".equals(protocol) ? "80" : "443" : parts[2];
                 path = parts[3];
             }
+            if(path!=null && !path.startsWith("/")) path = "/"+path;
             return protocol + "://" + host + ":" + port + path;
         } catch(Exception e){
             log.error("[normalizeURL] Malformed URL: " + rawUrl, e);
@@ -775,7 +848,7 @@ public class Crawler implements Serializable {
             int port = url.getPort();
             if (port != -1 && (port < 1 || port > 65535)) {
                 log.warn("[checkRobotRules] Invalid port in URL: " + normalizedUrl);
-                return true; // allow processing if malformed?
+                return false; // allow processing if malformed?
             }
 
             // check if the host is in the table

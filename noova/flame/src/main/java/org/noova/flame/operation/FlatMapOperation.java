@@ -82,7 +82,7 @@ public class FlatMapOperation implements Operation{
         it.forEachRemaining(row -> {
             try {
                     FlameRDD.StringToIterable lambda = (FlameRDD.StringToIterable) Serializer.byteArrayToObject(ctx.lambda(), ctx.getJAR());
-                    Iterable<String> result = lambda.op(row.get(FlameRDDImpl.FLAME_RDD_VALUE));
+                    Iterable<String> result = lambda.op(row.get(FlameRDDImpl.FLAME_RDD_VALUE));  // Cannot invoke "org.noova.flame.FlameRDD$StringToIterable.op(String)" because "lambda" is nul
                     if (result != null) {
                         result.forEach(key -> {
                             String rowKey = KeyGenerator.get();
