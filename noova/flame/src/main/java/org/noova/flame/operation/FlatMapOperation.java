@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class FlatMapOperation implements Operation{
     private static final Logger log = Logger.getLogger(FlatMapOperation.class);
-    private static boolean isJarFileValid = false;
     @Override
     public  String execute(Request req, Response res, OperationContext ctx) {
         ctx.input(req.queryParams("input"));

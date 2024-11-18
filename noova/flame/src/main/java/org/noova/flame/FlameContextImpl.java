@@ -27,7 +27,7 @@ public class FlameContextImpl implements FlameContext, Serializable {
         this.jarName = jarName;
     }
 
-    public synchronized Vector<String[]> getKVSWorkers() {
+    private synchronized Vector<String[]> getKVSWorkers() {
         Vector<String[]> kvsWorkers = new Vector<>();
         try {
             int kvsWorkerNum = getKVS().numWorkers();

@@ -1,4 +1,4 @@
-noova/all-jars/
+#noova/all-jars/
 project/project
 *.class
 #noova/worker1

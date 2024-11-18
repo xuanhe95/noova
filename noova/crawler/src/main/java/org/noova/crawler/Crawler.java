@@ -46,6 +46,8 @@ public class Crawler implements Serializable {
     private static final Map<String, SoftReference<String>> ROBOT_CACHE = new WeakHashMap<>();
     private static final Map<String, Boolean> BLACKLIST = new ConcurrentHashMap<>();
     private static final boolean ENABLE_ANCHOR_EXTRACTION = false;
+    private static final boolean ENABLE_BLACKLIST = false;
+    private static final boolean ENABLE_CANONICAL = false;
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
@@ -75,14 +77,15 @@ public class Crawler implements Serializable {
             log.info("[crawler] seed domain init: "+ seedDomains);
 
             String blacklistTable=null;
-            // rm blacklist logic for now
-//        if (args.length > 1) {
-//            log.warn("[crawler] find blacklist table...");
-//            blacklistTable = args[1];
-//        } else {
-//            log.info("[crawler] No blacklist table found");
-//            blacklistTable = null;
-//        }
+            if(ENABLE_BLACKLIST) {
+                if (args.length > 1) {
+                    log.warn("[crawler] find blacklist table...");
+                    blacklistTable = args[1];
+                } else {
+                    log.info("[crawler] No blacklist table found");
+                    blacklistTable = null;
+                }
+            }
 
             log.info("[crawler] Starting crawler with seed URL before parallelize: " + seedUrls);
 
@@ -128,8 +131,6 @@ public class Crawler implements Serializable {
             String prevJobTable = null; // placeholder for del old job table
 
             while (urlQueue.count() > 0) {
-                String currJobTable = ((FlameRDDImpl) urlQueue).getId();
-                log.info("[crawler] Current Job table ID: "+currJobTable);
 
                 urlQueue = urlQueue.flatMap(rawUrl -> {
                     try {
@@ -140,18 +141,22 @@ public class Crawler implements Serializable {
                     }
                 });
 
+                String nextJobTable = ((FlameRDDImpl) urlQueue).getId(); // get next job table ID
+                log.info("[crawler] Next Job table ID (before checkpoint): " + nextJobTable);
+
                 // del prev job table
-//            if (prevJobTable != null && !prevJobTable.equals("pt-checkpoint")) {
-//                log.info("[cleanup] Deleting unused table: " + prevJobTable);
-//                ctx.getKVS().delete(prevJobTable);
-//            }
+                if (prevJobTable != null && prevJobTable.startsWith("pt-job-") && !prevJobTable.startsWith("pt-job-0") ) {
+                    log.info("[cleanup] Deleting unused table: " + prevJobTable);
+                    ctx.getKVS().delete(prevJobTable);
+                }
 
                 // checkpoint the current queue
                 log.info("[crawler] Saving checkpoint for URL queue...");
                 ctx.getKVS().delete("pt-checkpoint"); // del previous checkpoint
                 urlQueue.saveAsTable("pt-checkpoint"); // save current queue as checkpoint
 
-                prevJobTable = currJobTable; // rotate
+                // rotate
+                prevJobTable = nextJobTable;
 
                 if(ENABLE_LOOP_INTERVAL){
                     Thread.sleep(LOOP_INTERVAL);
@@ -210,10 +215,10 @@ public class Crawler implements Serializable {
             }
 
             // filter for blacklisted url
-//            if (!checkBlackList(ctx, normalizedUrl, blacklistTable)) {
-//                log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist. Skipping.");
-//                return new ArrayList<>();
-//            }
+            if (ENABLE_BLACKLIST && !checkBlackList(ctx, normalizedUrl, blacklistTable)) {
+                log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist. Skipping.");
+                return new ArrayList<>();
+            }
 
             // filter based on disallow
             if (!checkRobotRules(ctx, normalizedUrl)) {
@@ -321,29 +326,26 @@ public class Crawler implements Serializable {
 
             String hashedPage = Hasher.hash(normalizedPage);
 
-            Row pageRow = ctx.getKVS().getRow(CANONICAL_PAGE_TABLE, hashedPage);
+            row.put("page", normalizedPage);
+            ctx.getKVS().putRow(CRAWLER_TABLE, row);
+
+            if(ENABLE_CANONICAL){
+                Row pageRow = ctx.getKVS().getRow(CANONICAL_PAGE_TABLE, hashedPage);
+                if (pageRow == null || pageRow.get("canonicalURL") == null || pageRow.get("canonicalURL").equals(normalizedUrl)) {
+                    log.info("[crawler] Creating new canonical URL: " + normalizedUrl);
+
+                    pageRow = new Row(hashedPage);
+                    pageRow.put("canonicalURL", normalizedUrl);
+                    pageRow.put("page", normalizedPage);
 
 
-            if (pageRow == null || pageRow.get("canonicalURL") == null || pageRow.get("canonicalURL").equals(normalizedUrl)) {
-                log.info("[crawler] Creating new canonical URL: " + normalizedUrl);
-                row.put("page", normalizedPage);
-//                row.put("page", page);
+                    log.info("[crawler] kvs addr: " + ctx.getKVS().getCoordinator());
 
-                pageRow = new Row(hashedPage);
-                pageRow.put("canonicalURL", normalizedUrl);
-                pageRow.put("page", normalizedPage);
-//                pageRow.put("page", page);
-
-
-                log.info("[crawler] kvs addr: " + ctx.getKVS().getCoordinator());
-
-                ctx.getKVS().putRow(CRAWLER_TABLE, row);
-                ctx.getKVS().putRow(CANONICAL_PAGE_TABLE, pageRow);
-            } else {
-                String canonicalURL = pageRow.get("canonicalURL");
-                log.warn("[crawler] Page is duplicated with + " + canonicalURL + ". Creating canonical URL: " + normalizedUrl);
-//                row.put("canonicalURL", pageRow.get("canonicalURL"));
-                ctx.getKVS().putRow(CRAWLER_TABLE, row);
+                    ctx.getKVS().putRow(CANONICAL_PAGE_TABLE, pageRow);
+                } else {
+                    String canonicalURL = pageRow.get("canonicalURL");
+                    log.warn("[crawler] Page is duplicated with + " + canonicalURL + ". Creating canonical URL: " + normalizedUrl);
+                }
             }
 
             return parsePageLinks(ctx, page, normalizedUrl, blacklistTable);
@@ -352,7 +354,6 @@ public class Crawler implements Serializable {
             //URL_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
         }
         return new ArrayList<>();
-        //return parsePageLinks(ctx, normalizedUrl, blacklistTable);
     }
 
     static List<String> parsePageLinks(FlameContext ctx, String page, String normalizedUrl, String blacklistTable) throws IOException {
@@ -394,10 +395,10 @@ public class Crawler implements Serializable {
             }
 
             // filter blacklist
-//            if (!checkBlackList(ctx, normalizedLink, blacklistTable)) {
-//                log.warn("[crawler] URL " + normalizedLink + " is blocked by blacklist. Ignore.");
-//                continue;
-//            }
+            if (ENABLE_BLACKLIST && !checkBlackList(ctx, normalizedLink, blacklistTable)) {
+                log.warn("[crawler] URL " + normalizedLink + " is blocked by blacklist. Ignore.");
+                continue;
+            }
 
             // filter robot
             if (!checkRobotRules(ctx, normalizedLink)) {
@@ -616,30 +617,30 @@ public class Crawler implements Serializable {
         return true;
     }
 
-//    private static boolean checkBlackList(FlameContext ctx, String normalizedUrl, String blacklistTable) {
-//        if (blacklistTable == null) {
-//            return true;
-//        }
-//        try {
-//            Iterator<Row> it = ctx.getKVS().scan(blacklistTable);
-//
-//
-//            while (it != null && it.hasNext()) {
-//                Row row = it.next();
-//                String pattern = row.get("pattern");
-//                if (isBlocked(normalizedUrl, pattern)) {
-//                    log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist pattern: " + pattern);
-//                    return false;
-//                }
-//            }
-//
-//            return true;
-//
-//        } catch (IOException e) {
-//            log.error("[crawler] Error while checking blacklist", e);
-//            throw new RuntimeException(e);
-//        }
-//    }
+    private static boolean checkBlackList(FlameContext ctx, String normalizedUrl, String blacklistTable) {
+        if (blacklistTable == null) {
+            return true;
+        }
+        try {
+            Iterator<Row> it = ctx.getKVS().scan(blacklistTable);
+
+
+            while (it != null && it.hasNext()) {
+                Row row = it.next();
+                String pattern = row.get("pattern");
+                if (isBlocked(normalizedUrl, pattern)) {
+                    log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist pattern: " + pattern);
+                    return false;
+                }
+            }
+
+            return true;
+
+        } catch (IOException e) {
+            log.error("[crawler] Error while checking blacklist", e);
+            throw new RuntimeException(e);
+        }
+    }
 
     static String normalizeURL(String rawUrl, String baseUrl){
         if(rawUrl.contains("#")){
