@@ -4,7 +4,25 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="" />
+    <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/__worker9001-current.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/__worker9001-current.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/__worker9002-current.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/__worker9002-current.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/__worker9003-current.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/__worker9003-current.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/crawler-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/crawler-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/flame-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/flame-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/gateway-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/gateway-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/generic-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/generic-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/indexer-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/indexer-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/job-1.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/job-1.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/kvs-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/kvs-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/original-gateway-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/original-gateway-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/original-webserver-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/original-webserver-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/pagerank-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/pagerank-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/tools-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/tools-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/webserver-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/webserver-1.0-SNAPSHOT.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/KVSClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/KVSClient.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
