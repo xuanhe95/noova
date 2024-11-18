@@ -646,9 +646,14 @@ public class Crawler implements Serializable {
         if(rawUrl.contains("#")){
             rawUrl = rawUrl.substring(0, rawUrl.indexOf("#"));
         }
+
+        rawUrl = rawUrl.trim();
+        rawUrl = rawUrl.replaceAll("\\\\+$", "");
+
         if(rawUrl.isEmpty()){
             return null;
         }
+
         if (rawUrl.matches(".*[<>\"'{}|^\\[\\]]+.*")) { // invalid char in html detected
             log.warn("[normalizeURL] Invalid characters detected in URL: " + rawUrl);
             return null;
@@ -682,6 +687,9 @@ public class Crawler implements Serializable {
 //                path = URLEncoder.encode(path, StandardCharsets.UTF_8).replace("+", "%20");
 //            }
             if(path!=null && !path.startsWith("/")) path = "/"+path;
+            if (path != null) {
+                path = path.replaceAll("//+", "/");
+            }
             return protocol + "://" + host + ":" + port + path;
         } catch(Exception e){
             log.error("[normalizeURL] Malformed URL: " + rawUrl, e);
