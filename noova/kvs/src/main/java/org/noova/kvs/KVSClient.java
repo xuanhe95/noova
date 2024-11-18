@@ -188,8 +188,14 @@ public class KVSClient implements KVS {
   }
 
   int workerIndexForKey(String key) {
+    // handle Index -1 out of bounds for length 10
+    if (workers.isEmpty() && key==null) {
+      throw new IllegalStateException("Workers list is empty and key is null, cannot compute worker index.");
+    }
+
+    // default to last worker
     int chosenWorker = workers.size()-1;
-    if (key != null) {
+    if (key != null) { // update worker based on key
       for (int i=0; i<workers.size()-1; i++) {
         if ((key.compareTo(workers.elementAt(i).id) >= 0) && (key.compareTo(workers.elementAt(i+1).id) < 0))
           chosenWorker = i;
@@ -265,6 +271,12 @@ public class KVSClient implements KVS {
   public Row getRow(String tableName, String row) throws IOException {
     if (!haveWorkers)
       downloadWorkers();
+
+    // handle Index -1 out of bounds for length 10
+    int workerIndex = workerIndexForKey(row);
+    if (workerIndex < 0 || workerIndex >= workers.size()) {
+      throw new IllegalStateException("Invalid worker index: " + workerIndex);
+    }
 
     HTTP.Response resp = HTTP.doRequest("GET", "http://"+workers.elementAt(workerIndexForKey(row)).address+"/data/"+tableName+"/"+ URLEncoder.encode(row, "UTF-8"), null);
     if (resp.statusCode() == 404)

@@ -2,6 +2,7 @@ package org.noova.crawler;
 
 import org.noova.flame.FlameContext;
 import org.noova.flame.FlameRDD;
+import org.noova.flame.FlameRDDImpl;
 import org.noova.kvs.Row;
 import org.noova.kvs.RouteRegistry;
 import org.noova.tools.Hasher;
@@ -12,7 +13,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -41,106 +44,134 @@ public class Crawler implements Serializable {
 
     private static final Map<String, SoftReference<String>> URL_CACHE = new WeakHashMap<>();
     private static final Map<String, SoftReference<String>> ROBOT_CACHE = new WeakHashMap<>();
+    private static final Map<String, Boolean> BLACKLIST = new ConcurrentHashMap<>();
     private static final boolean ENABLE_ANCHOR_EXTRACTION = false;
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
         System.out.println("Crawler is running");
+        long startTime = System.nanoTime();
 
-        // each worker work on separate ranges in parallel, e.g., on separate cores.
-        ctx.setConcurrencyLevel(6);
+        try{
+            // each worker work on separate ranges in parallel, e.g., on separate cores.
+            int concurrencyLevel = ctx.calculateConcurrencyLevel();
+            ctx.setConcurrencyLevel(concurrencyLevel);
+            log.info("[crawler] Concurrency level set to: " + concurrencyLevel);
 
-        if (args == null || args.length < 1) {
-            log.error("Usage: Crawler <seed-url>");
-            ctx.output("Seed URL is not found");
-            return;
-        }
+            if (args == null || args.length < 1) {
+                log.error("Usage: Crawler <seed-url>");
+                ctx.output("Seed URL is not found");
+                return;
+            }
 
-        //String seedUrl = args[0];
+            // limit to seed urls' domain for crawling first 200k pages
+            List<String> seedUrls = List.of(args);
+            Set<String> seedDomains = new HashSet<>();
+            for(String url : seedUrls){
+                seedDomains.add(new URI(url).getHost());
+            }
 
-        // limit to seed urls' domain for crawling first 200k pages
-        List<String> seedUrls = List.of(args);
-        Set<String> seedDomains = new HashSet<>();
-        for(String url : seedUrls){
-            seedDomains.add(new URI(url).getHost());
-        }
+            log.info("[crawler] seed url init: "+ seedUrls);
+            log.info("[crawler] seed domain init: "+ seedDomains);
 
-        log.info("[crawler] seed url init: "+ seedUrls);
-        log.info("[crawler] seed domain init: "+ seedDomains);
+            String blacklistTable=null;
+            // rm blacklist logic for now
+//        if (args.length > 1) {
+//            log.warn("[crawler] find blacklist table...");
+//            blacklistTable = args[1];
+//        } else {
+//            log.info("[crawler] No blacklist table found");
+//            blacklistTable = null;
+//        }
 
-        String blacklistTable;
+            log.info("[crawler] Starting crawler with seed URL before parallelize: " + seedUrls);
 
-        if (args.length > 1) {
-            log.warn("[crawler] find blacklist table...");
-            blacklistTable = args[1];
-        } else {
-            log.info("[crawler] No blacklist table found");
-            blacklistTable = null;
-        }
-
-        log.info("[crawler] Starting crawler with seed URL before parallelize: " + seedUrls);
-
-        //! rm locks cache for debugging crawler
+            //! rm locks cache for debugging crawler
 //        RouteRegistry.cleanup();
 //        log.info("[crawler] cleaning up locks in RouteRegistry");
 
-//        FlameRDD urlQueue = ctx.parallelize(seedUrls);
+            // adding checkpoints
+            FlameRDD urlQueue;
+            if (ctx.getKVS().existsRow("pt-checkpoint", "")) { // load from checkpoint if it exists
+                log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
+                urlQueue = ctx.fromTable("pt-checkpoint", row -> row.get("url"));
 
-        // adding checkpoints
-        FlameRDD urlQueue;
-        if (ctx.getKVS().existsRow("pt-checkpoint", "")) {
-            // load from checkpoint if it exists
-            log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
-            urlQueue = ctx.fromTable("pt-checkpoint", row -> row.get("url"));
-        } else {
-            // start with seed URLs if no checkpoint exists
-            log.info("[crawler] No checkpoint found. Starting with seed URLs.");
-            urlQueue = ctx.parallelize(seedUrls);
-        }
-
-        log.info("[crawler] Starting crawler with seed URL: " + Arrays.toString(args));
-        log.info("[crawler] urlQueue count: " + urlQueue.count());
-
-        // save checkpoint on Ctrl+C
-        FlameRDD finalUrlQueue = urlQueue;
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                log.info("[crawler] Shutdown detected. Saving checkpoint...");
-                ctx.getKVS().delete("pt-checkpoint");
-                finalUrlQueue.saveAsTable("pt-checkpoint");
-                log.info("[crawler] Checkpoint saved successfully during shutdown.");
-            } catch (Exception e) {
-                log.error("[crawler] Error saving checkpoint during shutdown.", e);
+                // debug
+                ctx.getKVS().scan("pt-checkpoint").forEachRemaining(row -> {
+                    log.info("[checkpoint] Loaded row: " + row);
+                });
+            } else { // start with seed URLs if no checkpoint exists
+                log.info("[crawler] No checkpoint found. Starting with seed URLs.");
+                urlQueue = ctx.parallelize(seedUrls);
             }
-        }));
 
-        while (urlQueue.count() > 0) {
-            urlQueue = urlQueue.flatMap(rawUrl -> {
+            log.info("[crawler] Starting crawler with seed URL: " + Arrays.toString(args));
+            log.info("[crawler] urlQueue count: " + urlQueue.count());
+
+            // save checkpoint on Ctrl+C
+            FlameRDD finalUrlQueue = urlQueue;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
-                    return processUrl(ctx, rawUrl, blacklistTable, seedDomains);
+                    log.info("[crawler] Shutdown detected. Saving checkpoint...");
+                    ctx.getKVS().delete("pt-checkpoint");
+                    finalUrlQueue.saveAsTable("pt-checkpoint");
+
+                    long elapsedTime = System.nanoTime()-startTime;
+                    ctx.output("Total time elapsed before shutdown: " +formatElapsedTime(elapsedTime)+"\n");
+
+                    log.info("[crawler] Checkpoint saved successfully during shutdown.");
                 } catch (Exception e) {
-                    log.error("Error processing URL: " + rawUrl, e);
-                    return List.of();
+                    log.error("[crawler] Error saving checkpoint during shutdown.", e);
                 }
-            });
+            }));
 
-            // checkpoint the current queue
-            log.info("[crawler] Saving checkpoint for URL queue...");
-            ctx.getKVS().delete("pt-checkpoint"); // del previous checkpoint
-            urlQueue.saveAsTable("pt-checkpoint"); // save current queue as checkpoint
+            String prevJobTable = null; // placeholder for del old job table
 
-            if(ENABLE_LOOP_INTERVAL){
-                Thread.sleep(LOOP_INTERVAL);
+            while (urlQueue.count() > 0) {
+                String currJobTable = ((FlameRDDImpl) urlQueue).getId();
+                log.info("[crawler] Current Job table ID: "+currJobTable);
+
+                urlQueue = urlQueue.flatMap(rawUrl -> {
+                    try {
+                        return processUrl(ctx, rawUrl, blacklistTable, seedDomains);
+                    } catch (Exception e) {
+                        log.error("Error processing URL: " + rawUrl, e);
+                        return List.of();
+                    }
+                });
+
+                // del prev job table
+//            if (prevJobTable != null && !prevJobTable.equals("pt-checkpoint")) {
+//                log.info("[cleanup] Deleting unused table: " + prevJobTable);
+//                ctx.getKVS().delete(prevJobTable);
+//            }
+
+                // checkpoint the current queue
+                log.info("[crawler] Saving checkpoint for URL queue...");
+                ctx.getKVS().delete("pt-checkpoint"); // del previous checkpoint
+                urlQueue.saveAsTable("pt-checkpoint"); // save current queue as checkpoint
+
+                prevJobTable = currJobTable; // rotate
+
+                if(ENABLE_LOOP_INTERVAL){
+                    Thread.sleep(LOOP_INTERVAL);
+                }
             }
-        }
 
-        log.info("[crawler] Crawler finished");
+            log.info("[crawler] Crawler finished");
 
-        ctx.output("OK");
+            long elapsedTime = System.nanoTime()-startTime;
+            ctx.output("Total time elapsed: " + formatElapsedTime(elapsedTime)+"\n");
+            ctx.output("OK");
 
-        //! rm locks cache for debugging crawler
+            //! rm locks cache for debugging crawler
 //        RouteRegistry.cleanup();
-
+        } catch (Exception e){
+            log.error("[crawler] An error occurred", e);
+            long elapsedTime = System.nanoTime() - startTime;
+            ctx.output("Total time elapsed before crash: " + formatElapsedTime(elapsedTime)+"\n");
+            throw e;
+        }
     }
 
     private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, Set<String> seedDomains) throws Exception {
@@ -152,15 +183,15 @@ public class Crawler implements Serializable {
 
         log.warn("[crawler] Processing URL: " + normalizedUrl);
         try {
-            // filter for invalid url
-            if(!checkUrlFormat(normalizedUrl)){
-                log.warn("[crawler] URL " + normalizedUrl + " is not a valid URL. Skipping.");
-                return new ArrayList<>();
-            }
-
             // filter for dup url
             if (isAccessed(ctx, normalizedUrl)) {
                 log.warn("[accessed] URL " + normalizedUrl + " has been processed before. Skipping.");
+                return new ArrayList<>();
+            }
+
+            // filter for invalid url
+            if(!checkUrlFormat(normalizedUrl)){
+                log.warn("[crawler] URL " + normalizedUrl + " is not a valid URL. Skipping.");
                 return new ArrayList<>();
             }
 
@@ -179,10 +210,10 @@ public class Crawler implements Serializable {
             }
 
             // filter for blacklisted url
-            if (!checkBlackList(ctx, normalizedUrl, blacklistTable)) {
-                log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist. Skipping.");
-                return new ArrayList<>();
-            }
+//            if (!checkBlackList(ctx, normalizedUrl, blacklistTable)) {
+//                log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist. Skipping.");
+//                return new ArrayList<>();
+//            }
 
             // filter based on disallow
             if (!checkRobotRules(ctx, normalizedUrl)) {
@@ -334,24 +365,21 @@ public class Crawler implements Serializable {
         }
         ctx.getKVS().put(TRANSIT_ACCESSED_LINK_TABLE, hashedUrl, "url", normalizedUrl);
 
-        String regex = "<a\\s+[^>]*href=[\"']([^\"']*)[\"'][^>]*>([\\s\\S]*?)<\\/a>";
+        Map<String, StringBuilder> anchorMap = new HashMap<>();
+
+//        String regex = "<a\\s+[^>]*href=[\"']([^\"']*)[\"'][^>]*>([\\s\\S]*?)<\\/a>";
+        String regex = "<a\\s+[^>]*href\\s*=\\s*['\"]?([^'\"\\s>]+)['\"\\s>][^>]*>([\\s\\S]*?)</a>";
         Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(page);
 
-        Map<String, StringBuilder> anchorMap = new HashMap<>();
-
         while (matcher.find()) {
             String href = matcher.group(1).strip();
+            String text = matcher.group(2).strip(); // for EC
 
-            // for EC
-            String text = matcher.group(2).strip();
-
-            // remove html tags
-            text = text.replaceAll("<[^>]*>", "").strip();
-
-            // filter non-lang char
-            text = filterNonLanguageCharacters(text);
-
+            if (href.matches(".*[<>\"'{}|^\\[\\]]+.*")) { // skip href with invalid char
+                log.warn("[crawler] Invalid href attribute: " + href);
+                continue;
+            }
 
             String normalizedLink = normalizeURL(href, normalizedUrl);
             if(normalizedLink == null){
@@ -359,24 +387,28 @@ public class Crawler implements Serializable {
                 continue;
             }
 
-            if (!checkRobotRules(ctx, normalizedLink)) {
-                log.warn("[crawler] URL " + normalizedLink + " is disallowed by robots.txt. Ignore.");
-                continue;
-            }
-
-            if (!checkBlackList(ctx, normalizedLink, blacklistTable)) {
-                log.warn("[crawler] URL " + normalizedLink + " is blocked by blacklist. Ignore.");
-                continue;
-            }
-
+            // filter invalid
             if(!checkUrlFormat(normalizedLink)){ // this should filter out invalid hyperlinks?
                 log.warn("[crawler] URL " + normalizedLink + " is not a valid URL. Skipping.");
+                continue;
+            }
+
+            // filter blacklist
+//            if (!checkBlackList(ctx, normalizedLink, blacklistTable)) {
+//                log.warn("[crawler] URL " + normalizedLink + " is blocked by blacklist. Ignore.");
+//                continue;
+//            }
+
+            // filter robot
+            if (!checkRobotRules(ctx, normalizedLink)) {
+                log.warn("[crawler] URL " + normalizedLink + " is disallowed by robots.txt. Ignore.");
                 continue;
             }
 
             log.info("[crawler] add link: " + normalizedLink);
 
             if(ENABLE_ANCHOR_EXTRACTION){
+                text = filterPage(text); // html filter
                 anchorMap.put(normalizedLink, anchorMap.getOrDefault(normalizedLink, new StringBuilder()).append(text).append("<br>"));
             }
 
@@ -504,31 +536,6 @@ public class Crawler implements Serializable {
 
         page = page.toLowerCase();
 
-
-//        // match <p> and <h1> to <h6> tags
-//        Pattern pattern = Pattern.compile("(?s)<(p|h[1-6]).*?>(.*?)</\\1>");
-//        Matcher matcher = pattern.matcher(page);
-//        StringBuilder htmlContent = new StringBuilder();
-//        // only keep the content inside <body> tag
-//        while (matcher.find()) {
-//            htmlContent.append(matcher.group(2)).append(" ");
-//        }
-//        String filtedText = htmlContent.toString();
-//
-//        filtedText = filtedText.toLowerCase().strip();
-//
-//        filtedText = filtedText.replaceAll("<[^>]*>", " ").strip();
-//
-//        log.info("[indexer] No HTML: " + filtedText);
-//
-//        filtedText = filtedText.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
-//
-//        log.info("[indexer] No Punctuation: " + filtedText);
-//
-//        // filter out non-letters
-//        filtedText = filtedText.replaceAll("[^\\p{L}\\s]", " ").strip();
-
-
         return page;
     }
 
@@ -609,30 +616,30 @@ public class Crawler implements Serializable {
         return true;
     }
 
-    private static boolean checkBlackList(FlameContext ctx, String normalizedUrl, String blacklistTable) {
-        if (blacklistTable == null) {
-            return true;
-        }
-        try {
-            Iterator<Row> it = ctx.getKVS().scan(blacklistTable);
-
-
-            while (it != null && it.hasNext()) {
-                Row row = it.next();
-                String pattern = row.get("pattern");
-                if (isBlocked(normalizedUrl, pattern)) {
-                    log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist pattern: " + pattern);
-                    return false;
-                }
-            }
-
-            return true;
-
-        } catch (IOException e) {
-            log.error("[crawler] Error while checking blacklist", e);
-            throw new RuntimeException(e);
-        }
-    }
+//    private static boolean checkBlackList(FlameContext ctx, String normalizedUrl, String blacklistTable) {
+//        if (blacklistTable == null) {
+//            return true;
+//        }
+//        try {
+//            Iterator<Row> it = ctx.getKVS().scan(blacklistTable);
+//
+//
+//            while (it != null && it.hasNext()) {
+//                Row row = it.next();
+//                String pattern = row.get("pattern");
+//                if (isBlocked(normalizedUrl, pattern)) {
+//                    log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist pattern: " + pattern);
+//                    return false;
+//                }
+//            }
+//
+//            return true;
+//
+//        } catch (IOException e) {
+//            log.error("[crawler] Error while checking blacklist", e);
+//            throw new RuntimeException(e);
+//        }
+//    }
 
     static String normalizeURL(String rawUrl, String baseUrl){
         if(rawUrl.contains("#")){
@@ -641,12 +648,17 @@ public class Crawler implements Serializable {
         if(rawUrl.isEmpty()){
             return null;
         }
+        if (rawUrl.matches(".*[<>\"'{}|^\\[\\]]+.*")) { // invalid char in html detected
+            log.warn("[normalizeURL] Invalid characters detected in URL: " + rawUrl);
+            return null;
+        }
         if(rawUrl.startsWith("..")){
             rawUrl = rawUrl.replace("..", "");
             rawUrl = baseUrl.substring(0, baseUrl.lastIndexOf("/")) + rawUrl;
         }
 
         try{
+            rawUrl = rawUrl.replace(" ", "%20");
             String[] parts = URLParser.parseURL(rawUrl);
 
             String protocol;
@@ -665,6 +677,9 @@ public class Crawler implements Serializable {
                 port = parts[2] == null ? "http".equals(protocol) ? "80" : "443" : parts[2];
                 path = parts[3];
             }
+//            if (path != null) {
+//                path = URLEncoder.encode(path, StandardCharsets.UTF_8).replace("+", "%20");
+//            }
             if(path!=null && !path.startsWith("/")) path = "/"+path;
             return protocol + "://" + host + ":" + port + path;
         } catch(Exception e){
@@ -920,7 +935,8 @@ public class Crawler implements Serializable {
 
     private static boolean startWithPattern(String normalizedUrlPath, String pattern) {
         try{
-            String regex = pattern.replace(".", "\\.").replace("*", ".*");
+//            String regex = pattern.replace(".", "\\.").replace("*", ".*");
+            String regex = pattern.replaceAll("([\\\\.*+?\\[^\\]$(){}=!<>|:\\-])", "\\\\$1");
             regex = "^" + regex + ".*";
             return normalizedUrlPath.matches(regex);
         } catch (PatternSyntaxException e) {
@@ -928,6 +944,17 @@ public class Crawler implements Serializable {
             return false;
         }
 
+    }
+
+    // record time for each crawler run
+    private static String formatElapsedTime(long nanoTime) {
+        long totalSeconds = nanoTime / 1_000_000_000;
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+        long milliseconds = (nanoTime / 1_000_000) % 1000;
+
+        return String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
     }
 
 }

@@ -397,17 +397,6 @@ public class RouteRegistry {
                     } finally {
                         lock.readLock().unlock();
                     }
-
-
-//                    synchronized (tableManager){
-//                        if (tableManager.getTable(tableKey) == null){
-//                            log.error("[regCount]Table not found");
-//                            res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
-//                            return null;
-//                        }
-//                    }
-
-
                 });
     }
 

@@ -1,6 +1,7 @@
 package org.noova.flame;
 
 import org.noova.kvs.KVSClient;
+import org.noova.kvs.Row;
 import org.noova.tools.*;
 import org.noova.tools.Partitioner.Partition;
 
@@ -18,13 +19,15 @@ public class FlameContextImpl implements FlameContext, Serializable {
     private final StringBuffer output = new StringBuffer();
 
     private final String jarName;
-    private int keyRangesPerWorker = 0;
+
+    // get multiple key ranges to each worker
+    private int keyRangesPerWorker = this.calculateConcurrencyLevel();
 
     public FlameContextImpl(String jarName) {
         this.jarName = jarName;
     }
 
-    private synchronized Vector<String[]> getKVSWorkers() {
+    public synchronized Vector<String[]> getKVSWorkers() {
         Vector<String[]> kvsWorkers = new Vector<>();
         try {
             int kvsWorkerNum = getKVS().numWorkers();
@@ -47,6 +50,7 @@ public class FlameContextImpl implements FlameContext, Serializable {
         return kvsWorkers;
     }
 
+    //! never used
     private Vector<Partition> getPartitions(Vector<String[]> kvsWorkers, Vector<String> flameWorkers) {
         Partitioner partitioner = new Partitioner();
         partitioner.setKeyRangesPerWorker(3);
@@ -76,6 +80,7 @@ public class FlameContextImpl implements FlameContext, Serializable {
 //        return parallelize(partitions, operation, lambda, kvsWorkers, output);
 //    }
 
+    //! partition?
     private List<Throwable> parallelize(Vector<Partition> partitions, String uri, byte[] uploadOrNull, Vector<String[]> kvsWorkers, String input, String output, Map<String, String> queryParams) {
         // handling NullPointerException when crawling
         if (partitions == null) {
@@ -240,5 +245,15 @@ public class FlameContextImpl implements FlameContext, Serializable {
     @Override
     public void setConcurrencyLevel(int keyRangesPerWorker) {
         this.keyRangesPerWorker = keyRangesPerWorker;
+    }
+
+    // calculate concurr lv based on cores available and # of workers
+    public int calculateConcurrencyLevel(){
+//        int numFlameWorkers = Coordinator.getWorkers().size();
+//        int numKVSWorkers = getKVSWorkers().size();
+        int cores = Runtime.getRuntime().availableProcessors();
+        return cores;
+//        int concurrencyLevel = Math.min(numFlameWorkers, numKVSWorkers)*cores;
+//        return Math.max((int)(concurrencyLevel *1.5), (int)(cores * 1.5));
     }
 }

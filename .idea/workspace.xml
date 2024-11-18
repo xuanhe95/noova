@@ -4,7 +4,18 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="" />
+    <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/noova/mvWorker.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/rmEmpty.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameContextImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameContextImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/operation/FlatMapOperation.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/operation/FlatMapOperation.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/KVSClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/KVSClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/RouteRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/RouteRegistry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/tools/src/main/java/org/noova/tools/Serializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/tools/src/main/java/org/noova/tools/Serializer.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -77,7 +88,7 @@
     "git-widget-placeholder": "main",
     "jdk.selected.JAVA_MODULE": "openjdk-19",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/ritazhang/Desktop/upenn-mcit/555/Noova/noova/sample2/worker2",
+    "last_opened_file_path": "/Users/ritazhang/Desktop/upenn-mcit/555/Noova/noova/sample/ver3/worker3",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -94,11 +105,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/noova/sample/ver3/worker3" />
       <recent name="$PROJECT_DIR$/noova/sample2/worker2" />
       <recent name="$PROJECT_DIR$/noova/sample2/worker1" />
       <recent name="$PROJECT_DIR$/noova/sample" />
       <recent name="$PROJECT_DIR$/noova/sample/worker1" />
-      <recent name="$PROJECT_DIR$/noova/kvs/src/test/java/org/noova/kvs" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/noova/sample/ver2" />
@@ -207,7 +218,7 @@
       <workItem from="1731533498272" duration="6362000" />
       <workItem from="1731539893400" duration="29033000" />
       <workItem from="1731781630206" duration="29000" />
-      <workItem from="1731781701776" duration="17004000" />
+      <workItem from="1731781701776" duration="62586000" />
     </task>
     <servers />
   </component>

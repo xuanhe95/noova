@@ -1,16 +1,21 @@
 package org.noova.flame.operation;
 
 import org.noova.flame.*;
+import org.noova.kvs.Row;
 import org.noova.tools.Logger;
 import org.noova.tools.Serializer;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class FlatMapOperation implements Operation{
     private static final Logger log = Logger.getLogger(FlatMapOperation.class);
+    private static boolean isJarFileValid = false;
     @Override
     public  String execute(Request req, Response res, OperationContext ctx) {
         ctx.input(req.queryParams("input"));
@@ -79,22 +84,35 @@ public class FlatMapOperation implements Operation{
             return;
         }
 
-        it.forEachRemaining(row -> {
-            try {
-                    FlameRDD.StringToIterable lambda = (FlameRDD.StringToIterable) Serializer.byteArrayToObject(ctx.lambda(), ctx.getJAR());
-                    Iterable<String> result = lambda.op(row.get(FlameRDDImpl.FLAME_RDD_VALUE));  // Cannot invoke "org.noova.flame.FlameRDD$StringToIterable.op(String)" because "lambda" is nul
-                    if (result != null) {
-                        result.forEach(key -> {
-                            String rowKey = KeyGenerator.get();
-                            try {
-                                count.getAndIncrement();
-                                ctx.getKVS().put(ctx.output(), rowKey, FlameRDDImpl.FLAME_RDD_VALUE, key);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        });
-                    }
+        // enable parallel processing
+        List<Row> rows = new ArrayList<>();
+        it.forEachRemaining(rows::add);
 
+        rows.parallelStream().forEach(row -> {
+            try {
+                // Serializer issue? - ClassNotFoundException: org.noova.crawler.Crawler
+                // thread local serialization
+                FlameRDD.StringToIterable lambda= (FlameRDD.StringToIterable) Serializer.byteArrayToObject(ctx.lambda(), ctx.getJAR());
+
+                // check if deserialization was successful
+                if (lambda == null) {
+                    log.error("[flat map] Serializer.java issue.");
+                    return;
+                }
+
+                // process each row with lambda
+                Iterable<String> result = lambda.op(row.get(FlameRDDImpl.FLAME_RDD_VALUE));
+                if (result != null) {
+                    result.forEach(key -> {
+                        String rowKey = KeyGenerator.get();
+                        try {
+                            count.getAndIncrement();
+                            ctx.getKVS().put(ctx.output(), rowKey, FlameRDDImpl.FLAME_RDD_VALUE, key);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();

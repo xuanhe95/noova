@@ -44,4 +44,5 @@ public interface FlameContext {
   // should work on these ranges in parallel, e.g., on separate cores.
 
   public void setConcurrencyLevel(int keyRangesPerWorker);
+  public int calculateConcurrencyLevel();
 }
