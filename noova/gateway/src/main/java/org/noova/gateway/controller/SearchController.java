@@ -3,6 +3,7 @@ package org.noova.gateway.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.noova.gateway.service.SearchService;
+import org.noova.gateway.service.Service;
 import org.noova.tools.Logger;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
@@ -24,6 +25,8 @@ public class SearchController implements IController {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private static final SearchService SEARCH_SERVICE = SearchService.getInstance();
+
     private SearchController() {
     }
 
@@ -39,7 +42,7 @@ public class SearchController implements IController {
         log.info("[search] Searching by keyword");
         String keyword = req.queryParams("keyword");
         log.info("[search] Searching by keyword: " + keyword);
-        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeyword(keyword);
+        Map<String, Set<Integer>> urlsWithPositions = SEARCH_SERVICE.searchByKeyword(keyword);
         urlsWithPositions.forEach((normalizedUrl, position) -> {
             log.info("[search] Found keyword: " + keyword + " at " + normalizedUrl + ": " + position);
         });
@@ -53,7 +56,7 @@ public class SearchController implements IController {
         log.info("[search] Searching by page rank");
         String keyword = req.queryParams("keyword");
         log.info("[search] Searching by keyword: " + keyword);
-        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeyword(keyword);
+        Map<String, Set<Integer>> urlsWithPositions = SEARCH_SERVICE.searchByKeyword(keyword);
         SortedMap<Double, String> sortedUrls = SearchService.getInstance().sortByPageRank(urlsWithPositions);
 
         String json = OBJECT_MAPPER.writeValueAsString(sortedUrls);
@@ -67,7 +70,7 @@ public class SearchController implements IController {
         log.info("[search] Predicting by keyword");
         String keyword = req.queryParams("keyword");
         String limit = req.queryParams("limit") == null ? "10" : req.queryParams("limit");
-        List<String> urls = SearchService.getInstance().predict(keyword, Integer.parseInt(limit));
+        List<String> urls = SEARCH_SERVICE.predict(keyword, Integer.parseInt(limit));
         res.body(urls.toString());
     }
 
@@ -78,6 +81,15 @@ public class SearchController implements IController {
         String limit = req.queryParams("limit") == null ? "10" : req.queryParams("limit");
         //List<String> urls = SearchService.getInstance().predictWord(keyword, Integer.parseInt(limit));
         //res.body(urls.toString());
+    }
+
+    @Route(path = "/snapshot", method = "GET")
+    private void getSnapshot(Request req, Response res) throws IOException {
+        log.info("[search] Getting snapshot");
+        String normalizedUrl = req.queryParams("url");
+        String page = SEARCH_SERVICE.getSnapshot(normalizedUrl);
+        res.type("text/html");
+        res.body(page);
     }
 
 }

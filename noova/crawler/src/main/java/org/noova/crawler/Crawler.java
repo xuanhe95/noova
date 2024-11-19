@@ -16,6 +16,7 @@ import java.net.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -37,9 +38,25 @@ public class Crawler implements Serializable {
     private static final String RULE_DISALLOW = "Disallow";
     private static final String RULE_ALLOW = "Allow";
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
-    private static final boolean ENABLE_LOOP_INTERVAL = false; //! polite check
+    private static final boolean ENABLE_LOOP_INTERVAL = true; //! polite check
     private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
     private static final boolean ENABLE_VERTICAL_CRAWL = true;
+
+    private static final Random RANDOM_GENERATOR = new Random();
+
+    private static final boolean ENABLE_RANDOM_DROP = true;
+
+    private static final double NORMAL_DROP_RATE = 0.1;
+
+    private static final double HIGH_DROP_RATE = 0.3;
+
+    private static final double LOW_DROP_RATE = 0.05;
+
+
+    //private static final Set<String> VERTICAL_SEED_DOMAINS = new ConcurrentSkipListSet<>();
+
+
+
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
 
     private static final Map<String, SoftReference<String>> URL_CACHE = new WeakHashMap<>();
@@ -68,13 +85,15 @@ public class Crawler implements Serializable {
 
             // limit to seed urls' domain for crawling first 200k pages
             List<String> seedUrls = List.of(args);
-            Set<String> seedDomains = new HashSet<>();
+            Set<String> verticalSeedDomains = new HashSet<>();
             for(String url : seedUrls){
-                seedDomains.add(new URI(url).getHost());
+                log.info("[crawler] seed url: "+ url);
+                String domain = new URI(url).getHost();
+                verticalSeedDomains.add(getTopLevelDomain(domain));
             }
 
             log.info("[crawler] seed url init: "+ seedUrls);
-            log.info("[crawler] seed domain init: "+ seedDomains);
+            log.info("[crawler] seed domain init: "+ verticalSeedDomains);
 
             String blacklistTable=null;
             if(ENABLE_BLACKLIST) {
@@ -137,7 +156,7 @@ public class Crawler implements Serializable {
 
                 urlQueue = urlQueue.flatMapParallel(rawUrl -> {
                     try {
-                        return processUrl(ctx, rawUrl, blacklistTable, seedDomains);
+                        return processUrl(ctx, rawUrl, blacklistTable, verticalSeedDomains);
                     } catch (Exception e) {
                         log.error("Error processing URL: " + rawUrl, e);
                         return List.of();
@@ -148,15 +167,15 @@ public class Crawler implements Serializable {
                 log.info("[crawler] Next Job table ID (before checkpoint): " + nextJobTable);
 
                 // del prev job table
-                if (prevJobTable != null && prevJobTable.startsWith("pt-job-") && !prevJobTable.startsWith("pt-job-0") ) {
-                    log.info("[cleanup] Deleting unused table: " + prevJobTable);
-                    ctx.getKVS().delete(prevJobTable);
-                }
+//                if (prevJobTable != null && prevJobTable.startsWith("pt-job-") && !prevJobTable.startsWith("pt-job-0") ) {
+//                    log.info("[cleanup] Deleting unused table: " + prevJobTable);
+//                    //ctx.getKVS().delete(prevJobTable);
+//                }
 
                 // checkpoint the current queue
                 log.info("[crawler] Saving checkpoint for URL queue...");
-                ctx.getKVS().delete("pt-checkpoint"); // del previous checkpoint
-                urlQueue.saveAsTable("pt-checkpoint"); // save current queue as checkpoint
+                //ctx.getKVS().delete("pt-checkpoint"); // del previous checkpoint
+                //urlQueue.saveAsTable("pt-checkpoint"); // save current queue as checkpoint
 
                 // rotate
                 prevJobTable = nextJobTable;
@@ -179,7 +198,7 @@ public class Crawler implements Serializable {
         }
     }
 
-    private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, Set<String> seedDomains) throws Exception {
+    private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, Set<String> verticalSeedDomains) throws Exception {
         String normalizedUrl = normalizeURL(rawUrl, rawUrl);
         if(normalizedUrl == null){
             log.warn("[crawler] URL " + rawUrl + " is not a valid URL. Skipping.");
@@ -208,9 +227,15 @@ public class Crawler implements Serializable {
             }
             // skip if not in the same domain as seed url
             String urlDomain = url.getHost();
-            log.info("[crawler] url domain: "+urlDomain);
-            if (ENABLE_VERTICAL_CRAWL && !seedDomains.contains(urlDomain)) {
-                log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + seedDomains + ". Skipping.");
+
+            String topLevelDomain = getTopLevelDomain(urlDomain);
+
+
+            log.info("[crawler] url domain: "+topLevelDomain);
+
+            if (ENABLE_VERTICAL_CRAWL && !verticalSeedDomains.contains(topLevelDomain)) {
+
+                log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + verticalSeedDomains + ". Skipping.");
                 return new ArrayList<>();
             }
 
@@ -253,7 +278,7 @@ public class Crawler implements Serializable {
             //parseHostRules(ctx, normalizedUrl);
             updateHostLastAccessTime(ctx, url.getHost());
 
-            return requestHead(ctx, normalizedUrl, row, blacklistTable);
+            return requestHead(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
 
         } catch (Exception e) {
             log.error("[crawler] Error while processing URL: " + rawUrl, e);
@@ -287,7 +312,7 @@ public class Crawler implements Serializable {
         return false;
     }
 
-    private static List<String> requestGet(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable) throws IOException{
+    private static List<String> requestGet(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains) throws IOException{
         URL url;
         try {
             url = new URI(normalizedUrl).toURL();
@@ -328,14 +353,14 @@ public class Crawler implements Serializable {
 
 
             // scrawled time
-            row.put(PropertyLoader.getProperty("table.crawler.time"), String.valueOf(LocalDateTime.now()));
+            row.put(PropertyLoader.getProperty("table.crawler.timestamp"), String.valueOf(LocalDateTime.now()));
             // put original page to the page column
             row.put(PropertyLoader.getProperty("table.crawler.page"), page);
             // put normalized page to the text column
             row.put(PropertyLoader.getProperty("table.crawler.text"), normalizedPageText);
             // parse titles and put them to the title column
             List<String> titles = parseTitles(page);
-            row.put("table.crawler.title", String.join(" ", titles));
+            row.put(PropertyLoader.getProperty("table.crawler.title"), String.join(" ", titles));
 
 
 
@@ -360,7 +385,7 @@ public class Crawler implements Serializable {
                 }
             }
 
-            return parsePageLinks(ctx, page, normalizedUrl, blacklistTable);
+            return parsePageLinks(ctx, page, normalizedUrl, blacklistTable, verticalSeedDomains);
 
             //String hashedUrl = Hasher.hash(normalizedUrl);
             //URL_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
@@ -368,7 +393,7 @@ public class Crawler implements Serializable {
         return new ArrayList<>();
     }
 
-    static List<String> parsePageLinks(FlameContext ctx, String page, String normalizedUrl, String blacklistTable) throws IOException {
+    static List<String> parsePageLinks(FlameContext ctx, String page, String normalizedUrl, String blacklistTable, Set<String> verticalSeedDomains) throws IOException {
         List<String> links = new ArrayList<>();
 
         String hashedUrl = Hasher.hash(normalizedUrl);
@@ -395,8 +420,14 @@ public class Crawler implements Serializable {
             }
 
             String normalizedLink = normalizeURL(href, normalizedUrl);
+
             if(normalizedLink == null){
                 log.warn("[crawler] URL " + href + " is not a valid URL. Skipping.");
+                continue;
+            }
+
+            if(shouldDropLink(normalizedLink, verticalSeedDomains)){
+                log.warn("[crawler] URL " + normalizedLink + " is dropped. Skipping.");
                 continue;
             }
 
@@ -456,7 +487,106 @@ public class Crawler implements Serializable {
         return links;
     }
 
-    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable) throws IOException, URISyntaxException {
+    public static double calculateDropProbability(int depth, int threshold, double k) {
+        // Sigmoid formula: P_drop = 1 / (1 + e^(-k * (depth - threshold)))
+        return 1 / (1 + Math.exp(-k * (depth - threshold)));
+    }
+
+
+    private static boolean isRandomPathSegment(String segment) {
+        return segment.matches("[a-zA-Z0-9]{10,}");
+    }
+
+    private static boolean shouldDropByPathDepth(String[] parts) {
+        double randomRatio = RANDOM_GENERATOR.nextDouble();
+        int depth = parts.length - 1;
+        double pathDropRatio = calculateDropProbability(depth, 8, 0.5);
+        for (String segment : parts) {
+            // if the path segment is a random string and the path is too deep, drop
+            if (isRandomPathSegment(segment) && parts.length > 5) {
+                log.warn("[crawler] Random path segment detected: " + String.join("/", parts));
+                return true;
+            }
+        }
+        // if the path is too deep
+        return randomRatio < pathDropRatio;
+    }
+
+    private static boolean shouldDropByDomain(String domain) {
+
+        double randomRatio = RANDOM_GENERATOR.nextDouble();
+        // drop if the link is not in the vertical domain
+        if(domain.endsWith("edu") || domain.endsWith("org") || domain.endsWith("com") || domain.endsWith("net")){
+            if(randomRatio < LOW_DROP_RATE){
+                log.info("[crawler] URL " + domain + " is dropped by random ratio. Skipping.");
+                return true;
+            }
+        }
+        else if(domain.endsWith("gov") || domain.endsWith("tv") || domain.endsWith("io")){
+            if(randomRatio < NORMAL_DROP_RATE){
+                log.info("[crawler] URL " + domain + " is dropped by random ratio. Skipping.");
+                return true;
+            }
+        }
+        else{
+            if(randomRatio < HIGH_DROP_RATE){
+                log.info("[crawler] URL " + domain + " is dropped by random ratio. Skipping.");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsInvalidProtocol(String link) {
+        return link.contains("mailto:") || link.contains("javascript:") || link.contains("tel:");
+    }
+
+    private static boolean shouldRandomDrop(String normalizedLink, Set<String> verticalSeedDomains) {
+        String[] protocolWithHost = normalizedLink.split("//");
+        if(protocolWithHost.length < 2){
+            return true;
+        }
+        String[] parts = protocolWithHost[1].split("/");
+        String hostWithPort = parts[0];
+        String rawHost = hostWithPort.split(":")[0];
+
+
+        String topLevelDomain = getTopLevelDomain(rawHost);
+        // if this is a vertical domain, do not drop
+        if(ENABLE_VERTICAL_CRAWL && verticalSeedDomains.contains(topLevelDomain)){
+            return false;
+        }
+
+        if(shouldDropByPathDepth(parts)){
+            log.info("[crawler] URL " + normalizedLink + " is dropped by path depth. Skipping.");
+            return true;
+        }
+
+        if(shouldDropByDomain(rawHost)){
+            return true;
+        }
+        // if pass all the checks, do not drop
+        return false;
+    }
+
+
+    private static boolean shouldDropLink(String normalizedLink, Set<String> verticalSeedDomains) {
+        normalizedLink = normalizedLink.toLowerCase();
+
+        if(containsInvalidProtocol(normalizedLink)){
+            // this will always drop
+            return true;
+        }
+
+        if(ENABLE_RANDOM_DROP && shouldRandomDrop(normalizedLink, verticalSeedDomains)){
+            return true;
+        }
+
+        // if pass all the checks, do not drop
+        return false;
+    }
+
+    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains) throws IOException, URISyntaxException {
         URL url = new URI(normalizedUrl).toURL();
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("HEAD");
@@ -505,7 +635,7 @@ public class Crawler implements Serializable {
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
             return new ArrayList<>();
         } else {
-            return requestGet(ctx, normalizedUrl, row, blacklistTable);
+            return requestGet(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
         }
     }
 
@@ -997,6 +1127,14 @@ public class Crawler implements Serializable {
         long milliseconds = (nanoTime / 1_000_000) % 1000;
 
         return String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
+    }
+
+    private static String getTopLevelDomain(String host) {
+        String[] parts = host.split("\\.");
+        if (parts.length < 2) {
+            return host;
+        }
+        return parts[parts.length - 2] + "." + parts[parts.length - 1];
     }
 
 }

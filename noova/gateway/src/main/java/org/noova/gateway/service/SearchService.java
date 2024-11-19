@@ -181,4 +181,16 @@ public class SearchService implements IService {
         return trie.getWordsWithPrefix(prefix, limit);
     }
 
+
+    public String getSnapshot(String url) throws IOException {
+        String hashedUrl = Hasher.hash(url);
+        Row row = KVS.getRow(PropertyLoader.getProperty("table.crawler"), hashedUrl);
+        if (row == null) {
+            log.warn("[search] No row found for URL: " + hashedUrl);
+            return null;
+        }
+        log.info("[search] Found row: " + hashedUrl);
+        return row.get(PropertyLoader.getProperty("table.crawler.page"));
+    }
+
 }
