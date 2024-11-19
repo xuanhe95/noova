@@ -28,6 +28,14 @@ public class PageRank implements Serializable {
     private static final String URL_DELIMITER = " ";
 
     private static final String DUMMY_URL = "Dummy";
+    private static final double DEFAULT_CONVERGENCE_THRESHOLD = 0.05;
+
+    private static int totalPageCount = 0;
+
+    private static int convergedCount = 0;
+
+    private static final Map<String, Boolean> CONVERGED_MAP = new HashMap<>();
+
 
     private static double convergenceThreshold = 0.001;
     static double convergenceRatioInPercentage = 100.0;
@@ -55,6 +63,10 @@ public class PageRank implements Serializable {
 
 
             FlameRDD rdd = ctx.fromTable(CRAWL_TABLE, row -> row.get("url") + URL_PAGE_DELIMITER + row.get("page"));
+
+
+            totalPageCount = rdd.count();
+
             FlamePairRDD stateTable = rdd.mapToPair(s -> {
                 // log.info("[page rank] Mapping: " + s);
                 String[] parts = s.split(URL_PAGE_DELIMITER);
@@ -231,6 +243,8 @@ public class PageRank implements Serializable {
             // add the weighted factor to the new current rank
             double newRankCurrent = decayedValue + (1 - DECAY_RATE);
 
+            checkAndUpdateConvergedState(hashedUrl, newRankCurrent, newRankPrevious);
+
             String pageUrls = state[2];
             log.info("[update] Decayed Value: " + decayedValue);
             log.info("[update] URL: " + hashedUrl  + " New Rank: " + newRankCurrent + " Prev Rank: " + newRankPrevious);
@@ -239,46 +253,73 @@ public class PageRank implements Serializable {
         });
     }
 
+    private static boolean checkAndUpdateConvergedState(String hashedUrl, double newRankCurrent, double newRankPrevious){
+        if(CONVERGED_MAP.containsKey(hashedUrl)){
+            return true;
+        }
+        double diff = Math.abs(newRankCurrent - newRankPrevious);
+        if(diff < convergenceThreshold){
+            log.warn("[check convergence] Converged by threshold: " + diff + " Threshold: " + convergenceThreshold);
+            CONVERGED_MAP.put(hashedUrl, true);
+        }
+        convergedCount++;
+        return false;
+    }
+
     private static boolean isConverged(FlamePairRDD stateTable) throws Exception {
         log.info("Checking for convergence");
-
-        String maxValues = stateTable.flatMap(hashedUrlWithState -> {
-            String[] state = hashedUrlWithState._2().split(",");
-            double rankCurrent = Double.parseDouble(state[0]);
-            double rankPrevious = Double.parseDouble(state[1]);
-            double diff = Math.abs(rankCurrent - rankPrevious);
-            log.info("[check convergence] Diff: " + diff);
-            return Collections.singletonList(String.valueOf(diff));
-        }).fold("", (s, t) -> {
-            if(s.isEmpty()){
-                return t;
-            }
-            return s + " " + t;
-        });
-
-        String[] maxValuesArray = maxValues.split(" ");
-        int totalCount = maxValuesArray.length;
-        AtomicInteger convergedCount = new AtomicInteger(0);
-        double maxValue = Double.MIN_VALUE;
-        for(String value : maxValuesArray){
-            log.info("[check convergence] Value: " + value);
-            if(Double.parseDouble(value) < convergenceThreshold){
-                log.warn("[check convergence] Converged by threshold: " + value + " Threshold: " + convergenceThreshold);
-                convergedCount.incrementAndGet();
-            }
-            maxValue = Math.max(maxValue, Double.parseDouble(value));
-        }
-
-
-        log.info("Max Value: " + maxValue);
-        log.info("[check convergence] Converged Threshold: " + totalCount * convergenceRatioInPercentage + " " + convergedCount.get() * 100);
-        // return (convergedCount / (double) totalCount) * 100 >= convergenceRatioInPercentage;
-
-        if(totalCount * convergenceRatioInPercentage <= convergedCount.get() * 100){
-            log.warn("[check convergence] Converged by threshold: " + "Total: " + totalCount + " Converged: " + convergedCount + " Threshold: " + convergenceRatioInPercentage);
+        if(totalPageCount * convergenceRatioInPercentage <= convergedCount * 100){
+            log.info("[check convergence] Converged by threshold: " + "Total: " + totalPageCount + " Converged: " + convergedCount + " Threshold: " + convergenceRatioInPercentage);
             return true;
         }
         return false;
+
+//        String maxValues = stateTable.flatMap(hashedUrlWithState -> {
+//            String[] state = hashedUrlWithState._2().split(",");
+//            double rankCurrent = Double.parseDouble(state[0]);
+//            double rankPrevious = Double.parseDouble(state[1]);
+//            double diff = Math.abs(rankCurrent - rankPrevious);
+//            log.info("[check convergence] Diff: " + diff);
+//            return Collections.singletonList(String.valueOf(diff));
+//        }).fold("", (s, t) -> {
+//            if(s.isEmpty()){
+//                return t;
+//            }
+//            return s + " " + t;
+//        });
+//
+//        String[] maxValuesArray = maxValues.split(" ");
+//        int totalCount = maxValuesArray.length;
+//        AtomicInteger convergedCount = new AtomicInteger(0);
+//        double maxValue = Double.MIN_VALUE;
+//        for(String value : maxValuesArray){
+//            log.info("[check convergence] Value: " + value);
+//
+//            double diff = DEFAULT_CONVERGENCE_THRESHOLD;
+//
+//            try{
+//                diff = Double.parseDouble(value);
+//            } catch (NumberFormatException e){
+//                log.error("[check convergence] Error parsing value: " + value + " Using default value: " + DEFAULT_CONVERGENCE_THRESHOLD);
+//            }
+//
+//            if(diff < convergenceThreshold){
+//                log.warn("[check convergence] Converged by threshold: " + value + " Threshold: " + convergenceThreshold);
+//                convergedCount.incrementAndGet();
+//            }
+//            maxValue = Math.max(maxValue, Double.parseDouble(value));
+//        }
+//
+//
+//        log.info("Max Value: " + maxValue);
+//        log.info("[check convergence] Converged Threshold: " + totalCount * convergenceRatioInPercentage + " " + convergedCount.get() * 100);
+//        // return (convergedCount / (double) totalCount) * 100 >= convergenceRatioInPercentage;
+//
+//        if(totalCount * convergenceRatioInPercentage <= convergedCount.get() * 100){
+//            log.warn("[check convergence] Converged by threshold: " + "Total: " + totalCount + " Converged: " + convergedCount + " Threshold: " + convergenceRatioInPercentage);
+//            return true;
+//        }
+//        return false;
         // return maxValue < convergenceThreshold;
     }
 
