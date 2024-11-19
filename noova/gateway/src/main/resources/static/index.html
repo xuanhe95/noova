@@ -4,139 +4,410 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Noova</title>
-    <link rel="icon" href="/static/icon.ico" type="image/x-icon">
+    <link rel="icon" href="https://i.ibb.co/BBPHLJP/logo.png" type="image/x-icon">
     <link
             href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
             rel="stylesheet">
     <style>
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f8f9fa;
             font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 90%;
+            margin: 0 auto;
+            padding-top: 20px;
         }
 
         .search-container {
-            text-align: center;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            flex-direction: column;
+            transition: all 0.3s ease;
             width: 100%;
-            max-width: 600px;
         }
 
-        .search-logo {
-            font-size: 48px;
-            color: #4285f4;
-            font-weight: bold;
+        .logo-large img {
+            width: 300px;
+            height: auto;
+            transition: width 0.3s ease;
+            padding-top: 100px;
+            margin-bottom: 20px;
+        }
+
+        /* Sticky header styling (small logo) */
+        .sticky {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: #f8f9fa;
+            padding: 10px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            width: 100%;
+            flex-direction: row; /* Align logo and form horizontally */
+        }
+
+        .sticky .search-logo img {
+            width: 40px;
+            height: auto;
+            margin-right: 10px;
+        }
+
+        /* Vertical layout (default) */
+        .vertical-layout {
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            align-items: center;
+        }
+
+        .vertical-layout .search-buttons {
+            margin-top: 10px; /* Space between search box and buttons */
+        }
+
+        /* Horizontal layout (after search) */
+        .horizontal-layout {
+            display: flex;
+            flex-direction: row; /* Align elements horizontally */
+            align-items: center;
+            gap: 10px; /* Space between search box and buttons */
         }
 
         .search-box {
             display: flex;
             align-items: center;
             border: 1px solid #dfe1e5;
-            border-radius: 24px;
-            padding: 8px 16px;
+            border-radius: 12px;
             box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
-            margin-top: 20px;
+            max-width: 800px;
+            width: 100%;
+            padding: 8px 16px;
         }
 
         .search-box input[type="text"] {
             border: none;
             outline: none;
             width: 100%;
-            font-size: 18px;
-            padding: 8px;
+            font-size: 16px;
         }
 
         .search-box .icon {
             color: #4285f4;
-            margin-right: 10px;
-        }
-
-        .search-buttons {
-            margin-top: 20px;
+            margin-right: 5px;
+            font-size: 18px;
         }
 
         .search-buttons .btn {
-            margin: 5px;
-            padding: 10px 20px;
+            width: 100px;
+            padding: 8px 16px;
             font-size: 16px;
             color: #5f6368;
             background-color: #f8f9fa;
             border: 1px solid #dfe1e5;
-            border-radius: 4px;
+            border-radius: 5px;
             box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
         }
+        .search-box {
+            width: 500px;
+        }
 
-        .search-buttons .btn:hover {
-            border-color: #dadce0;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        #results {
+            margin-top: 70px;
+        }
+
+        .suggestions-box {
+            position: absolute;
+            top: 88%;
+            background-color: #fff;
+            border: 1px solid #dfe1e5;
+            box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+            width: 500px;
+            z-index: 1000;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #1a0dab;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f1f3f4;
+        }
+
+        .pagination-link {
+            margin: 0 2px;
+            padding: 5px;
+            cursor: pointer;
+            color: #1a0dab;
+            font-weight: bold;
+            text-decoration: none;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+        }
+
+        .pagination-link:hover {
+            text-decoration: underline;
+        }
+
+        .pagination-link.current {
+            color: red;
+            cursor: default;
+            text-decoration: none;
+        }
+
+        .pagination-link.disabled {
+            color: #d3d3d3;
+            cursor: default;
+        }
+
+        footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f1f1f1;
+            padding: 20px 30px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            border-top: 1px solid #e0e0e0;
+            width: 100%;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+        }
+
+        .location-info {
+            display: flex;
+            align-items: center;
+            color: #333;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 576px) {
+            .search-logo {
+                font-size: 36px;
+            }
+
+            .search-box {
+                padding: 6px 12px;
+            }
+
+            .search-box input[type="text"] {
+                font-size: 16px;
+            }
+
+            .search-buttons .btn {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
-<div class="search-container">
-    <div class="search-logo">
-        <img src="https://i.ibb.co/BBPHLJP/logo.png" alt="Search Logo">
-    </div>
-    <div class="row justify-content-center">
-        <div class="col-md-12">
-            <form id="searchForm">
-                <div class="search-box">
-                    <span class="icon">&#128269;</span>
-                    <input type="text" name="keyword" id="search-query" placeholder="Search Noova..." required>
-                </div>
-                <div class="search-buttons">
-                    <button class="btn" type="submit">Noova it</button>
-                    <button class="btn" type="button" onclick="window.location.href='/random'">Recommendation</button>
-                </div>
-            </form>
+<div class="main-container">
+    <div class="search-container logo-large" id="searchContainer">
+        <div class="search-logo">
+            <img src="https://i.ibb.co/BBPHLJP/logo.png" alt="Search Logo">
         </div>
+        <form id="searchForm" class="vertical-layout">
+            <div class="search-box">
+                <span class="icon">&#128269;</span>
+                <input type="text" name="keyword" id="search-query" placeholder="Search Noova..." required>
+            </div>
+            <div id="suggestions" class="suggestions-box"></div>
+            <div class="search-buttons">
+                <button class="btn" type="submit">Noova it</button>
+            </div>
+        </form>
     </div>
-    <div id="results" class="row justify-content-center">
-        <!-- Search results will be displayed here -->
-    </div>
+    <div id="results"></div>
+    <div id="pagination-controls" class="text-center mt-3"></div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $('#searchForm').submit(function(event) {
-            event.preventDefault(); // Prevent the form from submitting traditionally
+<footer>
+    <div id="location-info" class="location-info">
+    </div>
+</footer>
 
-            const keyword = $('#search-query').val();
-            if (!keyword) {
+</body>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+
+    fetch('/api/location')
+        .then(response => response.json())
+        .then(data => {
+            const footerText = `Location: ${data.township}, Zipcode: ${data.zipcode}`;
+            document.getElementById('location-info').innerText = footerText;
+        })
+        .catch(error => {
+            console.error("Error fetching location:", error);
+            document.getElementById('location-info').innerText = "Unable to load location";
+        });
+
+    $(document).ready(function () {
+        const $searchBox = $('#search-query');
+        const $suggestionsBox = $('#suggestions');
+
+        $searchBox.on('input', function() {
+            const query = $(this).val();
+            if (query.length >= 1) { // Start suggesting after 1 or more characters
+                $.ajax({
+                    url: '/autocomplete',
+                    method: 'GET',
+                    data: { prefix: query },
+                    success: function(suggestions) {
+                        displaySuggestions(suggestions);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error fetching suggestions:", error);
+                        $suggestionsBox.empty().hide();
+                    }
+                });
+            } else {
+                $suggestionsBox.empty().hide(); // Clear suggestions if input is empty
+            }
+        });
+
+        function displaySuggestions(suggestions) {
+            $suggestionsBox.empty(); // Clear previous suggestions
+            if (suggestions.length === 0) {
+                $suggestionsBox.hide();
+                return;
+            }
+            suggestions.forEach(function(suggestion) {
+                const suggestionItem = $('<div>').text(suggestion).addClass('suggestion-item');
+                suggestionItem.on('click', function() {
+                    $searchBox.val(suggestion);
+                    $suggestionsBox.empty().hide();
+                });
+                $suggestionsBox.append(suggestionItem);
+            });
+
+            $suggestionsBox.show();
+        }
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#search-query, #suggestions').length) {
+                $suggestionsBox.hide();
+            }
+        });
+
+        let resultsData = [];
+        const resultsPerPage = 10;
+        let currentPage = 1;
+
+        $('#searchForm').submit(function (event) {
+            event.preventDefault();
+            const query = $('#search-query').val();
+            if (!query) {
                 alert("Please enter a search keyword.");
                 return;
             }
 
-            // Perform an AJAX GET request to the /search/pagerank endpoint
+            // Switch to sticky header mode after search
+            $('#searchContainer').removeClass('logo-large').addClass('sticky');
+            $('.search-logo').addClass('no-margin');
+            $('.search-buttons').addClass('no-margin');
+            $('#searchForm').removeClass('vertical-layout').addClass('horizontal-layout');            // Perform AJAX request to fetch results
+
             $.ajax({
-                url: '/search/pagerank',
+                url: '/search',
                 method: 'GET',
-                data: { keyword: keyword },
-                success: function(response) {
-                    displayResults(response);
+                data: {query: query},
+                success: function (response) {
+                    resultsData = response;
+                    currentPage = 1;
+                    displayResults();
+                    displayPaginationControls();
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     console.error("Error performing search:", error);
-                    $('#results').html('<p>An error occurred while fetching results.</p>');
+                    $('#results').html(`
+                        <p style="margin-top: 10%;">An error occurred while fetching results.</p>
+                    `);
                 }
             });
         });
 
-        function displayResults(data) {
+        function displayResults() {
             const resultsContainer = $('#results');
-            resultsContainer.empty(); // Clear previous results
+            resultsContainer.empty();
 
-            $.each(data, function(key, value) {
-                const resultItem = $('<div>').addClass('col-12 result-item');
-                resultItem.html(`<p><strong>${key}:</strong> <a href="${value}" target="_blank">${value}</a></p>`);
-                $('#results').append(resultItem);
-            });
+            const start = (currentPage - 1) * resultsPerPage;
+            const end = Math.min(start + resultsPerPage, resultsData.length);
+
+            for (let i = start; i < end; i++) {
+                const result = resultsData[i];
+                const resultItem = $('<div>').addClass('result-section result-item');
+                resultItem.html(`
+                    <h5><p>${result.title}</p></h5>
+                    <b><a href="${result.url}" target="_blank">${result.url.length > 50 ? result.url.substring(0, 50) + '...' : result.url}</a></b>
+                    <p><strong>Score:</strong> ${result.combinedScore.toFixed(2)}</p>
+                    <p>${result.context}...</p>
+                `);
+                resultsContainer.append(resultItem);
+            }
         }
+
+        function displayPaginationControls() {
+            const paginationContainer = $('#pagination-controls');
+            paginationContainer.empty();
+
+            const totalPages = Math.ceil(resultsData.length / resultsPerPage);
+
+            const prevButton = $('<span>').text('Previous').addClass('pagination-link');
+            if (currentPage > 1) {
+                prevButton.click(function() {
+                    currentPage--;
+                    displayResults();
+                    displayPaginationControls();
+                });
+            } else {
+                prevButton.addClass('disabled');
+            }
+            paginationContainer.append(prevButton);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageButton = $('<span>').text(i).addClass('pagination-link');
+                if (i === currentPage) {
+                    pageButton.addClass('current');
+                } else {
+                    pageButton.click((function(page) {
+                        return function() {
+                            currentPage = page;
+                            displayResults();
+                            displayPaginationControls();
+                        };
+                    })(i));
+                }
+                paginationContainer.append(pageButton);
+            }
+
+            const nextButton = $('<span>').text('Next').addClass('pagination-link');
+            if (currentPage < totalPages) {
+                nextButton.click(function() {
+                    currentPage++;
+                    displayResults();
+                    displayPaginationControls();
+                });
+            } else {
+                nextButton.addClass('disabled');
+            }
+            paginationContainer.append(nextButton);
+        }
+
     });
 </script>
-</body>
+
 </html>
