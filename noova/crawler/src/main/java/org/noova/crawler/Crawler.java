@@ -1048,33 +1048,40 @@ public class Crawler implements Serializable {
 //            log.error("[robot] Error while parsing URL: " + robotsTxtUrl, e);
 //            throw new RuntimeException(e);
 //        }
-        if(row == null){
+        if(row == null) {
             log.error("[robot] Row is null for: " + topLevelDomain);
             return;
         }
 
+        if(row.get(ROBOTS_TXT_PATH) != null) {
+            log.info("[robot] robots.txt already fetched for: " + topLevelDomain);
+            return;
+        }
+
         String robotsTxtUrl = topLevelDomain + "/" + ROBOTS_TXT_PATH;
+        HttpURLConnection conn = null;
 
         try {
 
             // Row row = ctx.getKVS().getRow(HOSTS_TABLE, getTopLevelDomain(url.getHost()));
-            if(row.get(ROBOTS_TXT_PATH) != null){
-                log.info("[robot] robots.txt already fetched for: " +  topLevelDomain);
-                return;
-            }
+//            if(row.get(ROBOTS_TXT_PATH) != null){
+//                log.info("[robot] robots.txt already fetched for: " +  topLevelDomain);
+//                return;
+//            }
 
 //            if(row == null){
 //                row = new Row(getTopLevelDomain(url.getHost()));
 //            }
 
             URL robotsUrl = new URI(robotsTxtUrl).toURL();
-
-            HttpURLConnection conn = (HttpURLConnection) robotsUrl.openConnection();
+            conn = (HttpURLConnection) robotsUrl.openConnection();
             // in case of slow response
-            conn.setConnectTimeout(1000);
+            conn.setConnectTimeout(500);
+            conn.setReadTimeout(500);
             conn.setRequestMethod("GET");
             conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
             conn.connect();
+
             int responseCode = conn.getResponseCode();
             if(responseCode == 200 && conn.getContentType() != null && conn.getContentType().contains("text/plain")) {
                 String robotsTxt = new String(conn.getInputStream().readAllBytes());
@@ -1086,17 +1093,20 @@ public class Crawler implements Serializable {
                 efficientParseHostRules(ctx, robotsTxt, row);
 
 
-            } else{
-                log.warn("[robot] No robots.txt found for: " +  robotsTxtUrl);
-                ctx.getKVS().put(HOSTS_TABLE, row.key(), ROBOTS_TXT_PATH, "Robot.txt not found");
+            }else {
+                row.put(ROBOTS_TXT_PATH, "NOT_FOUND");
             }
-
         } catch(Exception e) {
             log.error("[robot] Error while fetching robots.txt: " + robotsTxtUrl, e);
+            row.put(ROBOTS_TXT_PATH, "ERROR");
+        }finally {
+            if(conn != null) {
+                conn.disconnect();
+            }
             try {
-                ctx.getKVS().put(HOSTS_TABLE, row.key(), ROBOTS_TXT_PATH, "Error while fetching robots.txt");
-            } catch (IOException ex) {
-                log.error("[robot] Error while saving error message: " + robotsTxtUrl, ex);
+                ctx.getKVS().putRow(HOSTS_TABLE, row);
+            } catch(Exception e) {
+                log.error("[robot] Failed to save row for: " + topLevelDomain);
             }
         }
 //        } finally{
