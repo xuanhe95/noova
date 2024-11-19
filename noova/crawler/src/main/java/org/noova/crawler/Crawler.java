@@ -38,7 +38,7 @@ public class Crawler implements Serializable {
     private static final String RULE_DISALLOW = "Disallow";
     private static final String RULE_ALLOW = "Allow";
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
-    private static final boolean ENABLE_LOOP_INTERVAL = true; //! polite check
+    private static final boolean ENABLE_LOOP_INTERVAL = false; //! polite check
     private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
     private static final boolean ENABLE_VERTICAL_CRAWL = true;
 
@@ -46,11 +46,11 @@ public class Crawler implements Serializable {
 
     private static final boolean ENABLE_RANDOM_DROP = true;
 
-    private static final double NORMAL_DROP_RATE = 0.1;
+    private static final double NORMAL_DROP_RATE = 0.3;
 
-    private static final double HIGH_DROP_RATE = 0.3;
+    private static final double HIGH_DROP_RATE = 0.8;
 
-    private static final double LOW_DROP_RATE = 0.05;
+    private static final double LOW_DROP_RATE = 0.1;
 
 
     //private static final Set<String> VERTICAL_SEED_DOMAINS = new ConcurrentSkipListSet<>();
@@ -271,12 +271,12 @@ public class Crawler implements Serializable {
                 row = new Row(hashedUrl);
             }
             log.info("[crawler] Row: " + row);
-            if (!checkLastAccessTime(ctx, normalizedUrl, url.getHost())) {
+            if (!checkLastAccessTime(ctx, normalizedUrl, getTopLevelDomain(url.getHost()))) {
                 // if the host is accessed too frequently, skip this URL, but still need to put it into the table
                 return List.of(normalizedUrl);
             }
             //parseHostRules(ctx, normalizedUrl);
-            updateHostLastAccessTime(ctx, url.getHost());
+            updateHostLastAccessTime(ctx, getTopLevelDomain(url.getHost()));
 
             return requestHead(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
 
@@ -951,6 +951,7 @@ public class Crawler implements Serializable {
 
     private static void downloadRobotsTxt(FlameContext ctx, String normalizedUrl) {
 
+
         String robotsTxtUrl = normalizedUrl.endsWith("/") ? normalizedUrl + ROBOTS_TXT_PATH : normalizedUrl + "/" + ROBOTS_TXT_PATH;
 
 //        if(ROBOT_CACHE.containsKey(robotsTxtUrl)) {
@@ -965,18 +966,19 @@ public class Crawler implements Serializable {
         } catch (Exception e) {
             log.error("[robot] Error while parsing URL: " + robotsTxtUrl, e);
             throw new RuntimeException(e);
-
         }
 
         try {
 
-            Row row = ctx.getKVS().getRow(HOSTS_TABLE, url.getHost());
+            Row row = ctx.getKVS().getRow(HOSTS_TABLE, getTopLevelDomain(url.getHost()));
             if(row != null && row.get(ROBOTS_TXT_PATH) != null){
                 log.info("[robot] robots.txt already fetched for: " +  normalizedUrl);
                 return;
             }
 
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            // in case of slow response
+            conn.setConnectTimeout(1000);
             conn.setRequestMethod("GET");
             conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
             conn.connect();
@@ -984,16 +986,16 @@ public class Crawler implements Serializable {
             if(responseCode == 200) {
                 String robotsTxt = new String(conn.getInputStream().readAllBytes());
                 log.warn("[robot] Found robots.txt: " + robotsTxt);
-                ctx.getKVS().put(HOSTS_TABLE, url.getHost(), ROBOTS_TXT_PATH, robotsTxt);
+                ctx.getKVS().put(HOSTS_TABLE, getTopLevelDomain(url.getHost()), ROBOTS_TXT_PATH, robotsTxt);
             } else{
                 log.warn("[robot] No robots.txt found for: " +  robotsTxtUrl);
-                ctx.getKVS().put(HOSTS_TABLE, url.getHost(), ROBOTS_TXT_PATH, "Robot.txt not found");
+                ctx.getKVS().put(HOSTS_TABLE, getTopLevelDomain(url.getHost()), ROBOTS_TXT_PATH, "Robot.txt not found");
             }
 
         } catch(Exception e) {
             log.error("[robot] Error while fetching robots.txt: " + robotsTxtUrl, e);
             try {
-                ctx.getKVS().put(HOSTS_TABLE, url.getHost(), ROBOTS_TXT_PATH, "Error while fetching robots.txt");
+                ctx.getKVS().put(HOSTS_TABLE, getTopLevelDomain(url.getHost()), ROBOTS_TXT_PATH, "Error while fetching robots.txt");
             } catch (IOException ex) {
                 log.error("[robot] Error while saving error message: " + robotsTxtUrl, ex);
             }

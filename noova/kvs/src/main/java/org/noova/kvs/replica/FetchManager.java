@@ -103,7 +103,12 @@ public class FetchManager {
         // push row
         TableManager tableManager = TableManager.getInstance();
         Table table = tableManager.getTable(tableName);
-        Row row = table.getRow(rowName).getValue();
+        var version = table.getRow(rowName);
+        if(version == null){
+            log.error("Row not found");
+            return;
+        }
+        Row row = version.getValue();
         if(row == null){
             log.error("Row not found");
             return;

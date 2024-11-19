@@ -105,8 +105,7 @@ public class PersistTable implements Table {
 //        return getRows("", null);
 //    }
 
-    private FileIOStrategy getEncodedFile(String key){
-
+    private FileIOStrategy createEncodedFile(String key){
         String encodedKey = KeyEncoder.encode(key);
         File tableFile = new File(rootFilePath, encodedKey);
 
@@ -146,6 +145,40 @@ public class PersistTable implements Table {
         }
     }
 
+    private FileIOStrategy getEncodedFile(String key){
+
+        String encodedKey = KeyEncoder.encode(key);
+        File tableFile = new File(rootFilePath, encodedKey);
+
+        // this if for EC, if the key is too long, we need to create a subdir
+        if(encodedKey.length() > MAX_DIR_LENGTH){
+            log.warn("[persist table] key is too long, create subdir");
+            String subdir = SUBDIR_PREFIX + encodedKey.substring(0, SUBDIR_LENGTH);
+            File subFile = new File(rootFilePath + "/" + subdir);
+            if(!subFile.exists()){
+                boolean ok = subFile.mkdirs();
+                if(!ok){
+                    throw new RuntimeException("create rootFile failed");
+                }
+            }
+            tableFile = new File(subFile, encodedKey);
+        } else{
+            log.warn("[persist table] key is not too long");
+        }
+
+        log.info("get rootFile: " + tableFile.getAbsolutePath());
+
+        if(!tableFile.exists()){
+           return null;
+        }
+
+        try {
+            return new FileIOStrategy(tableFile);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public String key(){
         return key;
     }
@@ -157,10 +190,16 @@ public class PersistTable implements Table {
         //IOStrategy io = getEncodedFile(key);
 
         try(IOStrategy io = getEncodedFile(key)){
+            if(io == null){
+                log.warn("rootFile not found");
+                return null;
+            }
+
             Row row = Row.readFrom(io.in());
             log.info("read from rootFile");
             if(row == null){
-                return new Version<>("0", new Row(key));
+                //return new Version<>("0", new Row(key));
+                return null;
             }
             return new Version<>("0", row);
         } catch(Exception e) {
@@ -175,7 +214,7 @@ public class PersistTable implements Table {
 
         String rowKey = row.key();
 
-        try (IOStrategy io = getEncodedFile(rowKey)){
+        try (IOStrategy io = createEncodedFile(rowKey)){
             io.write(row.toByteArray());
             log.info("write to rootFile");
         } catch (Exception e) {
@@ -188,7 +227,7 @@ public class PersistTable implements Table {
     @Override
     public synchronized void putRow(String rowName, Row row) {
 
-        try (IOStrategy io = getEncodedFile(rowName)){
+        try (IOStrategy io = createEncodedFile(rowName)){
             io.write(row.toByteArray());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -198,7 +237,7 @@ public class PersistTable implements Table {
     @Override
     public synchronized Version<Row> putRow(String key){
 
-        try(IOStrategy io = getEncodedFile(key) ){
+        try(IOStrategy io = createEncodedFile(key) ){
             Row row = Row.readFrom(io.in());
             if(row == null){
                 row = new Row(key);

@@ -237,8 +237,12 @@ public class TableManager implements ITableManager {
             log.info("table not found");
             return null;
         }
-
-        Row row = table.getRow(rowKey).getValue();
+        var version = table.getRow(rowKey);
+        if(version == null){
+            log.info("row not found");
+            return null;
+        }
+        Row row = version.getValue();
         if(row == null){
             log.info("row not found");
             return null;
