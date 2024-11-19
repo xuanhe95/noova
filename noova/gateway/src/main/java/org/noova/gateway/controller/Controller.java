@@ -16,6 +16,8 @@ public class Controller implements IController {
     private static final Logger log = Logger.getLogger(Controller.class);
     public static void registerRoutes() {
         registerRoutes(SearchController.class);
+        registerRoutes(AutocompleteController.class);
+        registerRoutes(LocationController.class);
     }
 
     public static void registerRoutes(Class clazz){

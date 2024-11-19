@@ -35,7 +35,6 @@ public class SearchService implements IService {
 
     private static final KVS KVS = storageStrategy.getKVS();
 
-
     private static final int totalDocuments = 815; // TBD, hardcoded for now
 
 
@@ -315,10 +314,18 @@ public class SearchService implements IService {
         // Build the snippet string
         StringBuilder snippet = new StringBuilder();
         for (int i = start; i < end; i++) {
-            snippet.append(words[i]).append(" ");
+            if (positions.contains(i)) {
+                snippet.append("<b>").append(words[i]).append("</b>").append(" ");
+            } else {
+                snippet.append(words[i]).append(" ");
+            }
         }
 
         return snippet.toString().trim();
+    }
+
+    public List<String> getAutocompleteSuggestions(String inputWords, int limit) {
+        return trie.getWordsWithPrefix(inputWords,10);
     }
 
 

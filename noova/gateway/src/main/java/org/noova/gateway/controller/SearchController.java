@@ -117,10 +117,11 @@ public class SearchController implements IController {
             String pageContent = SearchService.getInstance().getPageContent(url);
             log.info("[search] page content: " + pageContent);
 
-            String contextSnippet = SearchService.getInstance().ExtractContextSnippet(pageContent, positions, 30); // 30-word context
+            String contextSnippet = SearchService.getInstance().ExtractContextSnippet(pageContent, positions, 60); // TBD, hardcoded
             log.info("[search] page contextSnippet: " + contextSnippet);
 
             Map<String, Object> result = new HashMap<>();
+            result.put("title", "TBD");
             result.put("url", url);
             result.put("combinedScore", combinedScore);
             result.put("context", contextSnippet);
@@ -135,5 +136,6 @@ public class SearchController implements IController {
         res.body(json);
         res.type("application/json");
     }
+
 
 }

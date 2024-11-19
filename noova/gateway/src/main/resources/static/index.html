@@ -4,107 +4,146 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Noova</title>
-    <link rel="icon" href="/static/icon.ico" type="image/x-icon">
+    <link rel="icon" href="https://i.ibb.co/BBPHLJP/logo.png" type="image/x-icon">
     <link
             href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
             rel="stylesheet">
     <style>
         body {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            background-color: #f8f9fa;
             font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 90%;
+            margin: 0 auto;
             padding-top: 20px;
         }
 
         .search-container {
-            width: 100%;
-            max-width: 800px;
-            text-align: center;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            flex-direction: column;
             transition: all 0.3s ease;
+            width: 100%;
         }
 
-        .scrolled .search-container {
+        .logo-large img {
+            width: 300px;
+            height: auto;
+            transition: width 0.3s ease;
+            padding-top: 100px;
+            margin-bottom: 20px;
+        }
+
+        /* Sticky header styling (small logo) */
+        .sticky {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            padding: 10px;
             background-color: #f8f9fa;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 10px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             z-index: 1000;
+            width: 100%;
+            flex-direction: row; /* Align logo and form horizontally */
         }
 
-        .search-logo {
-            font-size: 48px;
-            color: #4285f4;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 20px;
+        .sticky .search-logo img {
+            width: 40px;
+            height: auto;
+            margin-right: 10px;
+        }
+
+        /* Vertical layout (default) */
+        .vertical-layout {
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            align-items: center;
+        }
+
+        .vertical-layout .search-buttons {
+            margin-top: 10px; /* Space between search box and buttons */
+        }
+
+        /* Horizontal layout (after search) */
+        .horizontal-layout {
+            display: flex;
+            flex-direction: row; /* Align elements horizontally */
+            align-items: center;
+            gap: 10px; /* Space between search box and buttons */
         }
 
         .search-box {
             display: flex;
             align-items: center;
             border: 1px solid #dfe1e5;
-            border-radius: 24px;
-            padding: 8px 16px;
+            border-radius: 12px;
             box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
-            margin-bottom: 20px;
+            max-width: 800px;
+            width: 100%;
+            padding: 8px 16px;
         }
 
         .search-box input[type="text"] {
             border: none;
             outline: none;
             width: 100%;
-            font-size: 18px;
-            padding: 8px;
+            font-size: 16px;
         }
 
         .search-box .icon {
             color: #4285f4;
-            margin-right: 10px;
-        }
-
-        .search-buttons {
-            text-align: center;
-            margin-bottom: 20px;
+            margin-right: 5px;
+            font-size: 18px;
         }
 
         .search-buttons .btn {
-            margin: 5px;
-            padding: 10px 20px;
+            width: 100px;
+            padding: 8px 16px;
             font-size: 16px;
             color: #5f6368;
             background-color: #f8f9fa;
             border: 1px solid #dfe1e5;
-            border-radius: 4px;
+            border-radius: 5px;
             box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
         }
+        .search-box {
+            width: 500px;
+        }
 
-        .result-section {
-            margin-top: 80px;
-            padding: 20px;
-            border: 1px solid #dfe1e5;
-            border-radius: 8px;
+        #results {
+            margin-top: 70px;
+        }
+
+        .suggestions-box {
+            position: absolute;
+            top: 88%;
             background-color: #fff;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #dfe1e5;
+            box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+            width: 500px;
+            z-index: 1000;
+            border-radius: 4px;
+            overflow: hidden;
         }
 
-        .result-item {
-            margin-bottom: 15px;
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #1a0dab;
         }
 
-        .result-item h5 {
-            font-size: 18px;
-            color: #202124;
-        }
-
-        .result-item p {
-            font-size: 14px;
-            color: #4d5156;
+        .suggestion-item:hover {
+            background-color: #f1f3f4;
         }
 
         .pagination-link {
@@ -132,31 +171,63 @@
             color: #d3d3d3;
             cursor: default;
         }
-        .noova-text {
-            font-weight: bold;
-            font-size: 24px;
-            color: #1a0dab;
+
+        footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #f1f1f1;
+            padding: 20px 30px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            border-top: 1px solid #e0e0e0;
+            width: 100%;
+            position: fixed;
+            bottom: 0;
+            left: 0;
         }
-        .o-link {
-            font-size: 24px;
-            color: #1a0dab;
+
+        .location-info {
+            display: flex;
+            align-items: center;
+            color: #333;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 576px) {
+            .search-logo {
+                font-size: 36px;
+            }
+
+            .search-box {
+                padding: 6px 12px;
+            }
+
+            .search-box input[type="text"] {
+                font-size: 16px;
+            }
+
+            .search-buttons .btn {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
 <div class="main-container">
-    <div class="search-container">
-        <form id="searchForm"> <!-- Wrapping with form element -->
-            <div class="search-logo">
-                <img src="https://i.ibb.co/BBPHLJP/logo.png" alt="Search Logo">
-            </div>
+    <div class="search-container logo-large" id="searchContainer">
+        <div class="search-logo">
+            <img src="https://i.ibb.co/BBPHLJP/logo.png" alt="Search Logo">
+        </div>
+        <form id="searchForm" class="vertical-layout">
             <div class="search-box">
                 <span class="icon">&#128269;</span>
                 <input type="text" name="keyword" id="search-query" placeholder="Search Noova..." required>
             </div>
+            <div id="suggestions" class="suggestions-box"></div>
             <div class="search-buttons">
-                <button type="submit" class="btn" id="searchBtn">Noova it</button>
-                <button class="btn" type="button" onclick="window.location.href='/random'">Recommendation</button>
+                <button class="btn" type="submit">Noova it</button>
             </div>
         </form>
     </div>
@@ -164,14 +235,78 @@
     <div id="pagination-controls" class="text-center mt-3"></div>
 </div>
 
+<footer>
+    <div id="location-info" class="location-info">
+    </div>
+</footer>
+
+</body>
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script>
+
+    fetch('/api/location')
+        .then(response => response.json())
+        .then(data => {
+            const footerText = `Location: ${data.township}, Zipcode: ${data.zipcode}`;
+            document.getElementById('location-info').innerText = footerText;
+        })
+        .catch(error => {
+            console.error("Error fetching location:", error);
+            document.getElementById('location-info').innerText = "Unable to load location";
+        });
+
     $(document).ready(function () {
+        const $searchBox = $('#search-query');
+        const $suggestionsBox = $('#suggestions');
+
+        $searchBox.on('input', function() {
+            const query = $(this).val();
+            if (query.length >= 1) { // Start suggesting after 1 or more characters
+                $.ajax({
+                    url: '/autocomplete',
+                    method: 'GET',
+                    data: { prefix: query },
+                    success: function(suggestions) {
+                        displaySuggestions(suggestions);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error fetching suggestions:", error);
+                        $suggestionsBox.empty().hide();
+                    }
+                });
+            } else {
+                $suggestionsBox.empty().hide(); // Clear suggestions if input is empty
+            }
+        });
+
+        function displaySuggestions(suggestions) {
+            $suggestionsBox.empty(); // Clear previous suggestions
+            if (suggestions.length === 0) {
+                $suggestionsBox.hide();
+                return;
+            }
+            suggestions.forEach(function(suggestion) {
+                const suggestionItem = $('<div>').text(suggestion).addClass('suggestion-item');
+                suggestionItem.on('click', function() {
+                    $searchBox.val(suggestion);
+                    $suggestionsBox.empty().hide();
+                });
+                $suggestionsBox.append(suggestionItem);
+            });
+
+            $suggestionsBox.show();
+        }
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#search-query, #suggestions').length) {
+                $suggestionsBox.hide();
+            }
+        });
+
         let resultsData = [];
         const resultsPerPage = 10;
         let currentPage = 1;
 
-        // Handle form submit to support Enter key
         $('#searchForm').submit(function (event) {
             event.preventDefault();
             const query = $('#search-query').val();
@@ -180,7 +315,12 @@
                 return;
             }
 
-            // Perform AJAX request
+            // Switch to sticky header mode after search
+            $('#searchContainer').removeClass('logo-large').addClass('sticky');
+            $('.search-logo').addClass('no-margin');
+            $('.search-buttons').addClass('no-margin');
+            $('#searchForm').removeClass('vertical-layout').addClass('horizontal-layout');            // Perform AJAX request to fetch results
+
             $.ajax({
                 url: '/search',
                 method: 'GET',
@@ -193,7 +333,9 @@
                 },
                 error: function (xhr, status, error) {
                     console.error("Error performing search:", error);
-                    $('#results').html('<p>An error occurred while fetching results.</p>');
+                    $('#results').html(`
+                        <p style="margin-top: 10%;">An error occurred while fetching results.</p>
+                    `);
                 }
             });
         });
@@ -205,19 +347,14 @@
             const start = (currentPage - 1) * resultsPerPage;
             const end = Math.min(start + resultsPerPage, resultsData.length);
 
-            if (!Array.isArray(resultsData)) {
-                console.error("Expected data to be an array, but received:", resultsData);
-                resultsContainer.html('<p>An error occurred: Expected an array of results.</p>');
-                return;
-            }
-
             for (let i = start; i < end; i++) {
                 const result = resultsData[i];
                 const resultItem = $('<div>').addClass('result-section result-item');
                 resultItem.html(`
-                    <h5><a href="${result.url}" target="_blank">${result.url}</a></h5>
+                    <h5><p>${result.title}</p></h5>
+                    <b><a href="${result.url}" target="_blank">${result.url.length > 50 ? result.url.substring(0, 50) + '...' : result.url}</a></b>
                     <p><strong>Score:</strong> ${result.combinedScore.toFixed(2)}</p>
-                    <p>${result.context}</p>
+                    <p>${result.context}...</p>
                 `);
                 resultsContainer.append(resultItem);
             }
@@ -229,7 +366,6 @@
 
             const totalPages = Math.ceil(resultsData.length / resultsPerPage);
 
-            // Previous button
             const prevButton = $('<span>').text('Previous').addClass('pagination-link');
             if (currentPage > 1) {
                 prevButton.click(function() {
@@ -242,12 +378,8 @@
             }
             paginationContainer.append(prevButton);
 
-            // Generate the "Nooova" style pagination with clickable "O"s
-            let noovaText = $('<span>').text("N").addClass('noova-text');
-            paginationContainer.append(noovaText);
-
             for (let i = 1; i <= totalPages; i++) {
-                const pageButton = $('<span>').text("o").addClass('pagination-link o-link');
+                const pageButton = $('<span>').text(i).addClass('pagination-link');
                 if (i === currentPage) {
                     pageButton.addClass('current');
                 } else {
@@ -262,10 +394,6 @@
                 paginationContainer.append(pageButton);
             }
 
-            let noovaText2 = $('<span>').text("va").addClass('noova-text');
-            paginationContainer.append(noovaText2);
-
-            // Next button
             const nextButton = $('<span>').text('Next').addClass('pagination-link');
             if (currentPage < totalPages) {
                 nextButton.click(function() {
@@ -278,7 +406,8 @@
             }
             paginationContainer.append(nextButton);
         }
+
     });
 </script>
-</body>
+
 </html>
