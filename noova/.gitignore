@@ -36,7 +36,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
-/worker1/
 
 ### misc ###
 sample/
+/worker*/

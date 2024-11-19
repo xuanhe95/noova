@@ -4,16 +4,16 @@ import org.noova.flame.FlameContext;
 import org.noova.flame.FlameRDD;
 import org.noova.flame.FlameRDDImpl;
 import org.noova.kvs.Row;
-import org.noova.kvs.RouteRegistry;
 import org.noova.tools.Hasher;
 import org.noova.tools.Logger;
+import org.noova.tools.PropertyLoader;
 import org.noova.tools.URLParser;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -83,7 +83,6 @@ public class Crawler implements Serializable {
                     blacklistTable = args[1];
                 } else {
                     log.info("[crawler] No blacklist table found");
-                    blacklistTable = null;
                 }
             }
 
@@ -322,11 +321,23 @@ public class Crawler implements Serializable {
             //String[] normalizedPages = normalizePage(page);
             //String normalizedPage = String.join(" ", normalizedPages);
 
-            String normalizedPage = filterPage(page);
+            String normalizedPageText = filterPage(page);
 
-            String hashedPage = Hasher.hash(normalizedPage);
+            String hashedPage = Hasher.hash(page);
 
-            row.put("page", normalizedPage);
+
+            // scrawled time
+            row.put(PropertyLoader.getProperty("table.crawler.time"), String.valueOf(LocalDateTime.now()));
+            // put original page to the page column
+            row.put(PropertyLoader.getProperty("table.crawler.page"), page);
+            // put normalized page to the text column
+            row.put(PropertyLoader.getProperty("table.crawler.text"), normalizedPageText);
+            // parse titles and put them to the title column
+            List<String> titles = parseTitles(page);
+            row.put("table.crawler.title", String.join(" ", titles));
+
+
+
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
 
             if(ENABLE_CANONICAL){
@@ -336,7 +347,7 @@ public class Crawler implements Serializable {
 
                     pageRow = new Row(hashedPage);
                     pageRow.put("canonicalURL", normalizedUrl);
-                    pageRow.put("page", normalizedPage);
+                    pageRow.put("page", page);
 
 
                     log.info("[crawler] kvs addr: " + ctx.getKVS().getCoordinator());
@@ -514,6 +525,9 @@ public class Crawler implements Serializable {
         // filter html comments
         page = page.replaceAll("(?s)<!--.*?-->", " ").strip();
 
+        // filter footer tags
+        page = page.replaceAll("(?s)<footer.*?>.*?</footer>", " ").strip();
+
         // filter hidden tags
         page = page.replaceAll("(?s)<(meta|head|noscript|iframe|embed|object|applet|link|base|area|map|param|track|wbr)[^>]*>.*?</\\1>", " ").strip();
         page = page.replaceAll("(?s)<(meta|head|noscript|iframe|embed|object|applet|link|base|area|map|param|track|wbr)[^>]*>", " ").strip();
@@ -540,6 +554,24 @@ public class Crawler implements Serializable {
         return page;
     }
 
+
+    public static List<String> parseTitles(String page) {
+        if (page == null) {
+            return new ArrayList<>();
+        }
+
+        List<String> titles = new ArrayList<>();
+        Pattern titlePattern = Pattern.compile("(?i)<title[^>]*>(.*?)</title>");
+        Matcher matcher = titlePattern.matcher(page);
+
+        while (matcher.find()) {
+            // extract the content inside <title> tag
+            String title = matcher.group(1).strip();
+            titles.add(title);
+        }
+
+        return titles;
+    }
 
 
     private static String[] normalizePage(String page){
