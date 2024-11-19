@@ -146,6 +146,14 @@ public class FlameRDDImpl implements FlameRDD {
         return new FlameRDDImpl(output, context);
     }
 
+    @Override
+    public FlameRDD flatMapParallel(StringToIterable lambda) throws Exception {
+        checkDestroyed();
+        byte[] serializedLambda = Serializer.objectToByteArray(lambda);
+        String output = context.invokeOperation(id, "/rdd/flatMapParallel", serializedLambda, new HashMap<String, String>());
+        return new FlameRDDImpl(output, context);
+    }
+
     public FlamePairRDD flatMapToPair(StringToPairIterable lambda) throws Exception {
         checkDestroyed();
         byte[] serializedLambda = Serializer.objectToByteArray(lambda);

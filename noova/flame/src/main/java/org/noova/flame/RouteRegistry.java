@@ -32,6 +32,12 @@ public class RouteRegistry {
         });
     }
 
+    public void flapMapParallel() {
+        post("/rdd/flatMapParallel", (request, response) -> {
+            return new FlatMapParallelOperation().execute(request, response, getOperationContext(request));
+        });
+    }
+
 
     public void mapToPair() {
         post("/rdd/mapToPair", (request, response) -> {

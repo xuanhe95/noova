@@ -7,14 +7,13 @@ import org.noova.tools.Serializer;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class FlatMapOperation implements Operation{
-    private static final Logger log = Logger.getLogger(FlatMapOperation.class);
+public class FlatMapParallelOperation implements Operation{
+    private static final Logger log = Logger.getLogger(FlatMapParallelOperation.class);
     @Override
     public  String execute(Request req, Response res, OperationContext ctx) {
         ctx.input(req.queryParams("input"));
@@ -47,7 +46,11 @@ public class FlatMapOperation implements Operation{
         }
         AtomicInteger count = new AtomicInteger(0);
 
-        it.forEachRemaining(row -> {
+        // enable parallel processing
+        List<Row> rows = new ArrayList<>();
+        it.forEachRemaining(rows::add);
+
+        rows.parallelStream().forEach(row -> {
 
         for (String column : row.columns()) {
             FlamePair pair = new FlamePair(row.key(), row.get(column));
@@ -83,9 +86,14 @@ public class FlatMapOperation implements Operation{
             return;
         }
 
+        // enable parallel processing
+        List<Row> rows = new ArrayList<>();
+        it.forEachRemaining(rows::add);
 
-        it.forEachRemaining(row -> {
+        rows.parallelStream().forEach(row -> {
             try {
+                // Serializer issue? - ClassNotFoundException: org.noova.crawler.Crawler
+                // thread local serialization
                 FlameRDD.StringToIterable lambda= (FlameRDD.StringToIterable) Serializer.byteArrayToObject(ctx.lambda(), ctx.getJAR());
 
                 // check if deserialization was successful

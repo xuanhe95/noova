@@ -189,9 +189,9 @@ public class KVSClient implements KVS {
 
   int workerIndexForKey(String key) {
     // handle Index -1 out of bounds for length 10
-    if (workers.isEmpty()) {
-      throw new IllegalStateException("Workers list is empty, cannot compute worker index. Key is "+key);
-    }
+//    if (workers.isEmpty() && key == null) {
+//      throw new IllegalStateException("Workers list is empty, cannot compute worker index. Key is "+key);
+//    }
 
     // default to last worker
     int chosenWorker = workers.size()-1;

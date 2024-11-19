@@ -85,6 +85,7 @@ public interface FlameRDD {
   // The lambda is allowed to return null or an empty Iterable.
 
   public FlameRDD flatMap(StringToIterable lambda) throws Exception;
+  public FlameRDD flatMapParallel(StringToIterable lambda) throws Exception;
 
   // flatMapToPair() is analogous to flatMap(), except that the lambda
   // returns pairs instead of strings, and tha tthe output is a PairRDD

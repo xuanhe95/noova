@@ -34,6 +34,7 @@ class Worker extends org.noova.generic.Worker {
 
         RouteRegistry routes = new RouteRegistry(myJAR);
         routes.flapMap();
+        routes.flapMapParallel();
         routes.mapToPair();
         routes.foldByKey();
 

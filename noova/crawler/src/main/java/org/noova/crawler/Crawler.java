@@ -28,7 +28,7 @@ public class Crawler implements Serializable {
     private static final String HOSTS_TABLE = TABLE_PREFIX + "hosts";
     private static final String LAST_ACCESS_TABLE = "last-access";
     // this is to reduce the pages that have been accessed
-    private static final String TRANSIT_ACCESSED_LINK_TABLE = "accessed";
+    private static final String ACCESSED_LINK_TABLE = "accessed";
     private static final long DEFAULT_ACCESS_INTERVAL = 1000;
     private static final long DEFAULT_CRAWL_DELAY_IN_SECOND = 1;
     private static final long LOOP_INTERVAL = 10;
@@ -88,20 +88,24 @@ public class Crawler implements Serializable {
 
             log.info("[crawler] Starting crawler with seed URL before parallelize: " + seedUrls);
 
-            //! rm locks cache for debugging crawler
-//        RouteRegistry.cleanup();
-//        log.info("[crawler] cleaning up locks in RouteRegistry");
-
             // adding checkpoints
             FlameRDD urlQueue;
-            if (ctx.getKVS().existsRow("pt-checkpoint", "")) { // load from checkpoint if it exists
-                log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
-                urlQueue = ctx.fromTable("pt-checkpoint", row -> row.get("url"));
+            Iterator<Row> checkpointIterator = ctx.getKVS().scan("pt-checkpoint");
 
-                // debug
-                ctx.getKVS().scan("pt-checkpoint").forEachRemaining(row -> {
-                    log.info("[checkpoint] Loaded row: " + row);
+            // loading checkpoint
+            if (checkpointIterator.hasNext()) {
+                log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
+
+                List<String> checkpointUrls = new ArrayList<>();
+                checkpointIterator.forEachRemaining(row -> {
+                    String url = row.get("value");
+                    if (url != null && !url.isEmpty()) {
+                        checkpointUrls.add(url);
+                        log.info("[checkpoint] Loaded url: " + url);
+                    }
                 });
+
+                urlQueue = checkpointUrls.isEmpty() ? ctx.parallelize(seedUrls) : ctx.parallelize(checkpointUrls);
             } else { // start with seed URLs if no checkpoint exists
                 log.info("[crawler] No checkpoint found. Starting with seed URLs.");
                 urlQueue = ctx.parallelize(seedUrls);
@@ -120,7 +124,6 @@ public class Crawler implements Serializable {
 
                     long elapsedTime = System.nanoTime()-startTime;
                     ctx.output("Total time elapsed before shutdown: " +formatElapsedTime(elapsedTime)+"\n");
-
                     log.info("[crawler] Checkpoint saved successfully during shutdown.");
                 } catch (Exception e) {
                     log.error("[crawler] Error saving checkpoint during shutdown.", e);
@@ -129,9 +132,10 @@ public class Crawler implements Serializable {
 
             String prevJobTable = null; // placeholder for del old job table
 
+            // main crawling loop
             while (urlQueue.count() > 0) {
 
-                urlQueue = urlQueue.flatMap(rawUrl -> {
+                urlQueue = urlQueue.flatMapParallel(rawUrl -> {
                     try {
                         return processUrl(ctx, rawUrl, blacklistTable, seedDomains);
                     } catch (Exception e) {
@@ -167,9 +171,6 @@ public class Crawler implements Serializable {
             long elapsedTime = System.nanoTime()-startTime;
             ctx.output("Total time elapsed: " + formatElapsedTime(elapsedTime)+"\n");
             ctx.output("OK");
-
-            //! rm locks cache for debugging crawler
-//        RouteRegistry.cleanup();
         } catch (Exception e){
             log.error("[crawler] An error occurred", e);
             long elapsedTime = System.nanoTime() - startTime;
@@ -371,11 +372,11 @@ public class Crawler implements Serializable {
         List<String> links = new ArrayList<>();
 
         String hashedUrl = Hasher.hash(normalizedUrl);
-        if(ctx.getKVS().existsRow(TRANSIT_ACCESSED_LINK_TABLE, hashedUrl)){
+        if(ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl)){
             log.info("[crawler] URL " + normalizedUrl + " has been processed before. Ignore this URL.");
             return links;
         }
-        ctx.getKVS().put(TRANSIT_ACCESSED_LINK_TABLE, hashedUrl, "url", normalizedUrl);
+        ctx.getKVS().put(ACCESSED_LINK_TABLE, hashedUrl, "url", normalizedUrl);
 
         Map<String, StringBuilder> anchorMap = new HashMap<>();
 
@@ -715,9 +716,9 @@ public class Crawler implements Serializable {
                 port = parts[2] == null ? "http".equals(protocol) ? "80" : "443" : parts[2];
                 path = parts[3];
             }
-//            if (path != null) {
-//                path = URLEncoder.encode(path, StandardCharsets.UTF_8).replace("+", "%20");
-//            }
+            if (host != null) {
+                host = host.replaceAll("[^a-zA-Z0-9.-]", "");
+            }
             if(path!=null && !path.startsWith("/")) path = "/"+path;
             if (path != null) {
                 path = path.replaceAll("//+", "/");

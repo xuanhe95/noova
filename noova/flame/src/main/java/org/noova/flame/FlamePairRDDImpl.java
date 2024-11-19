@@ -91,6 +91,15 @@ public class FlamePairRDDImpl implements FlamePairRDD {
     }
 
     @Override
+    public FlameRDD flatMapParallel(PairToStringIterable lambda) throws Exception {
+        checkDestroyed();
+        Map<String, String> queryParams = new HashMap<>();
+        queryParams.put("pair", "true");
+        String output = context.invokeOperation(id, "/rdd/flatMapParallel", Serializer.objectToByteArray(lambda), queryParams);
+        return new FlameRDDImpl(output, context);
+    }
+
+    @Override
     public void destroy() throws Exception {
         checkDestroyed();
         log.warn("[destroy] Deleting table " + id);

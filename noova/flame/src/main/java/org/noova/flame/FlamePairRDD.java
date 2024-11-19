@@ -48,6 +48,7 @@ public interface FlamePairRDD {
     // copies of that string. The lambda is allowed to return null or an empty Iterable.
 
     public FlameRDD flatMap(PairToStringIterable lambda) throws Exception;
+    public FlameRDD flatMapParallel(PairToStringIterable lambda) throws Exception;
 
     // destroy() should delete the underlying table in the key-value store.
     // Any future invocations of any method on this RDD should throw an
