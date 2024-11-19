@@ -16,7 +16,6 @@ import java.net.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -34,7 +33,7 @@ public class Crawler implements Serializable {
     private static final long DEFAULT_CRAWL_DELAY_IN_SECOND = 1;
     private static final long LOOP_INTERVAL = 10;
     private static final String CANONICAL_PAGE_TABLE = TABLE_PREFIX + "canonical";
-    public static final String ROBOTS_TXT_PATH = "robots.txt";
+    public static final String ROBOTS_TXT_PATH = PropertyLoader.getProperty("robots.txt.path");
     private static final String RULE_DISALLOW = "Disallow";
     private static final String RULE_ALLOW = "Allow";
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
@@ -65,6 +64,7 @@ public class Crawler implements Serializable {
     private static final boolean ENABLE_ANCHOR_EXTRACTION = false;
     private static final boolean ENABLE_BLACKLIST = false;
     private static final boolean ENABLE_CANONICAL = false;
+    private static final boolean ENABLE_ONLY_CIS_5550_ROBOTS = true;
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
@@ -89,7 +89,7 @@ public class Crawler implements Serializable {
             for(String url : seedUrls){
                 log.info("[crawler] seed url: "+ url);
                 String domain = new URI(url).getHost();
-                verticalSeedDomains.add(getTopLevelDomain(domain));
+                verticalSeedDomains.add(getTopLevelDomain(null, domain));
             }
 
             log.info("[crawler] seed url init: "+ seedUrls);
@@ -226,9 +226,8 @@ public class Crawler implements Serializable {
                 return new ArrayList<>();
             }
             // skip if not in the same domain as seed url
-            String urlDomain = url.getHost();
+            String topLevelDomain = getTopLevelDomain(null, url.getHost());
 
-            String topLevelDomain = getTopLevelDomain(urlDomain);
 
 
             log.info("[crawler] url domain: "+topLevelDomain);
@@ -266,17 +265,19 @@ public class Crawler implements Serializable {
 //            }
 
             // this because anchor extraction can create rows before one link being accessed
+
+            String protocol = url.getProtocol();
             Row row = ctx.getKVS().getRow(CRAWLER_TABLE, hashedUrl);
             if(row == null){
                 row = new Row(hashedUrl);
             }
             log.info("[crawler] Row: " + row);
-            if (!checkLastAccessTime(ctx, normalizedUrl, getTopLevelDomain(url.getHost()))) {
+            if (!checkLastAccessTime(ctx, normalizedUrl, getTopLevelDomain(url.getProtocol(), url.getHost()))) {
                 // if the host is accessed too frequently, skip this URL, but still need to put it into the table
                 return List.of(normalizedUrl);
             }
             //parseHostRules(ctx, normalizedUrl);
-            updateHostLastAccessTime(ctx, getTopLevelDomain(url.getHost()));
+            updateHostLastAccessTime(ctx, getTopLevelDomain(url.getProtocol(), url.getHost()));
 
             return requestHead(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
 
@@ -323,7 +324,7 @@ public class Crawler implements Serializable {
         conn.setRequestMethod("GET");
         conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
         conn.connect();
-        updateHostLastAccessTime(ctx, url.getHost());
+        updateHostLastAccessTime(ctx, getTopLevelDomain(url.getProtocol(), url.getHost()));
         int responseCode = conn.getResponseCode();
 
 
@@ -551,7 +552,7 @@ public class Crawler implements Serializable {
         String rawHost = hostWithPort.split(":")[0];
 
 
-        String topLevelDomain = getTopLevelDomain(rawHost);
+        String topLevelDomain = getTopLevelDomain(null, rawHost);
         // if this is a vertical domain, do not drop
         if(ENABLE_VERTICAL_CRAWL && verticalSeedDomains.contains(topLevelDomain)){
             return false;
@@ -740,9 +741,9 @@ public class Crawler implements Serializable {
         return words;
     }
 
-    private static boolean checkLastAccessTime(FlameContext ctx, String normalizedUrl, String hostName) throws IOException {
-        log.info("[check access] Checking access interval for host: " + hostName);
-        long lastAccessTime = getHostLastAccessTime(ctx, hostName);
+    private static boolean checkLastAccessTime(FlameContext ctx, String normalizedUrl, String topLevelDomain) throws IOException {
+        log.info("[check access] Checking access interval for host: " + topLevelDomain);
+        long lastAccessTime = getHostLastAccessTime(ctx, topLevelDomain);
 
         long accessInterval = System.currentTimeMillis() - lastAccessTime;
 
@@ -750,17 +751,18 @@ public class Crawler implements Serializable {
         if (ENABLE_LOCK_ACCESS_RATING) {
             log.info("[check access] Access interval is locked: " + accessInterval);
             if (accessInterval < DEFAULT_ACCESS_INTERVAL) {
-                log.warn("[check access] Host " + hostName + " is being accessed too frequently. Skipping URL: " + normalizedUrl);
+                log.warn("[check access] Host " + topLevelDomain + " is being accessed too frequently. Skipping URL: " + normalizedUrl);
                 return false;
             }
         } else {
-            Row row = ctx.getKVS().getRow(HOSTS_TABLE, hostName);
+            String hashedTopLevelDomain = Hasher.hash(topLevelDomain);
+            Row row = ctx.getKVS().getRow(HOSTS_TABLE, hashedTopLevelDomain);
             if (row == null) {
                 return true;
             }
             String crawlDelay = row.get(CIS_5550_CRAWLER + ":" + RULE_CRAWL_DELAY) == null ? row.get("*:" + RULE_CRAWL_DELAY) : row.get(CIS_5550_CRAWLER + ":" + RULE_CRAWL_DELAY);
             if (crawlDelay == null) {
-                log.info("[check access] No crawl delay found for host: " + hostName + ". Using default value");
+                log.info("[check access] No crawl delay found for host: " + topLevelDomain + ". Using default value");
                 crawlDelay = String.valueOf(DEFAULT_CRAWL_DELAY_IN_SECOND);
             }
             double delayInSecond;
@@ -773,7 +775,7 @@ public class Crawler implements Serializable {
             }
 
             if (accessInterval < delayInSecond * 1000) {
-                log.warn("[check access] Host " + hostName + " is being accessed too frequently. Skipping URL: " + normalizedUrl);
+                log.warn("[check access] Host " + topLevelDomain + " is being accessed too frequently. Skipping URL: " + normalizedUrl);
                 return false;
             }
         }
@@ -849,7 +851,9 @@ public class Crawler implements Serializable {
             if (host != null) {
                 host = host.replaceAll("[^a-zA-Z0-9.-]", "");
             }
-            if(path!=null && !path.startsWith("/")) path = "/"+path;
+            if(path!=null && !path.startsWith("/")) {
+                path = "/"+path;
+            }
             if (path != null) {
                 path = path.replaceAll("//+", "/");
             }
@@ -862,15 +866,91 @@ public class Crawler implements Serializable {
     }
 
     private static void updateHostLastAccessTime(FlameContext ctx, String hostName) throws IOException {
-        ctx.getKVS().put(HOSTS_TABLE, hostName, LAST_ACCESS_TABLE, String.valueOf(System.currentTimeMillis()));
+        String hashedTopLevelDomain = Hasher.hash(hostName);
+        ctx.getKVS().put(HOSTS_TABLE, hashedTopLevelDomain, LAST_ACCESS_TABLE, String.valueOf(System.currentTimeMillis()));
+        ctx.getKVS().put(HOSTS_TABLE, hashedTopLevelDomain, "url", hostName);
     }
 
     private static long getHostLastAccessTime(FlameContext ctx, String hostName) throws IOException {
-        byte[] lastAccess = ctx.getKVS().get(HOSTS_TABLE, hostName, LAST_ACCESS_TABLE);
+        String hashedTopLevelDomain = Hasher.hash(hostName);
+        byte[] lastAccess = ctx.getKVS().get(HOSTS_TABLE, hashedTopLevelDomain, LAST_ACCESS_TABLE);
         if(lastAccess == null) {
             return 0;
         }
         return Long.parseLong(new String(lastAccess));
+    }
+
+    private static void efficientParseHostRules(FlameContext ctx, String robotsTxt, Row row){
+
+        try {
+            if(robotsTxt == null) {
+                return;
+            }
+
+            String[] lines = robotsTxt.split("\n");
+
+            String userAgent = null;
+
+            Map<String, Map<String, StringBuilder>> result = new HashMap<>();
+
+            Map<String, StringBuilder> rules = new HashMap<>();
+            for(String line : lines) {
+                if(line.startsWith("User-agent:")) {
+                    //log.info("[crawler] User-agent: " + line);
+                    if(userAgent != null) {
+                        result.put(userAgent, rules);
+                        rules = new HashMap<>();
+                    }
+                    userAgent = line.split(":")[1].strip();
+
+                } else if(userAgent != null && line.strip().toLowerCase().startsWith(RULE_DISALLOW.toLowerCase())) {
+                    /* for case disallow: empty
+                    User-agent: Pinterest
+                    Disallow:
+                     */
+                    if (line.split(":").length==1){
+                        continue;
+                    }
+                    String path = line.split(":")[1].strip();
+
+                    StringBuilder rule = rules.getOrDefault(RULE_DISALLOW, new StringBuilder()).append(path).append("\n");
+                    rules.put(RULE_DISALLOW, rule);
+                } else if(userAgent != null && line.strip().toLowerCase().startsWith(RULE_ALLOW.toLowerCase())) {
+                    String path = line.split(":")[1].strip();
+                    StringBuilder rule = rules.getOrDefault(RULE_ALLOW, new StringBuilder()).append(path).append("\n");
+                    rules.put(RULE_ALLOW, rule);
+                } else if(userAgent != null && line.strip().toLowerCase().startsWith(RULE_CRAWL_DELAY.toLowerCase())) {
+                    String delay = line.split(":")[1].strip();
+                    StringBuilder rule = new StringBuilder(delay);
+                    rules.put(RULE_CRAWL_DELAY, rule);
+                }
+            }
+
+            if(userAgent != null) {
+                result.put(userAgent, rules);
+            }
+
+            result.forEach((user, rule) -> {
+                log.info("[crawler] User-agent: " + user);
+
+                if(ENABLE_ONLY_CIS_5550_ROBOTS) {
+                    if(!user.equals(CIS_5550_CRAWLER) && !user.equals("*")) {
+                        log.info("[crawler] Skip user-agent: " + user);
+                        return;
+                    }
+                }
+                rule.forEach((key, value) -> {
+                    log.info("[crawler] Rule: " + key + " -> " + value);
+                    row.put(user+":"+key, value.toString());
+                });
+            });
+
+            ctx.getKVS().putRow(HOSTS_TABLE,row);
+
+        } catch(Exception e) {
+            log.error("[crawler] Error while getting robots.txt: " + robotsTxt, e);
+            throw new RuntimeException(e);
+        }
     }
 
     private static void parseHostRules(FlameContext ctx, String normalizedUrl){
@@ -949,53 +1029,72 @@ public class Crawler implements Serializable {
     }
 
 
-    private static void downloadRobotsTxt(FlameContext ctx, String normalizedUrl) {
+    private static void downloadAndParseRobotsTxt(FlameContext ctx, String topLevelDomain, Row row) {
 
 
-        String robotsTxtUrl = normalizedUrl.endsWith("/") ? normalizedUrl + ROBOTS_TXT_PATH : normalizedUrl + "/" + ROBOTS_TXT_PATH;
 
-//        if(ROBOT_CACHE.containsKey(robotsTxtUrl)) {
-//            //log.info("[robot] [cache hit] robots.txt already fetched for: " +  normalizedUrl);
-//            return;
+//        String robotsTxtUrl = normalizedUrl.endsWith("/") ? normalizedUrl + ROBOTS_TXT_PATH : normalizedUrl + "/" + ROBOTS_TXT_PATH;
+//
+////        if(ROBOT_CACHE.containsKey(robotsTxtUrl)) {
+////            //log.info("[robot] [cache hit] robots.txt already fetched for: " +  normalizedUrl);
+////            return;
+////        }
+//
+//
+//        URL url;
+//        try {
+//            url = new URI(robotsTxtUrl).toURL();
+//        } catch (Exception e) {
+//            log.error("[robot] Error while parsing URL: " + robotsTxtUrl, e);
+//            throw new RuntimeException(e);
 //        }
-
-
-        URL url;
-        try {
-            url = new URI(robotsTxtUrl).toURL();
-        } catch (Exception e) {
-            log.error("[robot] Error while parsing URL: " + robotsTxtUrl, e);
-            throw new RuntimeException(e);
+        if(row == null){
+            log.error("[robot] Row is null for: " + topLevelDomain);
+            return;
         }
 
+        String robotsTxtUrl = topLevelDomain + "/" + ROBOTS_TXT_PATH;
+
         try {
 
-            Row row = ctx.getKVS().getRow(HOSTS_TABLE, getTopLevelDomain(url.getHost()));
-            if(row != null && row.get(ROBOTS_TXT_PATH) != null){
-                log.info("[robot] robots.txt already fetched for: " +  normalizedUrl);
+            // Row row = ctx.getKVS().getRow(HOSTS_TABLE, getTopLevelDomain(url.getHost()));
+            if(row.get(ROBOTS_TXT_PATH) != null){
+                log.info("[robot] robots.txt already fetched for: " +  topLevelDomain);
                 return;
             }
 
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+//            if(row == null){
+//                row = new Row(getTopLevelDomain(url.getHost()));
+//            }
+
+            URL robotsUrl = new URI(robotsTxtUrl).toURL();
+
+            HttpURLConnection conn = (HttpURLConnection) robotsUrl.openConnection();
             // in case of slow response
             conn.setConnectTimeout(1000);
             conn.setRequestMethod("GET");
             conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
             conn.connect();
             int responseCode = conn.getResponseCode();
-            if(responseCode == 200) {
+            if(responseCode == 200 && conn.getContentType() != null && conn.getContentType().contains("text/plain")) {
                 String robotsTxt = new String(conn.getInputStream().readAllBytes());
                 log.warn("[robot] Found robots.txt: " + robotsTxt);
-                ctx.getKVS().put(HOSTS_TABLE, getTopLevelDomain(url.getHost()), ROBOTS_TXT_PATH, robotsTxt);
+
+                row.put(ROBOTS_TXT_PATH, robotsTxt);
+                // ctx.getKVS().put(HOSTS_TABLE, getTopLevelDomain(url.getHost()), ROBOTS_TXT_PATH, robotsTxt);
+
+                efficientParseHostRules(ctx, robotsTxt, row);
+
+
             } else{
                 log.warn("[robot] No robots.txt found for: " +  robotsTxtUrl);
-                ctx.getKVS().put(HOSTS_TABLE, getTopLevelDomain(url.getHost()), ROBOTS_TXT_PATH, "Robot.txt not found");
+                ctx.getKVS().put(HOSTS_TABLE, row.key(), ROBOTS_TXT_PATH, "Robot.txt not found");
             }
 
         } catch(Exception e) {
             log.error("[robot] Error while fetching robots.txt: " + robotsTxtUrl, e);
             try {
-                ctx.getKVS().put(HOSTS_TABLE, getTopLevelDomain(url.getHost()), ROBOTS_TXT_PATH, "Error while fetching robots.txt");
+                ctx.getKVS().put(HOSTS_TABLE, row.key(), ROBOTS_TXT_PATH, "Error while fetching robots.txt");
             } catch (IOException ex) {
                 log.error("[robot] Error while saving error message: " + robotsTxtUrl, ex);
             }
@@ -1032,24 +1131,32 @@ public class Crawler implements Serializable {
     private static boolean checkRobotRules(FlameContext ctx, String normalizedUrl)  {
         try {
             URL url = new URI(normalizedUrl).toURL();
+//            // check port
+//            int port = url.getPort();
+//            if (port != -1 && (port < 1 || port > 65535)) {
+//                log.warn("[checkRobotRules] Invalid port in URL: " + normalizedUrl);
+//                return false; // allow processing if malformed?
+//            }
 
-            // check port
-            int port = url.getPort();
-            if (port != -1 && (port < 1 || port > 65535)) {
-                log.warn("[checkRobotRules] Invalid port in URL: " + normalizedUrl);
-                return false; // allow processing if malformed?
-            }
+
+
+            String topLevelDomainName = getTopLevelDomain(url.getProtocol(), url.getHost());
+
+            String hashedTopLevelDomain = Hasher.hash(topLevelDomainName);
 
             // check if the host is in the table
-            Row row = ctx.getKVS().getRow(HOSTS_TABLE, url.getHost());
+            Row row = ctx.getKVS().getRow(HOSTS_TABLE, hashedTopLevelDomain);
             if (row == null) {
+                row = new Row(hashedTopLevelDomain);
+                row.put("url", topLevelDomainName);
                 // if the host is not in the table, download the robots.txt
-                downloadRobotsTxt(ctx, normalizedUrl);
+                downloadAndParseRobotsTxt(ctx, topLevelDomainName, row);
                 // parse the robots.txt
-                parseHostRules(ctx, normalizedUrl);
+                // parseHostRules(ctx, normalizedUrl);
             }
 
-            row = ctx.getKVS().getRow(HOSTS_TABLE, url.getHost());
+            // after parse, get again
+            row = ctx.getKVS().getRow(HOSTS_TABLE, topLevelDomainName);
             if (row == null) {
                 // if the host is still not in the table, return true
                 return true;
@@ -1131,12 +1238,15 @@ public class Crawler implements Serializable {
         return String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
     }
 
-    private static String getTopLevelDomain(String host) {
+    private static String getTopLevelDomain(String protocol, String host) {
         String[] parts = host.split("\\.");
         if (parts.length < 2) {
             return host;
         }
-        return parts[parts.length - 2] + "." + parts[parts.length - 1];
+        if(protocol == null){
+            return parts[parts.length - 2] + "." + parts[parts.length - 1];
+        }
+        return protocol + "://" + parts[parts.length - 2] + "." + parts[parts.length - 1];
     }
 
 }

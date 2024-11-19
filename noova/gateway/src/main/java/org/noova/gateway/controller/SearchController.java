@@ -86,7 +86,8 @@ public class SearchController implements IController {
     @Route(path = "/snapshot", method = "GET")
     private void getSnapshot(Request req, Response res) throws IOException {
         log.info("[search] Getting snapshot");
-        String normalizedUrl = req.queryParams("url");
+        String normalizedUrl = req.body();
+
         String page = SEARCH_SERVICE.getSnapshot(normalizedUrl);
         res.type("text/html");
         res.body(page);

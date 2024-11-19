@@ -28,16 +28,17 @@ cleanup() {
 
   # Attempt to gracefully terminate all processes
   kill "${pids[@]}" 2>/dev/null
-  sleep 1  # Wait for processes to release resources
+  sleep 0.5  # Wait for processes to release resources
 
   # Forcefully terminate any processes that did not exit gracefully
   kill -9 "${pids[@]}" 2>/dev/null
   echo "All processes have been terminated"
 
-  sleep 1
+  sleep 0.5
   # Check and release all ports
   check_and_release_port 8000  # Base port for KVSCoordinator
   check_and_release_port 9000  # Base port for FlameCoordinator
+  check_and_release_port 8080  # Web Server
 
   for ((i=1; i<=KVS_WORKER_COUNT; i++)); do
     check_and_release_port $((8000 + i))

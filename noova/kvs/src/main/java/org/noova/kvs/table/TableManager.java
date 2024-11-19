@@ -4,6 +4,7 @@ import org.noova.kvs.Row;
 import org.noova.kvs.Worker;
 import org.noova.kvs.version.Version;
 import org.noova.tools.Logger;
+import org.noova.tools.PropertyLoader;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -21,6 +22,10 @@ public class TableManager implements ITableManager {
     public static final String PERSIST_TABLE_PREFIX = "pt-";
     private static final Map<String, Table> TABLE_MAP = new ConcurrentSkipListMap<>();
 
+    private static final boolean ENABLE_PAGE_VIEW = false;
+    private static final boolean ENABLE_VIEW_FOLD = true;
+
+    private static final int VIEW_FOLD_LENGTH = 255;
 
     private static String storageDir;
     private TableManager(){
@@ -116,6 +121,10 @@ public class TableManager implements ITableManager {
 
         StringBuilder builder = new StringBuilder();
 
+
+        String page = PropertyLoader.getProperty("table.crawler.page");
+        String text = PropertyLoader.getProperty("table.crawler.text");
+
         builder.append("<html><head><title>Table View</title></head><body>");
         builder.append("<h1>").append("Table: ").append("\"").append(table.key()).append("\"").append("</h1>");
         builder.append("<table border=\"1\">");
@@ -124,6 +133,10 @@ public class TableManager implements ITableManager {
         builder.append("<tr>");
         builder.append("<th>Row Name</th>");
         for(String columnName : columnNames){
+            if(!ENABLE_PAGE_VIEW && columnName.toLowerCase().strip().equals(page)){
+                continue;
+            }
+
             builder.append("<th>").append(columnName).append("</th>");
         }
         builder.append("</tr>");
@@ -132,13 +145,23 @@ public class TableManager implements ITableManager {
         for(Row row : sortedRows){
             builder.append("<tr>");
             builder.append("<td>").append(row.key()).append("</td>");
-            for(String columnName : columnNames){
+            for(String columnName : columnNames) {
+                log.info("[view] get column: " + columnName);
+                if (!ENABLE_PAGE_VIEW && columnName.toLowerCase().strip().equals(page)) {
+                    continue;
+                }
+
                 byte[] value = row.getBytes(columnName);
-                if(value == null){
+                if (value == null) {
                     builder.append("<td></td>");
                 } else {
-                    builder.append("<td>").append(new String(value)).append("</td>");
+                    String textValue = new String(value);
+                    if (ENABLE_VIEW_FOLD && textValue.length() > VIEW_FOLD_LENGTH) {
+                        textValue = textValue.substring(0, VIEW_FOLD_LENGTH) + "...";
+                    }
+                    builder.append("<td>").append(textValue).append("</td>");
                 }
+
             }
             builder.append("</tr>");
         }
