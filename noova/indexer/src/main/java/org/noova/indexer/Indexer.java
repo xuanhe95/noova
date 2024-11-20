@@ -9,6 +9,7 @@ import org.noova.tools.PropertyLoader;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Indexer implements Serializable {
     private static final Logger log = Logger.getLogger(Indexer.class);
@@ -16,9 +17,7 @@ public class Indexer implements Serializable {
     private static final boolean ENABLE_PORTER_STEMMING = true;
     private static final boolean ENABLE_IP_INDEX = true;
     private static final String DELIMITER = PropertyLoader.getProperty("default.delimiter");
-
-
-
+    private static final int PAGE_LIMIT = 5;
 
     public static void run(FlameContext ctx, String[] args) {
 
@@ -37,7 +36,8 @@ public class Indexer implements Serializable {
                         }
                         return url + DELIMITER + page;
                     }
-            );
+            ).filter(s -> !s.isEmpty());
+
             FlamePairRDD data = rdd.mapToPair(s -> {
                 String[] parts = s.split(DELIMITER);
 
@@ -68,8 +68,7 @@ public class Indexer implements Serializable {
                 }
 
                 List<FlamePair> pairs = new ArrayList<>();
-
-                Map<String, List<Integer>> wordLocations = new HashMap<>();
+                Map<String, WordStats> wordStats = new HashMap<>();
 
                 for (int i = 0; i < words.length; i++) {
 
@@ -77,11 +76,9 @@ public class Indexer implements Serializable {
                     if(word.isEmpty()){
                         log.warn("[indexer] Empty word");
                     }
-                    log.info("[indexer] Word: " + word);
+//                    log.info("[indexer] Word: " + word);
 
-                    List<Integer> locations = wordLocations.getOrDefault(word, new ArrayList<>());
-                    locations.add(i);
-                    wordLocations.put(word, locations);
+                    processWord(word, i, wordStats);
 
 //                    if(!seen.contains(word)) {
 //                        seen.add(word);
@@ -90,36 +87,28 @@ public class Indexer implements Serializable {
 
                     // EC3
                     if(ENABLE_PORTER_STEMMING) {
-                        log.info("[indexer] Stemming: " + word);
+//                        log.info("[indexer] Stemming: " + word);
                         PorterStemmer stemmer = new PorterStemmer();
                         stemmer.add(word.toCharArray(), word.length());
                         stemmer.stem();
                         String stemmedWord = stemmer.toString();
 
-                        log.info("[indexer] Original: " + word + " Stemmed: " + stemmedWord);
-                        if (stemmedWord.equals(word)) {
-                            continue;
-                        }
+//                        log.info("[indexer] Original: " + word + " Stemmed: " + stemmedWord);
 
-                        List<Integer> stemmedLocations = wordLocations.getOrDefault(stemmedWord, new ArrayList<>());
-                        stemmedLocations.add(i);
-                        wordLocations.put(stemmedWord, stemmedLocations);
+                        if (!stemmedWord.equals(word)) {
+                            processWord(stemmedWord, i, wordStats);
+                        }
                     }
                 }
 
-                List<Map.Entry<String, List<Integer>>> sorted = new ArrayList<>(wordLocations.entrySet());
-                sorted.sort((a, b) -> b.getValue().size() - a.getValue().size());
+                List<Map.Entry<String, WordStats>> sorted = new ArrayList<>(wordStats.entrySet());
+                sorted.sort((a, b) -> b.getValue().frequency - a.getValue().frequency);
 
-                for(Map.Entry<String, List<Integer>> entry : sorted) {
-                    log.info("Word: " + entry.getKey() + " Count: " + entry.getValue().size());
+                for(Map.Entry<String, WordStats> entry : sorted) {
                     String word = entry.getKey();
-                    List<Integer> locations = entry.getValue();
-                    StringBuilder builder = new StringBuilder();
-                    for(int i : locations) {
-                        builder.append(i).append(" ");
-                    }
-                    builder.deleteCharAt(builder.length() - 1);
-                    pairs.add(new FlamePair(word, url + ":" + builder));
+                    WordStats stats = entry.getValue();
+                    pairs.add(new FlamePair(word,
+                            String.format("%s:%d %d", url, stats.frequency, stats.firstLocation)));
                 }
 
                 return pairs;
@@ -127,25 +116,25 @@ public class Indexer implements Serializable {
                 if(s.isEmpty()) {
                     return t;
                 }
-                List<String> leftSide = new ArrayList<>(List.of(s.split(",")));
-                List<String> rightSide = Arrays.asList(t.split(","));
+                if(t.isEmpty()) {
+                    return s;
+                }
+                List<String> entries = new ArrayList<>();
+                entries.addAll(Arrays.asList(s.split(",")));
+                entries.addAll(Arrays.asList(t.split(",")));
 
-                log.info("[indexer] Left: " + leftSide);
-                log.info("[indexer] Right: " + rightSide);
-
-                leftSide.addAll(rightSide);
-
-                leftSide.sort((a, b) -> {
-                    String[] aParts = a.substring(a.indexOf(":") + 1).split(" ");
-                    String[] bParts = b.substring(b.indexOf(":") + 1).split(" ");
-                    if(aParts.length != bParts.length) {
-                        return bParts.length - aParts.length;
-                    } else {
-                        return aParts[0].compareTo(bParts[0]);
+                entries.sort((a, b) -> {
+                    int freqA = Integer.parseInt(a.substring(a.indexOf(":") + 1).split(" ")[0]);
+                    int freqB = Integer.parseInt(b.substring(b.indexOf(":") + 1).split(" ")[0]);
+                    if(freqA != freqB) {
+                        return freqB - freqA;
                     }
+                    int locA = Integer.parseInt(a.substring(a.indexOf(":") + 1).split(" ")[1]);
+                    int locB = Integer.parseInt(b.substring(b.indexOf(":") + 1).split(" ")[1]);
+                    return locA - locB;
                 });
 
-                return String.join(",", leftSide);
+                return String.join(",", entries);
             }).saveAsTable(INDEX_TABLE);
 
 
@@ -178,25 +167,26 @@ public class Indexer implements Serializable {
     }
 
     public static String filterPage(String page) {
-        if(page == null) {
-            return "";
-        }
+        if(page == null) return "";
 
-        String filtedText = page.toLowerCase().strip();
-
-        filtedText = filtedText.replaceAll("<[^>]*>", " ").strip();
-
-        log.info("[indexer] No HTML: " + filtedText);
-
-        filtedText = filtedText.replaceAll("[.,:;!?'’\"()\\-\\r\\n\\t]", " ").strip();
-
-        log.info("[indexer] No Punctuation: " + filtedText);
-
-        // filter out non-letters
-        filtedText = filtedText.replaceAll("[^\\p{L}\\s]", " ").strip();
-
-        return filtedText;
+        return page.toLowerCase()
+                .strip()
+                .replaceAll("<[^>]*>", " ")
+                .strip()
+                .replaceAll("[.,:;!?''\"()\\-\\r\\n\\t]", " ")
+                .strip()
+                .replaceAll("[^\\p{L}\\s]", " ")
+                .strip();
     }
 
+    private static class WordStats {
+        int frequency = 0;
+        int firstLocation = Integer.MAX_VALUE;
+    }
 
+    private static void processWord(String word, int location, Map<String, WordStats> wordStats) {
+        WordStats stats = wordStats.computeIfAbsent(word, k -> new WordStats());
+        stats.frequency++;
+        stats.firstLocation = Math.min(stats.firstLocation, location);
+    }
 }
