@@ -26,7 +26,6 @@
       <change beforePath="$PROJECT_DIR$/noova/all-jars/tools-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/tools-1.0-SNAPSHOT.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/all-jars/webserver-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/webserver-1.0-SNAPSHOT.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/table/TableManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/table/TableManager.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

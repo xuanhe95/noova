@@ -291,7 +291,6 @@ public class Crawler implements Serializable {
             // filter for invalid url
             if(!checkUrlFormat(normalizedUrl)){
                 log.warn("[crawler] URL " + normalizedUrl + " is not a valid URL. Skipping.");
-                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
 
@@ -299,7 +298,6 @@ public class Crawler implements Serializable {
             URL url = new URI(normalizedUrl).toURL();
             if (url.getHost() == null||url.getPort() < -1 || url.getPort() > 65535) {
                 log.warn("[crawler] Invalid host or port in URL: " + normalizedUrl);
-                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
 
@@ -310,21 +308,18 @@ public class Crawler implements Serializable {
             if (ENABLE_VERTICAL_CRAWL && !verticalSeedDomains.contains(topLevelDomain)) {
 
                 log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + verticalSeedDomains + ". Skipping.");
-                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
 
             // filter for blacklisted url
             if (ENABLE_BLACKLIST && !checkBlackList(ctx, normalizedUrl, blacklistTable)) {
                 log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist. Skipping.");
-                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
 
             // filter based on disallow
             if (!checkRobotRules(ctx, normalizedUrl)) {
                 log.warn("[crawler] URL " + normalizedUrl + " is disallowed by robots.txt. Skipping.");
-                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
 
@@ -353,7 +348,6 @@ public class Crawler implements Serializable {
             log.info("[crawler] Row: " + row);
             if (!checkLastAccessTime(ctx, normalizedUrl, getTopLevelDomain(url.getProtocol(), url.getHost()))) {
                 // if the host is accessed too frequently, skip this URL, but still need to put it into the table
-                updateAccessedTable(ctx,normalizedUrl);
                 return List.of(normalizedUrl);
             }
             //parseHostRules(ctx, normalizedUrl);
@@ -422,25 +416,23 @@ public class Crawler implements Serializable {
             log.info("[redirect] Redirect " + responseCode + " is detected. URL: " + normalizedUrl);
             String location = conn.getHeaderField("Location");
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
-            updateAccessedTable(ctx,normalizedUrl);
+//            updateAccessedTable(ctx,normalizedUrl);
             if (location != null) {
                 // redirect to the new location
                 location = normalizeURL(location, normalizedUrl);
                 if(location == null){
                     log.error("[redirect] Invalid URL: " + location);
-                    updateAccessedTable(ctx,normalizedUrl);
                     return new ArrayList<>();
                 }
                 return List.of(location);
             } else {
                 log.error("[redirect] No location found in the response header. URL: " + normalizedUrl);
-                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
         } else if (responseCode != 200) {
             log.warn("[response] Error Response code: " + responseCode);
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
-            updateAccessedTable(ctx,normalizedUrl);
+//            updateAccessedTable(ctx,normalizedUrl);
             return new ArrayList<>();
         } else {
             log.info("[crawler] proceeding to get request");
@@ -525,7 +517,7 @@ public class Crawler implements Serializable {
             row.put(PropertyLoader.getProperty("table.crawler.zipcodes"), zipcodes);
 
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
-            updateAccessedTable(ctx, normalizedUrl);
+//            updateAccessedTable(ctx, normalizedUrl);
 
             if(ENABLE_CANONICAL){
                 Row pageRow = ctx.getKVS().getRow(CANONICAL_PAGE_TABLE, hashedPage);
@@ -551,7 +543,6 @@ public class Crawler implements Serializable {
             //String hashedUrl = Hasher.hash(normalizedUrl);
             //URL_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
         }
-        updateAccessedTable(ctx,normalizedUrl);
         return new ArrayList<>();
     }
 
@@ -745,6 +736,7 @@ public class Crawler implements Serializable {
 //            return links;
 //        }
 //        ctx.getKVS().put(ACCESSED_LINK_TABLE, hashedUrl, "url", normalizedUrl);
+        updateAccessedTable(ctx,normalizedUrl);
 
         Map<String, StringBuilder> anchorMap = new HashMap<>();
 
@@ -758,7 +750,6 @@ public class Crawler implements Serializable {
 
             if (href.matches(".*[<>\"'{}|^\\[\\]]+.*")) { // skip href with invalid char
                 log.warn("[crawler] Invalid href attribute: " + href);
-                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
 
@@ -766,33 +757,13 @@ public class Crawler implements Serializable {
 
             if(normalizedLink == null){
                 log.warn("[crawler] URL " + href + " is not a valid URL. Skipping.");
-                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
 
             if(shouldDropLink(normalizedLink, verticalSeedDomains)){
                 log.warn("[crawler] URL " + normalizedLink + " is dropped. Skipping.");
-                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
-
-            // filter invalid
-//            if(!checkUrlFormat(normalizedLink)){ // this should filter out invalid hyperlinks?
-//                log.warn("[crawler] URL " + normalizedLink + " is not a valid URL. Skipping.");
-//                continue;
-//            }
-
-            // filter blacklist
-//            if (ENABLE_BLACKLIST && !checkBlackList(ctx, normalizedLink, blacklistTable)) {
-//                log.warn("[crawler] URL " + normalizedLink + " is blocked by blacklist. Ignore.");
-//                continue;
-//            }
-
-            // filter robot
-//            if (!checkRobotRules(ctx, normalizedLink)) {
-//                log.warn("[crawler] URL " + normalizedLink + " is disallowed by robots.txt. Ignore.");
-//                continue;
-//            }
 
             log.info("[crawler] add link: " + normalizedLink);
 
@@ -815,13 +786,7 @@ public class Crawler implements Serializable {
                     String anchorKey = "anchor:" + normalizedUrl;
                     targetRow.put(anchorKey, anchor.toString());
                     ctx.getKVS().putRow(CRAWLER_TABLE, targetRow);
-                    updateAccessedTable(ctx, normalizedUrl);
                 } catch (IOException e) {
-                    try {
-                        updateAccessedTable(ctx,normalizedUrl);
-                    } catch (IOException ex) {
-                        throw new RuntimeException(ex);
-                    }
                     log.error("[crawler] Error while adding anchor to the row: " + link, e);
                     // throw new RuntimeException(e);
                 }
@@ -1119,7 +1084,6 @@ public class Crawler implements Serializable {
                 log.info("[crawl delay] Crawl delay: " + crawlDelay);
                 delayInSecond = Double.parseDouble(crawlDelay);
             } catch (Exception e) {
-                updateAccessedTable(ctx,normalizedUrl);
                 log.error("[crawl delay] Error while parsing crawl delay: " + crawlDelay + " using default value");
                 delayInSecond = 0;
             }
@@ -1153,7 +1117,6 @@ public class Crawler implements Serializable {
 
         } catch (IOException e) {
             log.error("[crawler] Error while checking blacklist", e);
-            updateAccessedTable(ctx,normalizedUrl);
             throw new RuntimeException(e);
         }
     }
