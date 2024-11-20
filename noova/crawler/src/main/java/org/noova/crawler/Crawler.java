@@ -57,7 +57,11 @@ public class Crawler implements Serializable {
 
     private static final double LOW_DROP_RATE = 0.1;
 
-    private static final long ITERATION_TIMEOUT = 40000;
+    private static final double ALL_DROP_RATE = 0.2;
+
+    private static final long ITERATION_TIMEOUT = 15000;
+
+    private static boolean nextIterationMutux;
 
 
     private static final List<String> US_CITIES = List.of(
@@ -204,31 +208,36 @@ public class Crawler implements Serializable {
             List<String> recentTables = new LinkedList<>();
             while (urlQueue.count() > 0) {
 
-                long iterationStartTime = System.currentTimeMillis();
-                urlQueue = urlQueue.flatMapParallel(rawUrl -> {
-                    try {
-                        return processUrl(ctx, rawUrl, blacklistTable, verticalSeedDomains, iterationStartTime);
-                    } catch (Exception e) {
-                        log.error("Error processing URL: " + rawUrl, e);
-                        return List.of();
-                    }
-                });
 
-                String nextJobTable = ((FlameRDDImpl) urlQueue).getId(); // get next job table ID
-                log.info("[crawler] Next Job table ID (before checkpoint): " + nextJobTable);
+//                synchronized (Crawler.class) {
+                    long iterationStartTime = System.currentTimeMillis();
+                    log.info("[crawler] Iteration started at: " + iterationStartTime);
+                    nextIterationMutux = false;
 
-                // del prev job table
-                recentTables.add((nextJobTable));
-                if (recentTables.size() > TABLE_RETENTION_NUM) {
-                    String delTable = recentTables.remove(0);
-                    try {
-                        log.info("[cleanup] Deleting unused table: " + delTable);
-                        ctx.getKVS().delete(delTable);
-                    } catch (Exception e) {
-                        log.error("[cleanup] Error deleting table: " + delTable , e);
+                    urlQueue = urlQueue.flatMapParallel(rawUrl -> {
+                        try {
+                            return processUrl(ctx, rawUrl, blacklistTable, verticalSeedDomains, iterationStartTime);
+                        } catch (Exception e) {
+                            log.error("Error processing URL: " + rawUrl, e);
+                            return List.of();
+                        }
+                    });
+
+                    String nextJobTable = ((FlameRDDImpl) urlQueue).getId(); // get next job table ID
+                    log.info("[crawler] Next Job table ID (before checkpoint): " + nextJobTable);
+
+                    // del prev job table
+                    recentTables.add((nextJobTable));
+                    if (recentTables.size() > TABLE_RETENTION_NUM) {
+                        String delTable = recentTables.remove(0);
+                        try {
+                            log.info("[cleanup] Deleting unused table: " + delTable);
+                            ctx.getKVS().delete(delTable);
+                        } catch (Exception e) {
+                            log.error("[cleanup] Error deleting table: " + delTable, e);
+                        }
                     }
                 }
-
 
                 // checkpoint the current queue
                 if (ENABLE_CHECKPOINT) {
@@ -239,7 +248,7 @@ public class Crawler implements Serializable {
                 if(ENABLE_LOOP_INTERVAL){
                     Thread.sleep(LOOP_INTERVAL);
                 }
-            }
+//            }
 
             log.info("[crawler] Crawler finished");
 
@@ -276,6 +285,9 @@ public class Crawler implements Serializable {
         }
     }
 
+
+
+
     private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, Set<String> verticalSeedDomains, long iterationStartTime) throws Exception {
 
 
@@ -285,10 +297,8 @@ public class Crawler implements Serializable {
             return new ArrayList<>();
         }
 
-        if(checkTimeOut(iterationStartTime)){
-            log.warn("[crawler] Iteration timeout. Exiting.");
-            return List.of(normalizedUrl);
-        }
+
+
 
 
         log.warn("[crawler] Processing URL: " + normalizedUrl);
@@ -298,6 +308,8 @@ public class Crawler implements Serializable {
                 log.warn("[accessed] URL " + normalizedUrl + " has been processed before. Skipping.");
                 return new ArrayList<>();
             }
+
+
 
             // filter for invalid url
             if(!checkUrlFormat(normalizedUrl)){
@@ -364,7 +376,7 @@ public class Crawler implements Serializable {
             //parseHostRules(ctx, normalizedUrl);
             updateHostLastAccessTime(ctx, getTopLevelDomain(url.getProtocol(), url.getHost()));
 
-            return requestHead(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
+            return requestHead(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains,iterationStartTime);
 
         } catch (Exception e) {
             log.error("[crawler] Error while processing URL: " + rawUrl, e);
@@ -374,7 +386,25 @@ public class Crawler implements Serializable {
         }
     }
 
+    private static boolean shouldRandomDropForAll() {
+        if(ENABLE_RANDOM_DROP){
+            double random = RANDOM_GENERATOR.nextDouble();
+            if(random < ALL_DROP_RATE){
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean checkTimeOut(long iterationStartTime) {
+
+//        synchronized (Crawler.class) {
+//            if(nextIterationMutux){
+//                return true;
+//            }
+//            nextIterationMutux = true;
+//        }
+
         long now = System.currentTimeMillis();
         log.info("[crawler] Time elapsed: " + (now - iterationStartTime));
         if(now - iterationStartTime > ITERATION_TIMEOUT){
@@ -403,7 +433,7 @@ public class Crawler implements Serializable {
         return false;
     }
 
-    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains) throws IOException, URISyntaxException {
+    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains, long iterationStartTime) throws IOException, URISyntaxException {
         URL url = new URI(normalizedUrl).toURL();
         log.info("[crawler] requestHead normalizedUrl: " + normalizedUrl);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -457,11 +487,11 @@ public class Crawler implements Serializable {
             return new ArrayList<>();
         } else {
             log.info("[crawler] proceeding to get request");
-            return requestGet(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
+            return requestGet(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains, iterationStartTime);
         }
     }
 
-    private static List<String> requestGet(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains) throws IOException{
+    private static List<String> requestGet(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains, long iterationStartTime) throws IOException{
         URL url;
         try {
             url = new URI(normalizedUrl).toURL();
@@ -557,6 +587,16 @@ public class Crawler implements Serializable {
                     String canonicalURL = pageRow.get("canonicalURL");
                     log.warn("[crawler] Page is duplicated with + " + canonicalURL + ". Creating canonical URL: " + normalizedUrl);
                 }
+            }
+
+
+            if(checkTimeOut(iterationStartTime)){
+                log.warn("[crawler] Iteration timeout. Exiting.");
+                if(shouldRandomDropForAll()){
+                    log.warn("[crawler] Randomly dropping URL: " + normalizedUrl);
+                    return new ArrayList<>();
+                }
+                return List.of(normalizedUrl);
             }
 
             return parsePageLinks(ctx, page, normalizedUrl, blacklistTable, verticalSeedDomains);
@@ -749,6 +789,13 @@ public class Crawler implements Serializable {
     }
 
     static List<String> parsePageLinks(FlameContext ctx, String page, String normalizedUrl, String blacklistTable, Set<String> verticalSeedDomains) throws IOException {
+
+
+
+
+
+
+
         List<String> links = new ArrayList<>();
 
 //        String hashedUrl = Hasher.hash(normalizedUrl);
@@ -780,6 +827,16 @@ public class Crawler implements Serializable {
                 log.warn("[crawler] URL " + href + " is not a valid URL. Skipping.");
                 continue;
             }
+
+            if(!checkUrlFormat(normalizedLink)){
+                log.warn("[crawler] URL " + normalizedLink + " is not a valid URL. Skipping.");
+                continue;
+            }
+
+//            if (isAccessed(ctx, normalizedLink)) {
+//                log.warn("[accessed] URL " + normalizedLink + " has been processed before. Skipping.");
+//                continue;
+//            }
 
             if(shouldDropLink(normalizedLink, verticalSeedDomains)){
                 log.warn("[crawler] URL " + normalizedLink + " is dropped. Skipping.");

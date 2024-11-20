@@ -12,7 +12,7 @@ public class KeyGenerator {
     static Map<String, AtomicInteger> COUNTER_MAP = new ConcurrentHashMap<>();
 
     private static String getPrefix(){
-        return "pt-job-" + count.getAndIncrement() + "-";
+        return "job-" + count.getAndIncrement() + "-";
 //        return "job-" + count.getAndIncrement() + "-";
     }
     static AtomicInteger count = new AtomicInteger(0);
