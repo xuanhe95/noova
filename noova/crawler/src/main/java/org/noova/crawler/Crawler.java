@@ -57,6 +57,8 @@ public class Crawler implements Serializable {
 
     private static final double LOW_DROP_RATE = 0.1;
 
+    private static final long ITERATION_TIMEOUT = 40000;
+
 
     private static final List<String> US_CITIES = List.of(
             "Abilene", "Akron", "Alameda", "Albany", "Albuquerque", "Alexandria", "Allentown", "Amarillo", "Anaheim", "Anchorage",
@@ -202,9 +204,10 @@ public class Crawler implements Serializable {
             List<String> recentTables = new LinkedList<>();
             while (urlQueue.count() > 0) {
 
+                long iterationStartTime = System.currentTimeMillis();
                 urlQueue = urlQueue.flatMapParallel(rawUrl -> {
                     try {
-                        return processUrl(ctx, rawUrl, blacklistTable, verticalSeedDomains);
+                        return processUrl(ctx, rawUrl, blacklistTable, verticalSeedDomains, iterationStartTime);
                     } catch (Exception e) {
                         log.error("Error processing URL: " + rawUrl, e);
                         return List.of();
@@ -273,12 +276,20 @@ public class Crawler implements Serializable {
         }
     }
 
-    private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, Set<String> verticalSeedDomains) throws Exception {
+    private static List<String> processUrl(FlameContext ctx, String rawUrl, String blacklistTable, Set<String> verticalSeedDomains, long iterationStartTime) throws Exception {
+
+
         String normalizedUrl = normalizeURL(rawUrl, rawUrl);
         if(normalizedUrl == null){
             log.warn("[crawler] URL " + rawUrl + " is not a valid URL. Skipping.");
             return new ArrayList<>();
         }
+
+        if(checkTimeOut(iterationStartTime)){
+            log.warn("[crawler] Iteration timeout. Exiting.");
+            return List.of(normalizedUrl);
+        }
+
 
         log.warn("[crawler] Processing URL: " + normalizedUrl);
         try {
@@ -361,6 +372,16 @@ public class Crawler implements Serializable {
             // return new ArrayList<>();
             return List.of(normalizedUrl);
         }
+    }
+
+    private static boolean checkTimeOut(long iterationStartTime) {
+        long now = System.currentTimeMillis();
+        log.info("[crawler] Time elapsed: " + (now - iterationStartTime));
+        if(now - iterationStartTime > ITERATION_TIMEOUT){
+            log.warn("[crawler] Iteration timeout. Exiting.");
+            return true;
+        }
+        return false;
     }
 
     private static boolean checkUrlFormat(String normalizedUrl) {
