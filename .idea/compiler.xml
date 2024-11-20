@@ -6,12 +6,15 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="crawler" />
         <module name="kvs" />
         <module name="indexer" />
-        <module name="crawler" />
         <module name="pagerank" />
         <module name="flame" />
+        <module name="webserver" />
+        <module name="tools" />
         <module name="gateway" />
+        <module name="generic" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>

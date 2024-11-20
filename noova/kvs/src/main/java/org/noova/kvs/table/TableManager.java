@@ -83,9 +83,9 @@ public class TableManager implements ITableManager {
             }
             log.info("[table manager] get persist table: " + tableKey);
             //TABLE_MAP.put(tableKey, new PersistTable(tableKey, storageDir));
+        } else{
+            log.info("[table manager] get transit table: " + tableKey);
         }
-
-        log.info("[table manager] get transit table: " + tableKey);
 
         return TABLE_MAP.getOrDefault(tableKey , null);
     }

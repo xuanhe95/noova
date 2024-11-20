@@ -33,7 +33,7 @@ public class Crawler implements Serializable {
     private static final String HOSTS_TABLE = TABLE_PREFIX + "hosts";
     private static final String LAST_ACCESS_TABLE = "last-access";
     // this is to reduce the pages that have been accessed
-    private static final String ACCESSED_LINK_TABLE = "accessed";
+    private static final String ACCESSED_LINK_TABLE = TABLE_PREFIX + "accessed";
     private static final long DEFAULT_ACCESS_INTERVAL = 1000;
     private static final long DEFAULT_CRAWL_DELAY_IN_SECOND = 1;
     private static final long LOOP_INTERVAL = 10;
@@ -42,9 +42,10 @@ public class Crawler implements Serializable {
     private static final String RULE_DISALLOW = "Disallow";
     private static final String RULE_ALLOW = "Allow";
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
-    private static final boolean ENABLE_LOOP_INTERVAL = false; //! polite check
+    private static final boolean ENABLE_LOOP_INTERVAL = false;
     private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
     private static final boolean ENABLE_VERTICAL_CRAWL = true;
+    private static final boolean ENABLE_CHECKPOINT = false;
 
     private static final Random RANDOM_GENERATOR = new Random();
 
@@ -56,10 +57,7 @@ public class Crawler implements Serializable {
 
     private static final double LOW_DROP_RATE = 0.1;
 
-
     //private static final Set<String> VERTICAL_SEED_DOMAINS = new ConcurrentSkipListSet<>();
-
-
 
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
 
@@ -71,6 +69,7 @@ public class Crawler implements Serializable {
     private static final boolean ENABLE_CANONICAL = false;
     private static final boolean ENABLE_ONLY_CIS_5550_ROBOTS = true;
     private static final int LINK_DROP_LENGTH = 128;
+    private static final int TABLE_RETENTION_NUM = 2; // num of job table on hold before del
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
@@ -113,17 +112,15 @@ public class Crawler implements Serializable {
 
             log.info("[crawler] Starting crawler with seed URL before parallelize: " + seedUrls);
 
-            // adding checkpoints
+            // load checkpoint or start w/ seed
             FlameRDD urlQueue;
             Iterator<Row> checkpointIterator = ctx.getKVS().scan("pt-checkpoint");
-
-            // loading checkpoint
             if (checkpointIterator.hasNext()) {
                 log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
 
                 List<String> checkpointUrls = new ArrayList<>();
                 checkpointIterator.forEachRemaining(row -> {
-                    String url = row.get("value");
+                    String url = row.get("url");
                     if (url != null && !url.isEmpty()) {
                         checkpointUrls.add(url);
                         log.info("[checkpoint] Loaded url: " + url);
@@ -140,24 +137,23 @@ public class Crawler implements Serializable {
             log.info("[crawler] urlQueue count: " + urlQueue.count());
 
             // save checkpoint on Ctrl+C
-            FlameRDD finalUrlQueue = urlQueue;
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    log.info("[crawler] Shutdown detected. Saving checkpoint...");
-                    ctx.getKVS().delete("pt-checkpoint");
-                    finalUrlQueue.saveAsTable("pt-checkpoint");
+            if(ENABLE_CHECKPOINT) {
+                FlameRDD finalUrlQueue = urlQueue;
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    try {
+                        log.info("[crawler] Shutdown detected. Saving checkpoint...");
+                        saveCheckpoint(ctx , finalUrlQueue);
 
-                    long elapsedTime = System.nanoTime()-startTime;
-                    ctx.output("Total time elapsed before shutdown: " +formatElapsedTime(elapsedTime)+"\n");
-                    log.info("[crawler] Checkpoint saved successfully during shutdown.");
-                } catch (Exception e) {
-                    log.error("[crawler] Error saving checkpoint during shutdown.", e);
-                }
-            }));
+                        long elapsedTime = System.nanoTime() - startTime;
+                        ctx.output("Total time elapsed before shutdown: " + formatElapsedTime(elapsedTime) + "\n");
+                        log.info("[crawler] Checkpoint saved successfully during shutdown.");
+                    } catch (Exception e) {
+                        log.error("[crawler] Error saving checkpoint during shutdown." , e);
+                    }
+                }));
+            }
 
-            String prevJobTable = null; // placeholder for del old job table
-
-            // main crawling loop
+            List<String> recentTables = new LinkedList<>();
             while (urlQueue.count() > 0) {
 
                 urlQueue = urlQueue.flatMapParallel(rawUrl -> {
@@ -173,18 +169,23 @@ public class Crawler implements Serializable {
                 log.info("[crawler] Next Job table ID (before checkpoint): " + nextJobTable);
 
                 // del prev job table
-//                if (prevJobTable != null && prevJobTable.startsWith("pt-job-") && !prevJobTable.startsWith("pt-job-0") ) {
-//                    log.info("[cleanup] Deleting unused table: " + prevJobTable);
-//                    //ctx.getKVS().delete(prevJobTable);
-//                }
+                recentTables.add((nextJobTable));
+                if (recentTables.size() > TABLE_RETENTION_NUM) {
+                    String delTable = recentTables.remove(0);
+                    try {
+                        log.info("[cleanup] Deleting unused table: " + delTable);
+                        ctx.getKVS().delete(delTable);
+                    } catch (Exception e) {
+                        log.error("[cleanup] Error deleting table: " + delTable , e);
+                    }
+                }
+
 
                 // checkpoint the current queue
-                log.info("[crawler] Saving checkpoint for URL queue...");
-                //ctx.getKVS().delete("pt-checkpoint"); // del previous checkpoint
-                //urlQueue.saveAsTable("pt-checkpoint"); // save current queue as checkpoint
-
-                // rotate
-                prevJobTable = nextJobTable;
+                if (ENABLE_CHECKPOINT) {
+                    log.info("[crawler] Saving checkpoint for URL queue...");
+                    saveCheckpoint(ctx , urlQueue);
+                }
 
                 if(ENABLE_LOOP_INTERVAL){
                     Thread.sleep(LOOP_INTERVAL);
@@ -201,6 +202,28 @@ public class Crawler implements Serializable {
             long elapsedTime = System.nanoTime() - startTime;
             ctx.output("Total time elapsed before crash: " + formatElapsedTime(elapsedTime)+"\n");
             throw e;
+        }
+    }
+
+    // helper to save checkpoint
+    private static void saveCheckpoint(FlameContext ctx, FlameRDD urlQueue) {
+        try {
+            ctx.getKVS().delete("pt-checkpoint");
+            urlQueue.saveAsTable("pt-checkpoint");
+            log.info("[checkpoint] Checkpoint saved successfully");
+        } catch (Exception e) {
+            log.error("[checkpoint] Error saving checkpoint", e);
+        }
+    }
+
+    // helper to add visited link upon every failed case
+    private static void updateAccessedTable(FlameContext ctx, String normalizedUrl) throws IOException {
+        String hashedUrl = Hasher.hash(normalizedUrl);
+        boolean visited = ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl);
+        if(!visited) {
+             Row row = new Row(hashedUrl);
+             row.put("url", normalizedUrl);
+             ctx.getKVS().putRow(ACCESSED_LINK_TABLE, row);
         }
     }
 
@@ -222,6 +245,7 @@ public class Crawler implements Serializable {
             // filter for invalid url
             if(!checkUrlFormat(normalizedUrl)){
                 log.warn("[crawler] URL " + normalizedUrl + " is not a valid URL. Skipping.");
+                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
 
@@ -229,32 +253,36 @@ public class Crawler implements Serializable {
             URL url = new URI(normalizedUrl).toURL();
             if (url.getHost() == null||url.getPort() < -1 || url.getPort() > 65535) {
                 log.warn("[crawler] Invalid host or port in URL: " + normalizedUrl);
+                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
+
             // skip if not in the same domain as seed url
             String topLevelDomain = getTopLevelDomain(null, url.getHost());
-
-
-
             log.info("[crawler] url domain: "+topLevelDomain);
 
             if (ENABLE_VERTICAL_CRAWL && !verticalSeedDomains.contains(topLevelDomain)) {
 
                 log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + verticalSeedDomains + ". Skipping.");
+                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
 
             // filter for blacklisted url
             if (ENABLE_BLACKLIST && !checkBlackList(ctx, normalizedUrl, blacklistTable)) {
                 log.warn("[crawler] URL " + normalizedUrl + " is blocked by blacklist. Skipping.");
+                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
 
             // filter based on disallow
             if (!checkRobotRules(ctx, normalizedUrl)) {
                 log.warn("[crawler] URL " + normalizedUrl + " is disallowed by robots.txt. Skipping.");
+                updateAccessedTable(ctx,normalizedUrl);
                 return new ArrayList<>();
             }
+
+            log.info("[crawler] finish adding robot for url: "+ normalizedUrl);
 
             String hashedUrl = Hasher.hash(normalizedUrl);
 //            if(URL_CACHE.containsKey(hashedUrl)) {
@@ -272,7 +300,6 @@ public class Crawler implements Serializable {
 
             // this because anchor extraction can create rows before one link being accessed
 
-            String protocol = url.getProtocol();
             Row row = ctx.getKVS().getRow(CRAWLER_TABLE, hashedUrl);
             if(row == null){
                 row = new Row(hashedUrl);
@@ -280,6 +307,7 @@ public class Crawler implements Serializable {
             log.info("[crawler] Row: " + row);
             if (!checkLastAccessTime(ctx, normalizedUrl, getTopLevelDomain(url.getProtocol(), url.getHost()))) {
                 // if the host is accessed too frequently, skip this URL, but still need to put it into the table
+                updateAccessedTable(ctx,normalizedUrl);
                 return List.of(normalizedUrl);
             }
             //parseHostRules(ctx, normalizedUrl);
@@ -293,11 +321,6 @@ public class Crawler implements Serializable {
             // return new ArrayList<>();
             return List.of(normalizedUrl);
         }
-    }
-
-    public static String filterNonLanguageCharacters(String text) {
-        // 保留 Unicode 语言字符和空格，去除数字、符号和标点
-        return text.replaceAll("[^\\p{L}\\s]", " ");
     }
 
     private static boolean checkUrlFormat(String normalizedUrl) {
@@ -319,6 +342,65 @@ public class Crawler implements Serializable {
         return false;
     }
 
+    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains) throws IOException, URISyntaxException {
+        URL url = new URI(normalizedUrl).toURL();
+        log.info("[crawler] requestHead normalizedUrl: " + normalizedUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("HEAD");
+        conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
+        conn.setInstanceFollowRedirects(false);
+        conn.connect();
+        int responseCode = conn.getResponseCode();
+
+        log.info("[response] Response code: " + responseCode);
+
+        String contentType = conn.getHeaderField("Content-Type");
+        String contentLength = conn.getHeaderField("Content-Length");
+        row.put("url", normalizedUrl);
+        row.put("responseCode", String.valueOf(responseCode));
+
+        if (contentLength != null) {
+            row.put("length", contentLength);
+        }
+
+        if (contentType != null) {
+            row.put("contentType", contentType);
+        }
+
+        InetAddress ip = InetAddress.getByName(url.getHost());
+        log.info("[crawler] IP: " + ip.getHostAddress());
+        row.put("ip", ip.getHostAddress());
+
+        if (responseCode == 301 || responseCode == 302 || responseCode == 303 || responseCode == 307 || responseCode == 308) {
+            log.info("[redirect] Redirect " + responseCode + " is detected. URL: " + normalizedUrl);
+            String location = conn.getHeaderField("Location");
+            ctx.getKVS().putRow(CRAWLER_TABLE, row);
+            updateAccessedTable(ctx,normalizedUrl);
+            if (location != null) {
+                // redirect to the new location
+                location = normalizeURL(location, normalizedUrl);
+                if(location == null){
+                    log.error("[redirect] Invalid URL: " + location);
+                    updateAccessedTable(ctx,normalizedUrl);
+                    return new ArrayList<>();
+                }
+                return List.of(location);
+            } else {
+                log.error("[redirect] No location found in the response header. URL: " + normalizedUrl);
+                updateAccessedTable(ctx,normalizedUrl);
+                return new ArrayList<>();
+            }
+        } else if (responseCode != 200) {
+            log.warn("[response] Error Response code: " + responseCode);
+            ctx.getKVS().putRow(CRAWLER_TABLE, row);
+            updateAccessedTable(ctx,normalizedUrl);
+            return new ArrayList<>();
+        } else {
+            log.info("[crawler] proceeding to get request");
+            return requestGet(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
+        }
+    }
+
     private static List<String> requestGet(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains) throws IOException{
         URL url;
         try {
@@ -332,21 +414,9 @@ public class Crawler implements Serializable {
         conn.connect();
         updateHostLastAccessTime(ctx, getTopLevelDomain(url.getProtocol(), url.getHost()));
         int responseCode = conn.getResponseCode();
+        log.info("[crawler] get request response code: "+ responseCode);
 
-
-
-        //        conn = (HttpURLConnection) url.openConnection();
-//        conn.setRequestMethod("GET");
-//        conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
-//        conn.connect();
-//        responseCode = conn.getResponseCode();
         if (responseCode == 200 && conn.getContentType() != null && conn.getContentType().contains("text/html")) {
-
-            if(isAccessed(ctx, normalizedUrl)){
-                log.info("[crawler] URL " + normalizedUrl + " is accessed before. Ignore this URL.");
-                return new ArrayList<>();
-            }
-
 
             byte[] rawPage = conn.getInputStream().readAllBytes();
 
@@ -400,6 +470,7 @@ public class Crawler implements Serializable {
             row.put(PropertyLoader.getProperty("table.crawler.icon"), icon);
 
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
+            updateAccessedTable(ctx, normalizedUrl);
 
             if(ENABLE_CANONICAL){
                 Row pageRow = ctx.getKVS().getRow(CANONICAL_PAGE_TABLE, hashedPage);
@@ -425,6 +496,7 @@ public class Crawler implements Serializable {
             //String hashedUrl = Hasher.hash(normalizedUrl);
             //URL_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
         }
+        updateAccessedTable(ctx,normalizedUrl);
         return new ArrayList<>();
     }
 
@@ -500,16 +572,15 @@ public class Crawler implements Serializable {
     static List<String> parsePageLinks(FlameContext ctx, String page, String normalizedUrl, String blacklistTable, Set<String> verticalSeedDomains) throws IOException {
         List<String> links = new ArrayList<>();
 
-        String hashedUrl = Hasher.hash(normalizedUrl);
-        if(ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl)){
-            log.info("[crawler] URL " + normalizedUrl + " has been processed before. Ignore this URL.");
-            return links;
-        }
-        ctx.getKVS().put(ACCESSED_LINK_TABLE, hashedUrl, "url", normalizedUrl);
+//        String hashedUrl = Hasher.hash(normalizedUrl);
+//        if(ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl)){
+//            log.info("[crawler] URL " + normalizedUrl + " has been processed before. Ignore this URL.");
+//            return links;
+//        }
+//        ctx.getKVS().put(ACCESSED_LINK_TABLE, hashedUrl, "url", normalizedUrl);
 
         Map<String, StringBuilder> anchorMap = new HashMap<>();
 
-//        String regex = "<a\\s+[^>]*href=[\"']([^\"']*)[\"'][^>]*>([\\s\\S]*?)<\\/a>";
         String regex = "<a\\s+[^>]*href\\s*=\\s*['\"]?([^'\"\\s>]+)['\"\\s>][^>]*>([\\s\\S]*?)</a>";
         Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(page);
@@ -520,6 +591,7 @@ public class Crawler implements Serializable {
 
             if (href.matches(".*[<>\"'{}|^\\[\\]]+.*")) { // skip href with invalid char
                 log.warn("[crawler] Invalid href attribute: " + href);
+                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
 
@@ -527,29 +599,34 @@ public class Crawler implements Serializable {
 
             if(normalizedLink == null){
                 log.warn("[crawler] URL " + href + " is not a valid URL. Skipping.");
+                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
 
             if(shouldDropLink(normalizedLink, verticalSeedDomains)){
                 log.warn("[crawler] URL " + normalizedLink + " is dropped. Skipping.");
+                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
 
             // filter invalid
             if(!checkUrlFormat(normalizedLink)){ // this should filter out invalid hyperlinks?
                 log.warn("[crawler] URL " + normalizedLink + " is not a valid URL. Skipping.");
+                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
 
             // filter blacklist
             if (ENABLE_BLACKLIST && !checkBlackList(ctx, normalizedLink, blacklistTable)) {
                 log.warn("[crawler] URL " + normalizedLink + " is blocked by blacklist. Ignore.");
+                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
 
             // filter robot
             if (!checkRobotRules(ctx, normalizedLink)) {
                 log.warn("[crawler] URL " + normalizedLink + " is disallowed by robots.txt. Ignore.");
+                updateAccessedTable(ctx,normalizedUrl);
                 continue;
             }
 
@@ -558,12 +635,6 @@ public class Crawler implements Serializable {
             if(ENABLE_ANCHOR_EXTRACTION){
                 text = filterPage(text); // html filter
                 anchorMap.put(normalizedLink, anchorMap.getOrDefault(normalizedLink, new StringBuilder()).append(text).append("<br>"));
-            }
-
-
-            if(isAccessed(ctx, normalizedLink)){
-                log.info("[crawler] URL " + normalizedLink + " is accessed before. Ignore.");
-                continue;
             }
 
             links.add(normalizedLink);
@@ -580,7 +651,13 @@ public class Crawler implements Serializable {
                     String anchorKey = "anchor:" + normalizedUrl;
                     targetRow.put(anchorKey, anchor.toString());
                     ctx.getKVS().putRow(CRAWLER_TABLE, targetRow);
+                    updateAccessedTable(ctx, normalizedUrl);
                 } catch (IOException e) {
+                    try {
+                        updateAccessedTable(ctx,normalizedUrl);
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
                     log.error("[crawler] Error while adding anchor to the row: " + link, e);
                     // throw new RuntimeException(e);
                 }
@@ -695,59 +772,6 @@ public class Crawler implements Serializable {
         return false;
     }
 
-    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains) throws IOException, URISyntaxException {
-        URL url = new URI(normalizedUrl).toURL();
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("HEAD");
-        conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
-        conn.setInstanceFollowRedirects(false);
-        conn.connect();
-        int responseCode = conn.getResponseCode();
-
-        log.info("[response] Response code: " + responseCode);
-
-        String contentType = conn.getHeaderField("Content-Type");
-        String contentLength = conn.getHeaderField("Content-Length");
-        row.put("url", normalizedUrl);
-        row.put("responseCode", String.valueOf(responseCode));
-
-        if (contentLength != null) {
-            row.put("length", contentLength);
-        }
-
-        if (contentType != null) {
-            row.put("contentType", contentType);
-        }
-
-        InetAddress ip = InetAddress.getByName(url.getHost());
-        log.info("[crawler] IP: " + ip.getHostAddress());
-        row.put("ip", ip.getHostAddress());
-
-        if (responseCode == 301 || responseCode == 302 || responseCode == 303 || responseCode == 307 || responseCode == 308) {
-            log.info("[redirect] Redirect " + responseCode + " is detected. URL: " + normalizedUrl);
-            String location = conn.getHeaderField("Location");
-            ctx.getKVS().putRow(CRAWLER_TABLE, row);
-            if (location != null) {
-                // redirect to the new location
-                location = normalizeURL(location, normalizedUrl);
-                if(location == null){
-                    log.error("[redirect] Invalid URL: " + location);
-                    return new ArrayList<>();
-                }
-                return List.of(location);
-            } else {
-                log.error("[redirect] No location found in the response header. URL: " + normalizedUrl);
-                return new ArrayList<>();
-            }
-        } else if (responseCode != 200) {
-            log.warn("[response] Error Response code: " + responseCode);
-            ctx.getKVS().putRow(CRAWLER_TABLE, row);
-            return new ArrayList<>();
-        } else {
-            return requestGet(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
-        }
-    }
-
     public static String filterPage(String page) {
         if(page == null) {
             return "";
@@ -828,11 +852,9 @@ public class Crawler implements Serializable {
         // only keep the content inside <body> tag
         while (matcher.find()) {
             htmlContent.append(matcher.group(2)).append(" ");
-
-
         }
 
-        String content = filterNonLanguageCharacters(htmlContent.toString());
+        String content = htmlContent.toString().replaceAll("[^\\p{L}\\s]", " ");;
 
         // remove script tags
         content = content.replaceAll("(?s)<script.*?>.*?</script>", " ").strip();
@@ -878,6 +900,7 @@ public class Crawler implements Serializable {
                 log.info("[crawl delay] Crawl delay: " + crawlDelay);
                 delayInSecond = Double.parseDouble(crawlDelay);
             } catch (Exception e) {
+                updateAccessedTable(ctx,normalizedUrl);
                 log.error("[crawl delay] Error while parsing crawl delay: " + crawlDelay + " using default value");
                 delayInSecond = 0;
             }
@@ -890,7 +913,7 @@ public class Crawler implements Serializable {
         return true;
     }
 
-    private static boolean checkBlackList(FlameContext ctx, String normalizedUrl, String blacklistTable) {
+    private static boolean checkBlackList(FlameContext ctx, String normalizedUrl, String blacklistTable) throws IOException {
         if (blacklistTable == null) {
             return true;
         }
@@ -911,6 +934,7 @@ public class Crawler implements Serializable {
 
         } catch (IOException e) {
             log.error("[crawler] Error while checking blacklist", e);
+            updateAccessedTable(ctx,normalizedUrl);
             throw new RuntimeException(e);
         }
     }
@@ -977,6 +1001,7 @@ public class Crawler implements Serializable {
         String hashedTopLevelDomain = Hasher.hash(hostName);
         ctx.getKVS().put(HOSTS_TABLE, hashedTopLevelDomain, LAST_ACCESS_TABLE, String.valueOf(System.currentTimeMillis()));
         ctx.getKVS().put(HOSTS_TABLE, hashedTopLevelDomain, "url", hostName);
+        log.info("[crawler] successfully update host last accessed time for host: "+hostName);
     }
 
     private static long getHostLastAccessTime(FlameContext ctx, String hostName) throws IOException {
@@ -1233,12 +1258,18 @@ public class Crawler implements Serializable {
     private static boolean isAccessed(FlameContext ctx, String normalizedUrl){
         String hashedUrl = Hasher.hash(normalizedUrl);
         try {
-            Row row = ctx.getKVS().getRow(CRAWLER_TABLE, hashedUrl);
-            if(row == null){
-                return false;
-            }
-            return row.get("url") != null;
-            // return ctx.getKVS().existsRow(TRANSIT_ACCESSED_LINK_TABLE, normalizedUrl);
+//            Row row = ctx.getKVS().getRow(CRAWLER_TABLE, hashedUrl);
+//            if(row == null){
+//                return false;
+//            }
+//            return row.get("url") != null;
+             boolean visited = ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl);
+//             if(!visited) {
+//                 Row row = new Row(hashedUrl);
+//                 row.put("url", normalizedUrl);
+//                 ctx.getKVS().putRow(ACCESSED_LINK_TABLE, row);
+//             }
+             return visited;
         } catch (IOException e) {
             log.error("[crawler] Error while checking if URL is accessed: " + normalizedUrl, e);
             return false;

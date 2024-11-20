@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/operation/FlatMapParallelOperation.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_jsoup_jsoup_1_18_1.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/all-jars/__worker9001-current.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/__worker9001-current.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/all-jars/__worker9002-current.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/__worker9002-current.jar" afterDir="false" />
@@ -24,14 +26,7 @@
       <change beforePath="$PROJECT_DIR$/noova/all-jars/tools-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/tools-1.0-SNAPSHOT.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/all-jars/webserver-1.0-SNAPSHOT.jar" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/webserver-1.0-SNAPSHOT.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlamePairRDD.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlamePairRDD.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlamePairRDDImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlamePairRDDImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameRDD.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameRDD.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameRDDImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameRDDImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/RouteRegistry.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/RouteRegistry.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/Worker.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/Worker.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/operation/FlatMapOperation.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/operation/FlatMapOperation.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/KVSClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/KVSClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/table/TableManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/table/TableManager.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
