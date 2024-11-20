@@ -40,3 +40,4 @@ build/
 ### misc ###
 sample/
 /worker*/
+/all-jars/
