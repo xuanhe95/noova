@@ -95,7 +95,7 @@ public class TableManager implements ITableManager {
         return new HashSet<>(TABLE_MAP.keySet());
     }
 
-    public String view(String tableKey, String startRowKey, int limit){
+    public synchronized String view(String tableKey, String startRowKey, int limit){
 
         Table table = getTable(tableKey);
         log.info("[view] get table: " + tableKey);
@@ -186,7 +186,7 @@ public class TableManager implements ITableManager {
                         log.warn("[view] get image: " + textValue);
                     }
                     else if (ENABLE_VIEW_FOLD && textValue.length() > VIEW_FOLD_LENGTH) {
-                        textValue = textValue.substring(0, VIEW_FOLD_LENGTH) + "...";
+                        textValue = "<p>" + textValue.substring(0, VIEW_FOLD_LENGTH) + "...</p>";
                     }
                     builder.append("<td>").append(textValue).append("</td>");
                 }
@@ -200,7 +200,7 @@ public class TableManager implements ITableManager {
 
         // create next page button
         if(hasMore){
-            builder.append("<a href=\"/view/")
+            builder.append("<p>").append("<a href=\"/view/")
                     .append(tableKey)
                     .append("?fromRow=")
                     .append(nextRowKey)
@@ -208,11 +208,14 @@ public class TableManager implements ITableManager {
                     .append(limit)
                     .append("\">")
                     .append("Next Page")
-                    .append("</a>");
+                    .append("</a>")
+                    .append("</p>");
         }
 
+        builder.append("<p><a href=\"http://").append(Worker.getCoordinatorAddr()).append("/\"").append("/>").append("Home").append("</a></p>");
+
         builder.append("</body></html>");
-        log.info("[view] return view: " + builder.toString());
+        // log.info("[view] return view: " + builder.toString());
         return builder.toString();
     }
 

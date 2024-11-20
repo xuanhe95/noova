@@ -57,6 +57,51 @@ public class Crawler implements Serializable {
 
     private static final double LOW_DROP_RATE = 0.1;
 
+
+    private static final List<String> US_CITIES = List.of(
+            "Abilene", "Akron", "Alameda", "Albany", "Albuquerque", "Alexandria", "Allentown", "Amarillo", "Anaheim", "Anchorage",
+            "Ann Arbor", "Antioch", "Apple Valley", "Appleton", "Arlington", "Arvada", "Asheville", "Athens", "Atlanta", "Atlantic City",
+            "Augusta", "Aurora", "Austin", "Bakersfield", "Baltimore", "Barnstable", "Baton Rouge", "Beaumont", "Bel Air", "Bellevue",
+            "Berkeley", "Bethlehem", "Billings", "Birmingham", "Bloomington", "Boise", "Boise City", "Bonita Springs", "Boston", "Boulder",
+            "Bradenton", "Bremerton", "Bridgeport", "Brighton", "Brownsville", "Bryan", "Buffalo", "Burbank", "Burlington", "Cambridge",
+            "Canton", "Cape Coral", "Carrollton", "Cary", "Cathedral City", "Cedar Rapids", "Champaign", "Chandler", "Charleston", "Charlotte",
+            "Chattanooga", "Chesapeake", "Chicago", "Chula Vista", "Cincinnati", "Clarke County", "Clarksville", "Clearwater", "Cleveland", "College Station",
+            "Colorado Springs", "Columbia", "Columbus", "Concord", "Coral Springs", "Corona", "Corpus Christi", "Costa Mesa", "Dallas", "Daly City",
+            "Danbury", "Davenport", "Davidson County", "Dayton", "Daytona Beach", "Deltona", "Denton", "Denver", "Des Moines", "Detroit",
+            "Downey", "Duluth", "Durham", "El Monte", "El Paso", "Elizabeth", "Elk Grove", "Elkhart", "Erie", "Escondido",
+            "Eugene", "Evansville", "Fairfield", "Fargo", "Fayetteville", "Fitchburg", "Flint", "Fontana", "Fort Collins", "Fort Lauderdale",
+            "Fort Smith", "Fort Walton Beach", "Fort Wayne", "Fort Worth", "Frederick", "Fremont", "Fresno", "Fullerton", "Gainesville", "Garden Grove",
+            "Garland", "Gastonia", "Gilbert", "Glendale", "Grand Prairie", "Grand Rapids", "Grayslake", "Green Bay", "Greensboro", "Greenville",
+            "Gulfport-Biloxi", "Hagerstown", "Hampton", "Harlingen", "Harrisburg", "Hartford", "Havre de Grace", "Hayward", "Hemet", "Henderson",
+            "Hesperia", "Hialeah", "Hickory", "High Point", "Hollywood", "Honolulu", "Houma", "Houston", "Howell", "Huntington",
+            "Huntington Beach", "Huntsville", "Independence", "Indianapolis", "Inglewood", "Irvine", "Irving", "Jackson", "Jacksonville", "Jefferson",
+            "Jersey City", "Johnson City", "Joliet", "Kailua", "Kalamazoo", "Kaneohe", "Kansas City", "Kennewick", "Kenosha", "Killeen",
+            "Kissimmee", "Knoxville", "Lacey", "Lafayette", "Lake Charles", "Lakeland", "Lakewood", "Lancaster", "Lansing", "Laredo",
+            "Las Cruces", "Las Vegas", "Layton", "Leominster", "Lewisville", "Lexington", "Lincoln", "Little Rock", "Long Beach", "Lorain",
+            "Los Angeles", "Louisville", "Lowell", "Lubbock", "Macon", "Madison", "Manchester", "Marina", "Marysville", "McAllen",
+            "McHenry", "Medford", "Melbourne", "Memphis", "Merced", "Mesa", "Mesquite", "Miami", "Milwaukee", "Minneapolis",
+            "Miramar", "Mission Viejo", "Modesto", "Monroe", "Monterey", "Montgomery", "Moreno Valley", "Murfreesboro", "Murrieta",
+            "Muskegon", "Myrtle Beach", "Naperville", "Naples", "Nashua", "Nashville", "New Bedford", "New Haven", "New London", "New Orleans",
+            "New York", "Newark", "Newburgh", "Newport News", "Norfolk", "Normal", "Norman", "North Charleston", "North Las Vegas", "North Port",
+            "Norwalk", "Norwich", "Oakland", "Ocala", "Oceanside", "Odessa", "Ogden", "Oklahoma City", "Olathe", "Olympia",
+            "Omaha", "Ontario", "Orange", "Orem", "Orlando", "Overland Park", "Oxnard", "Palm Bay", "Palm Springs", "Palmdale",
+            "Panama City", "Pasadena", "Paterson", "Pembroke Pines", "Pensacola", "Peoria", "Philadelphia", "Phoenix", "Pittsburgh", "Plano",
+            "Pomona", "Pompano Beach", "Port Arthur", "Port Orange", "Port Saint Lucie", "Port St. Lucie", "Portland", "Portsmouth", "Poughkeepsie", "Providence",
+            "Provo", "Pueblo", "Punta Gorda", "Racine", "Raleigh", "Rancho Cucamonga", "Reading", "Redding", "Reno", "Richland",
+            "Richmond", "Richmond County", "Riverside", "Roanoke", "Rochester", "Rockford", "Roseville", "Round Lake Beach", "Sacramento", "Saginaw",
+            "Saint Louis", "Saint Paul", "Saint Petersburg", "Salem", "Salinas", "Salt Lake City", "San Antonio", "San Bernardino", "San Buenaventura", "San Diego",
+            "San Francisco", "San Jose", "Santa Ana", "Santa Barbara", "Santa Clara", "Santa Clarita", "Santa Cruz", "Santa Maria", "Santa Rosa", "Sarasota",
+            "Savannah", "Scottsdale", "Scranton", "Seaside", "Seattle", "Sebastian", "Shreveport", "Simi Valley", "Sioux City", "Sioux Falls",
+            "South Bend", "South Lyon", "Spartanburg", "Spokane", "Springdale", "Springfield", "Stamford", "Sterling Heights", "Tacoma", "Tallahassee",
+            "Tampa", "Temecula", "Tempe", "Thornton", "Thousand Oaks", "Toledo", "Topeka", "Torrance", "Trenton", "Tucson",
+            "Tulsa", "Tuscaloosa", "Tustin", "Tyler", "Union City", "Upland", "Utica", "Vacaville", "Valdosta", "Vallejo",
+            "Vancouver", "Victorville", "Virginia Beach", "Visalia", "Vista", "Waco", "Warren", "Washington", "Waterbury", "Waukegan",
+            "West Covina", "West Palm Beach", "West Valley City", "Wichita", "Wilmington", "Winston-Salem", "Woodbridge", "Worcester", "Yakima", "Yonkers",
+            "York", "Youngstown", "Yuba City", "Yuma", "Zanesville", "Zephyrhills", "Zion"
+    );
+
+
+
     //private static final Set<String> VERTICAL_SEED_DOMAINS = new ConcurrentSkipListSet<>();
 
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
@@ -68,8 +113,9 @@ public class Crawler implements Serializable {
     private static final boolean ENABLE_BLACKLIST = false;
     private static final boolean ENABLE_CANONICAL = false;
     private static final boolean ENABLE_ONLY_CIS_5550_ROBOTS = true;
-    private static final int LINK_DROP_LENGTH = 128;
     private static final int TABLE_RETENTION_NUM = 2; // num of job table on hold before del
+    private static final int LINK_DROP_LENGTH = 200;
+    private static final int CONNECT_TIMEOUT = 1000;
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
@@ -236,7 +282,7 @@ public class Crawler implements Serializable {
 
         log.warn("[crawler] Processing URL: " + normalizedUrl);
         try {
-            // filter for dup url
+//             filter for dup url
             if (isAccessed(ctx, normalizedUrl)) {
                 log.warn("[accessed] URL " + normalizedUrl + " has been processed before. Skipping.");
                 return new ArrayList<>();
@@ -349,6 +395,7 @@ public class Crawler implements Serializable {
         conn.setRequestMethod("HEAD");
         conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
         conn.setInstanceFollowRedirects(false);
+        conn.setConnectTimeout(CONNECT_TIMEOUT);
         conn.connect();
         int responseCode = conn.getResponseCode();
 
@@ -409,6 +456,8 @@ public class Crawler implements Serializable {
             throw new RuntimeException(e);
         }
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(CONNECT_TIMEOUT);
+        conn.setReadTimeout(CONNECT_TIMEOUT);
         conn.setRequestMethod("GET");
         conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
         conn.connect();
@@ -442,8 +491,10 @@ public class Crawler implements Serializable {
             String addresses = parseAddresses(doc);
             String description = parseDescription(doc);
             String icon = parseIcon(doc, normalizedUrl);
-            String title = doc.title().toLowerCase();
-
+            String title = parseTitles(doc);
+            String location = parseLocation(doc);
+            String zipcodes = parseZipCodes(doc);
+            String keywords = parseKeywords(doc);
 
             //String normalizedPageText = filterPage(page);
 
@@ -468,6 +519,10 @@ public class Crawler implements Serializable {
             row.put(PropertyLoader.getProperty("table.crawler.description"), description);
 
             row.put(PropertyLoader.getProperty("table.crawler.icon"), icon);
+
+            row.put(PropertyLoader.getProperty("table.crawler.location"), location);
+
+            row.put(PropertyLoader.getProperty("table.crawler.zipcodes"), zipcodes);
 
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
             updateAccessedTable(ctx, normalizedUrl);
@@ -500,21 +555,77 @@ public class Crawler implements Serializable {
         return new ArrayList<>();
     }
 
-    static String parseIcon(Document doc, String websiteUrl) throws MalformedURLException {
-        Element iconLink = doc.select("link[rel~=(?i)^(icon|shortcut icon)$]").first();
+    public static String parseKeywords(Document doc) {
+        // 尝试从 meta[name=keywords] 获取内容
+        Element keywordsElement = doc.selectFirst("meta[name=keywords]");
+        if (keywordsElement != null) {
+            String keywords = keywordsElement.attr("content");
+            if (!keywords.isEmpty()) {
+                return keywords.trim();
+            }
+        }
+
+        return "";
+    }    static String parseTitles(Document doc) {
+
+        StringBuilder normalizedHtml = new StringBuilder();
+
+
+        Element ogTitleElement = doc.selectFirst("meta[property=og:title]");
+        if (ogTitleElement != null) {
+            String ogTitle = ogTitleElement.attr("content");
+            if (!ogTitle.isEmpty()) {
+                normalizedHtml.append(ogTitle).append("\n");
+            }
+        }
+
+        // 如果没有 og:title，尝试获取普通 <title> 标签内容
+        Element titleElement = doc.selectFirst("title");
+        if (titleElement != null) {
+            String title = titleElement.text();
+            if (!title.isEmpty()) {
+                normalizedHtml.append(title).append("\n");
+            }
+        }
+
+        // 如果以上都没有，尝试从 meta[name=description] 获取
+        Element descriptionElement = doc.selectFirst("meta[name=description]");
+        if (descriptionElement != null) {
+            String description = descriptionElement.attr("content");
+            if (!description.isEmpty()) {
+                normalizedHtml.append(description).append("\n");
+            }
+        }
+
+        return normalizedHtml.toString().toLowerCase();
+    }
+    public static String parseIcon(Document doc, String websiteUrl) {
+
+
+        Element appleTouchIcon = doc.select("link[rel~=(?i)^(apple-touch-icon)$]").first();
+        Element shortcutIcon = doc.select("link[rel~=(?i)^(shortcut icon)$]").first();
+        Element genericIcon = doc.select("link[rel~=(?i)^(icon)$]").first();
+
         String iconUrl = null;
 
-        if (iconLink != null) {
-            String iconHref = iconLink.attr("href");
-            URL baseUrl = new URL(websiteUrl);
-            iconUrl = new URL(baseUrl, iconHref).toString();
-        } else {
+        if (appleTouchIcon != null) {
+            iconUrl = appleTouchIcon.absUrl("href");
+        } else if (shortcutIcon != null) {
+            iconUrl = shortcutIcon.absUrl("href");
+        } else if (genericIcon != null) {
+            iconUrl = genericIcon.absUrl("href");
+        }
+
+        if (iconUrl == null || iconUrl.isEmpty()) {
             iconUrl = websiteUrl + "/favicon.ico";
         }
 
         StringBuilder normalizedHtml = new StringBuilder();
-        normalizedHtml.append("<img src=\"").append(iconUrl).append("\" alt=\"icon\" title=\"icon\" onerror=\"this.style.display='none';\" />").append("\n");
-        return normalizedHtml.toString().toLowerCase();
+        normalizedHtml.append("<img src=\"").append(iconUrl)
+                .append("\" alt=\"icon\" title=\"icon\" onerror=\"this.style.display='none';\" />").append("\n");
+
+
+        return normalizedHtml.toString();
     }
 
     static String parseDescription(Document doc){
@@ -528,25 +639,81 @@ public class Crawler implements Serializable {
         return normalizedHtml.toString().toLowerCase();
     }
 
+    public static String parseLocation(Document doc){
+        String latitude = doc.select("meta[property~=(?i)(og:latitude|og:lat|place:location:latitude|geo.position)]").attr("content");
+        String longitude = doc.select("meta[property~=(?i)(og:longitude|place:location:longitude)]").attr("content");
 
-    static String parseAddresses(Document doc){
-
+        if(!latitude.isEmpty() && !longitude.isEmpty()){
+            return latitude + "," + longitude;
+        }
+        return "";
+    }
+    public static String parseAddresses(Document doc) {
+        // 搜索常见的地址容器
         Elements addressElements = doc.select(".address, address div.address, span.location, p.contact-info");
-        String addressRegex = "\\d+\\s+[A-Za-z]+(?:\\s+[A-Za-z]+)*,\\s+[A-Za-z]+,\\s+[A-Z]{2}\\s+\\d{5}";
-        Pattern pattern = Pattern.compile(addressRegex);
+
+
+        String text = doc.text();
+
+        // 用于存储匹配到的城市信息
+        List<String> matchedCities = new ArrayList<>();
+
+        // 遍历城市列表，检查是否包含在文本中
+        for (String city : US_CITIES) {
+            if (text.matches("(?i).*\\b" + city + "\\b.*")) {
+                matchedCities.add(city);
+            }
+        }
+
+        // 返回匹配到的城市列表，按换行符分隔
+        return String.join("\n", matchedCities);
+
+    }
+
+    public static String parseZipCodes(Document doc) {
+        // 提取整个页面的文本
+        String text = doc.text();
 
         StringBuilder normalizedHtml = new StringBuilder();
 
-        for (Element address : addressElements) {
-            String text = address.text().toLowerCase();
-            Matcher matcher = pattern.matcher(text);
-            while (matcher.find()) {
-                String addressText = matcher.group().strip().replace("\n", " ");
-                normalizedHtml.append(addressText).append("\n");
-            }
+        // 改进的正则表达式
+        String zipCodeRegex = "(?i)(?<!\\.)\\bzip\\b.{0,20}\\b\\d{5}(?:-\\d{4})?\\b";
+        Pattern pattern = Pattern.compile(zipCodeRegex);
+        Matcher matcher = pattern.matcher(text);
+
+        // 使用 Set 避免重复
+        Set<String> zipCodes = new HashSet<>();
+
+        // 查找所有匹配的 ZIP codes
+        while (matcher.find()) {
+            String zipCode = matcher.group().strip();
+            zipCodes.add(zipCode);
         }
-        return normalizedHtml.toString();
+
+        zipCodes.forEach(zipCode -> normalizedHtml.append(zipCode).append("\n"));
+
+        return normalizedHtml.toString().toLowerCase();
+
     }
+
+//    static String parseAddresses(Document doc){
+//
+//        Elements addressElements = doc.select(".address, address div.address, span.location, p.contact-info");
+//        String addressRegex = "\\d+\\s+[A-Za-z]+(?:\\s+[A-Za-z]+)*,\\s+[A-Za-z]+,\\s+[A-Z]{2}\\s+\\d{5}";
+//        Pattern pattern = Pattern.compile(addressRegex);
+//
+//        StringBuilder normalizedHtml = new StringBuilder();
+//
+//        for (Element address : addressElements) {
+//            String text = address.text().toLowerCase();
+//            Matcher matcher = pattern.matcher(text);
+//            while (matcher.find()) {
+//                String addressText = matcher.group().strip().replace("\n", " ");
+//                normalizedHtml.append(addressText).append("\n");
+//            }
+//        }
+//        return normalizedHtml.toString();
+//    }
     static String parseImages(Document doc){
         Elements imgElements = doc.select("img");
         StringBuilder normalizedHtml = new StringBuilder();
@@ -610,25 +777,22 @@ public class Crawler implements Serializable {
             }
 
             // filter invalid
-            if(!checkUrlFormat(normalizedLink)){ // this should filter out invalid hyperlinks?
-                log.warn("[crawler] URL " + normalizedLink + " is not a valid URL. Skipping.");
-                updateAccessedTable(ctx,normalizedUrl);
-                continue;
-            }
+//            if(!checkUrlFormat(normalizedLink)){ // this should filter out invalid hyperlinks?
+//                log.warn("[crawler] URL " + normalizedLink + " is not a valid URL. Skipping.");
+//                continue;
+//            }
 
             // filter blacklist
-            if (ENABLE_BLACKLIST && !checkBlackList(ctx, normalizedLink, blacklistTable)) {
-                log.warn("[crawler] URL " + normalizedLink + " is blocked by blacklist. Ignore.");
-                updateAccessedTable(ctx,normalizedUrl);
-                continue;
-            }
+//            if (ENABLE_BLACKLIST && !checkBlackList(ctx, normalizedLink, blacklistTable)) {
+//                log.warn("[crawler] URL " + normalizedLink + " is blocked by blacklist. Ignore.");
+//                continue;
+//            }
 
             // filter robot
-            if (!checkRobotRules(ctx, normalizedLink)) {
-                log.warn("[crawler] URL " + normalizedLink + " is disallowed by robots.txt. Ignore.");
-                updateAccessedTable(ctx,normalizedUrl);
-                continue;
-            }
+//            if (!checkRobotRules(ctx, normalizedLink)) {
+//                log.warn("[crawler] URL " + normalizedLink + " is disallowed by robots.txt. Ignore.");
+//                continue;
+//            }
 
             log.info("[crawler] add link: " + normalizedLink);
 
@@ -771,6 +935,61 @@ public class Crawler implements Serializable {
         // if pass all the checks, do not drop
         return false;
     }
+
+//    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains) throws IOException, URISyntaxException {
+//        URL url = new URI(normalizedUrl).toURL();
+//        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+//        conn.setRequestMethod("HEAD");
+//        conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
+//        conn.setInstanceFollowRedirects(false);
+//        conn.setConnectTimeout(CONNECT_TIMEOUT);
+//        conn.setReadTimeout(CONNECT_TIMEOUT);
+//        conn.connect();
+//        int responseCode = conn.getResponseCode();
+//
+//        log.info("[response] Response code: " + responseCode);
+//
+//        String contentType = conn.getHeaderField("Content-Type");
+//        String contentLength = conn.getHeaderField("Content-Length");
+//        row.put("url", normalizedUrl);
+//        row.put("responseCode", String.valueOf(responseCode));
+//
+//        if (contentLength != null) {
+//            row.put("length", contentLength);
+//        }
+//
+//        if (contentType != null) {
+//            row.put("contentType", contentType);
+//        }
+//
+//        InetAddress ip = InetAddress.getByName(url.getHost());
+//        log.info("[crawler] IP: " + ip.getHostAddress());
+//        row.put("ip", ip.getHostAddress());
+//
+//        if (responseCode == 301 || responseCode == 302 || responseCode == 303 || responseCode == 307 || responseCode == 308) {
+//            log.info("[redirect] Redirect " + responseCode + " is detected. URL: " + normalizedUrl);
+//            String location = conn.getHeaderField("Location");
+//            ctx.getKVS().putRow(CRAWLER_TABLE, row);
+//            if (location != null) {
+//                // redirect to the new location
+//                location = normalizeURL(location, normalizedUrl);
+//                if(location == null){
+//                    log.error("[redirect] Invalid URL: " + location);
+//                    return new ArrayList<>();
+//                }
+//                return List.of(location);
+//            } else {
+//                log.error("[redirect] No location found in the response header. URL: " + normalizedUrl);
+//                return new ArrayList<>();
+//            }
+//        } else if (responseCode != 200) {
+//            log.warn("[response] Error Response code: " + responseCode);
+//            ctx.getKVS().putRow(CRAWLER_TABLE, row);
+//            return new ArrayList<>();
+//        } else {
+//            return requestGet(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains);
+//        }
+//    }
 
     public static String filterPage(String page) {
         if(page == null) {
@@ -1209,8 +1428,8 @@ public class Crawler implements Serializable {
             URL robotsUrl = new URI(robotsTxtUrl).toURL();
             conn = (HttpURLConnection) robotsUrl.openConnection();
             // in case of slow response
-            conn.setConnectTimeout(500);
-            conn.setReadTimeout(500);
+            conn.setConnectTimeout(1000);
+            conn.setReadTimeout(1000);
             conn.setRequestMethod("GET");
             conn.setRequestProperty("User-Agent", CIS_5550_CRAWLER);
             conn.connect();
