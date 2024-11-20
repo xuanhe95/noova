@@ -33,7 +33,7 @@ public class Crawler implements Serializable {
     private static final String HOSTS_TABLE = TABLE_PREFIX + "hosts";
     private static final String LAST_ACCESS_TABLE = "last-access";
     // this is to reduce the pages that have been accessed
-    private static final String ACCESSED_LINK_TABLE = TABLE_PREFIX + "accessed";
+    private static final String ACCESSED_LINK_TABLE = TABLE_PREFIX + "crawl";
     private static final long DEFAULT_ACCESS_INTERVAL = 1000;
     private static final long DEFAULT_CRAWL_DELAY_IN_SECOND = 1;
     private static final long LOOP_INTERVAL = 10;
@@ -59,61 +59,26 @@ public class Crawler implements Serializable {
 
     private static final double ALL_DROP_RATE = 0.2;
 
-    private static final long ITERATION_TIMEOUT = 15000;
+    private static final long ITERATION_TIMEOUT = 50000;
 
-    private static boolean nextIterationMutux;
+    private static final boolean ENABLE_URL_CACHE = true;
+
 
 
     private static final List<String> US_CITIES = List.of(
-            "Abilene", "Akron", "Alameda", "Albany", "Albuquerque", "Alexandria", "Allentown", "Amarillo", "Anaheim", "Anchorage",
-            "Ann Arbor", "Antioch", "Apple Valley", "Appleton", "Arlington", "Arvada", "Asheville", "Athens", "Atlanta", "Atlantic City",
-            "Augusta", "Aurora", "Austin", "Bakersfield", "Baltimore", "Barnstable", "Baton Rouge", "Beaumont", "Bel Air", "Bellevue",
-            "Berkeley", "Bethlehem", "Billings", "Birmingham", "Bloomington", "Boise", "Boise City", "Bonita Springs", "Boston", "Boulder",
-            "Bradenton", "Bremerton", "Bridgeport", "Brighton", "Brownsville", "Bryan", "Buffalo", "Burbank", "Burlington", "Cambridge",
-            "Canton", "Cape Coral", "Carrollton", "Cary", "Cathedral City", "Cedar Rapids", "Champaign", "Chandler", "Charleston", "Charlotte",
-            "Chattanooga", "Chesapeake", "Chicago", "Chula Vista", "Cincinnati", "Clarke County", "Clarksville", "Clearwater", "Cleveland", "College Station",
-            "Colorado Springs", "Columbia", "Columbus", "Concord", "Coral Springs", "Corona", "Corpus Christi", "Costa Mesa", "Dallas", "Daly City",
-            "Danbury", "Davenport", "Davidson County", "Dayton", "Daytona Beach", "Deltona", "Denton", "Denver", "Des Moines", "Detroit",
-            "Downey", "Duluth", "Durham", "El Monte", "El Paso", "Elizabeth", "Elk Grove", "Elkhart", "Erie", "Escondido",
-            "Eugene", "Evansville", "Fairfield", "Fargo", "Fayetteville", "Fitchburg", "Flint", "Fontana", "Fort Collins", "Fort Lauderdale",
-            "Fort Smith", "Fort Walton Beach", "Fort Wayne", "Fort Worth", "Frederick", "Fremont", "Fresno", "Fullerton", "Gainesville", "Garden Grove",
-            "Garland", "Gastonia", "Gilbert", "Glendale", "Grand Prairie", "Grand Rapids", "Grayslake", "Green Bay", "Greensboro", "Greenville",
-            "Gulfport-Biloxi", "Hagerstown", "Hampton", "Harlingen", "Harrisburg", "Hartford", "Havre de Grace", "Hayward", "Hemet", "Henderson",
-            "Hesperia", "Hialeah", "Hickory", "High Point", "Hollywood", "Honolulu", "Houma", "Houston", "Howell", "Huntington",
-            "Huntington Beach", "Huntsville", "Independence", "Indianapolis", "Inglewood", "Irvine", "Irving", "Jackson", "Jacksonville", "Jefferson",
-            "Jersey City", "Johnson City", "Joliet", "Kailua", "Kalamazoo", "Kaneohe", "Kansas City", "Kennewick", "Kenosha", "Killeen",
-            "Kissimmee", "Knoxville", "Lacey", "Lafayette", "Lake Charles", "Lakeland", "Lakewood", "Lancaster", "Lansing", "Laredo",
-            "Las Cruces", "Las Vegas", "Layton", "Leominster", "Lewisville", "Lexington", "Lincoln", "Little Rock", "Long Beach", "Lorain",
-            "Los Angeles", "Louisville", "Lowell", "Lubbock", "Macon", "Madison", "Manchester", "Marina", "Marysville", "McAllen",
-            "McHenry", "Medford", "Melbourne", "Memphis", "Merced", "Mesa", "Mesquite", "Miami", "Milwaukee", "Minneapolis",
-            "Miramar", "Mission Viejo", "Modesto", "Monroe", "Monterey", "Montgomery", "Moreno Valley", "Murfreesboro", "Murrieta",
-            "Muskegon", "Myrtle Beach", "Naperville", "Naples", "Nashua", "Nashville", "New Bedford", "New Haven", "New London", "New Orleans",
-            "New York", "Newark", "Newburgh", "Newport News", "Norfolk", "Normal", "Norman", "North Charleston", "North Las Vegas", "North Port",
-            "Norwalk", "Norwich", "Oakland", "Ocala", "Oceanside", "Odessa", "Ogden", "Oklahoma City", "Olathe", "Olympia",
-            "Omaha", "Ontario", "Orange", "Orem", "Orlando", "Overland Park", "Oxnard", "Palm Bay", "Palm Springs", "Palmdale",
-            "Panama City", "Pasadena", "Paterson", "Pembroke Pines", "Pensacola", "Peoria", "Philadelphia", "Phoenix", "Pittsburgh", "Plano",
-            "Pomona", "Pompano Beach", "Port Arthur", "Port Orange", "Port Saint Lucie", "Port St. Lucie", "Portland", "Portsmouth", "Poughkeepsie", "Providence",
-            "Provo", "Pueblo", "Punta Gorda", "Racine", "Raleigh", "Rancho Cucamonga", "Reading", "Redding", "Reno", "Richland",
-            "Richmond", "Richmond County", "Riverside", "Roanoke", "Rochester", "Rockford", "Roseville", "Round Lake Beach", "Sacramento", "Saginaw",
-            "Saint Louis", "Saint Paul", "Saint Petersburg", "Salem", "Salinas", "Salt Lake City", "San Antonio", "San Bernardino", "San Buenaventura", "San Diego",
-            "San Francisco", "San Jose", "Santa Ana", "Santa Barbara", "Santa Clara", "Santa Clarita", "Santa Cruz", "Santa Maria", "Santa Rosa", "Sarasota",
-            "Savannah", "Scottsdale", "Scranton", "Seaside", "Seattle", "Sebastian", "Shreveport", "Simi Valley", "Sioux City", "Sioux Falls",
-            "South Bend", "South Lyon", "Spartanburg", "Spokane", "Springdale", "Springfield", "Stamford", "Sterling Heights", "Tacoma", "Tallahassee",
-            "Tampa", "Temecula", "Tempe", "Thornton", "Thousand Oaks", "Toledo", "Topeka", "Torrance", "Trenton", "Tucson",
-            "Tulsa", "Tuscaloosa", "Tustin", "Tyler", "Union City", "Upland", "Utica", "Vacaville", "Valdosta", "Vallejo",
-            "Vancouver", "Victorville", "Virginia Beach", "Visalia", "Vista", "Waco", "Warren", "Washington", "Waterbury", "Waukegan",
-            "West Covina", "West Palm Beach", "West Valley City", "Wichita", "Wilmington", "Winston-Salem", "Woodbridge", "Worcester", "Yakima", "Yonkers",
-            "York", "Youngstown", "Yuba City", "Yuma", "Zanesville", "Zephyrhills", "Zion"
+            "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
+            "Austin", "Jacksonville", "Fort Worth", "Columbus", "Indianapolis", "Charlotte", "San Francisco", "Seattle", "Denver", "Washington",
+            "Boston", "El Paso", "Nashville", "Detroit", "Las Vegas", "Portland", "Miami", "Atlanta", "Orlando", "Salt Lake City",
+            "Minneapolis", "Tampa", "St. Louis", "Cleveland", "Pittsburgh", "Cincinnati", "Kansas City", "Sacramento", "Baltimore", "Milwaukee",
+            "Omaha", "Raleigh", "Colorado Springs", "Virginia Beach", "Albuquerque", "Fresno", "Tucson", "Mesa", "Long Beach", "Honolulu"
     );
-
-
 
     //private static final Set<String> VERTICAL_SEED_DOMAINS = new ConcurrentSkipListSet<>();
 
     private static final String CIS_5550_CRAWLER = "cis5550-crawler";
 
-    private static final Map<String, SoftReference<String>> URL_CACHE = new WeakHashMap<>();
-    private static final Map<String, SoftReference<String>> ROBOT_CACHE = new WeakHashMap<>();
+    private static final Map<String, SoftReference<String>> URL_ACCESS_CACHE = new HashMap<>();
+    private static final Map<String, SoftReference<String>> ROBOT_ACCESS_CACHE = new HashMap<>();
     private static final Map<String, Boolean> BLACKLIST = new ConcurrentHashMap<>();
     private static final boolean ENABLE_ANCHOR_EXTRACTION = false;
     private static final boolean ENABLE_BLACKLIST = false;
@@ -121,7 +86,11 @@ public class Crawler implements Serializable {
     private static final boolean ENABLE_ONLY_CIS_5550_ROBOTS = true;
     private static final int TABLE_RETENTION_NUM = 2; // num of job table on hold before del
     private static final int LINK_DROP_LENGTH = 200;
-    private static final int CONNECT_TIMEOUT = 1000;
+    private static final int CONNECT_TIMEOUT = 3000;
+
+
+    private static final long CACHE_EXPIRATION = 1000 * 60 * 60 * 24; // 24 hours
+
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
@@ -205,6 +174,9 @@ public class Crawler implements Serializable {
                 }));
             }
 
+            startCacheCleanThread();
+
+
             List<String> recentTables = new LinkedList<>();
             while (urlQueue.count() > 0) {
 
@@ -212,7 +184,6 @@ public class Crawler implements Serializable {
 //                synchronized (Crawler.class) {
                     long iterationStartTime = System.currentTimeMillis();
                     log.info("[crawler] Iteration started at: " + iterationStartTime);
-                    nextIterationMutux = false;
 
                     urlQueue = urlQueue.flatMapParallel(rawUrl -> {
                         try {
@@ -263,6 +234,23 @@ public class Crawler implements Serializable {
         }
     }
 
+    private static void startCacheCleanThread() {
+        Thread cacheThread = new Thread(
+                () -> {
+                    while (true) {
+                        try {
+                            Thread.sleep(CACHE_EXPIRATION);
+                            URL_ACCESS_CACHE.entrySet().removeIf(entry -> entry.getValue().get() == null);
+                            ROBOT_ACCESS_CACHE.entrySet().removeIf(entry -> entry.getValue().get() == null);
+                        } catch (InterruptedException e) {
+                            log.error("[crawler] Cache thread interrupted", e);
+                        }
+                    }
+                }
+        );
+        cacheThread.start();
+    }
+
     // helper to save checkpoint
     private static void saveCheckpoint(FlameContext ctx, FlameRDD urlQueue) {
         try {
@@ -276,13 +264,20 @@ public class Crawler implements Serializable {
 
     // helper to add visited link upon every failed case
     private static void updateAccessedTable(FlameContext ctx, String normalizedUrl) throws IOException {
-        String hashedUrl = Hasher.hash(normalizedUrl);
-        boolean visited = ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl);
-        if(!visited) {
-             Row row = new Row(hashedUrl);
-             row.put("url", normalizedUrl);
-             ctx.getKVS().putRow(ACCESSED_LINK_TABLE, row);
+        if(!ENABLE_URL_CACHE){
+            return;
         }
+
+
+        String hashedUrl = Hasher.hash(normalizedUrl);
+        //boolean visited = ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl);
+        //if(!visited) {
+//             Row row = new Row(hashedUrl);
+//             row.put("url", normalizedUrl);
+//             ctx.getKVS().putRow(ACCESSED_LINK_TABLE, row);
+        //}
+
+        URL_ACCESS_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
     }
 
 
@@ -319,10 +314,10 @@ public class Crawler implements Serializable {
 
             // filter for domain name
             URL url = new URI(normalizedUrl).toURL();
-            if (url.getHost() == null||url.getPort() < -1 || url.getPort() > 65535) {
-                log.warn("[crawler] Invalid host or port in URL: " + normalizedUrl);
-                return new ArrayList<>();
-            }
+//            if (url.getHost() == null||url.getPort() < -1 || url.getPort() > 65535) {
+//                log.warn("[crawler] Invalid host or port in URL: " + normalizedUrl);
+//                return new ArrayList<>();
+//            }
 
             // skip if not in the same domain as seed url
             String topLevelDomain = getTopLevelDomain(null, url.getHost());
@@ -467,7 +462,7 @@ public class Crawler implements Serializable {
             log.info("[redirect] Redirect " + responseCode + " is detected. URL: " + normalizedUrl);
             String location = conn.getHeaderField("Location");
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
-//            updateAccessedTable(ctx,normalizedUrl);
+            //updateAccessedTable(ctx,normalizedUrl);
             if (location != null) {
                 // redirect to the new location
                 location = normalizeURL(location, normalizedUrl);
@@ -483,7 +478,7 @@ public class Crawler implements Serializable {
         } else if (responseCode != 200) {
             log.warn("[response] Error Response code: " + responseCode);
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
-//            updateAccessedTable(ctx,normalizedUrl);
+            //updateAccessedTable(ctx,normalizedUrl);
             return new ArrayList<>();
         } else {
             log.info("[crawler] proceeding to get request");
@@ -535,9 +530,9 @@ public class Crawler implements Serializable {
             String description = parseDescription(doc);
             String icon = parseIcon(doc, normalizedUrl);
             String title = parseTitles(doc);
-            String location = parseLocation(doc);
-            String zipcodes = parseZipCodes(doc);
-            String keywords = parseKeywords(doc);
+            //String location = parseLocation(doc);
+            //String zipcodes = parseZipCodes(doc);
+            //String keywords = parseKeywords(doc);
 
             //String normalizedPageText = filterPage(page);
 
@@ -563,12 +558,13 @@ public class Crawler implements Serializable {
 
             row.put(PropertyLoader.getProperty("table.crawler.icon"), icon);
 
-            row.put(PropertyLoader.getProperty("table.crawler.location"), location);
+            //row.put(PropertyLoader.getProperty("table.crawler.location"), location);
 
-            row.put(PropertyLoader.getProperty("table.crawler.zipcodes"), zipcodes);
+            //row.put(PropertyLoader.getProperty("table.crawler.zipcodes"), zipcodes);
 
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
-//            updateAccessedTable(ctx, normalizedUrl);
+
+            updateAccessedTable(ctx, normalizedUrl);
 
             if(ENABLE_CANONICAL){
                 Row pageRow = ctx.getKVS().getRow(CANONICAL_PAGE_TABLE, hashedPage);
@@ -804,7 +800,7 @@ public class Crawler implements Serializable {
 //            return links;
 //        }
 //        ctx.getKVS().put(ACCESSED_LINK_TABLE, hashedUrl, "url", normalizedUrl);
-        updateAccessedTable(ctx,normalizedUrl);
+
 
         Map<String, StringBuilder> anchorMap = new HashMap<>();
 
@@ -833,10 +829,10 @@ public class Crawler implements Serializable {
                 continue;
             }
 
-//            if (isAccessed(ctx, normalizedLink)) {
-//                log.warn("[accessed] URL " + normalizedLink + " has been processed before. Skipping.");
-//                continue;
-//            }
+            if (isAccessed(ctx, normalizedLink)) {
+                log.warn("[accessed] URL " + normalizedLink + " has been processed before. Skipping.");
+                continue;
+            }
 
             if(shouldDropLink(normalizedLink, verticalSeedDomains)){
                 log.warn("[crawler] URL " + normalizedLink + " is dropped. Skipping.");
@@ -1523,13 +1519,23 @@ public class Crawler implements Serializable {
 //                return false;
 //            }
 //            return row.get("url") != null;
-             boolean visited = ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl);
+             //boolean visited = ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl);
 //             if(!visited) {
 //                 Row row = new Row(hashedUrl);
 //                 row.put("url", normalizedUrl);
 //                 ctx.getKVS().putRow(ACCESSED_LINK_TABLE, row);
 //             }
-             return visited;
+
+            if(ENABLE_URL_CACHE && URL_ACCESS_CACHE.containsKey(hashedUrl)){
+                return true;
+            }
+
+            Row row = ctx.getKVS().getRow(CRAWLER_TABLE, hashedUrl);
+            if(row == null){
+                return false;
+            }
+            return row.get("url") != null;
+             //return visited;
         } catch (IOException e) {
             log.error("[crawler] Error while checking if URL is accessed: " + normalizedUrl, e);
             return false;
@@ -1544,9 +1550,7 @@ public class Crawler implements Serializable {
 //            int port = url.getPort();
 //            if (port != -1 && (port < 1 || port > 65535)) {
 //                log.warn("[checkRobotRules] Invalid port in URL: " + normalizedUrl);
-//                return false; // allow processing if malformed?
-//            }
-
+//                return false; // allow processing if malformed
 
 
             String topLevelDomainName = getTopLevelDomain(url.getProtocol(), url.getHost());

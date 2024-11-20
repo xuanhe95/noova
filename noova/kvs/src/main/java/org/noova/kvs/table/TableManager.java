@@ -183,7 +183,7 @@ public class TableManager implements ITableManager {
                             imgBuilder.append(img);
                         }
                         textValue = imgBuilder.toString();
-                        log.warn("[view] get image: " + textValue);
+                        //log.warn("[view] get image: " + textValue);
                     }
                     else if (ENABLE_VIEW_FOLD && textValue.length() > VIEW_FOLD_LENGTH) {
                         textValue = "<p>" + textValue.substring(0, VIEW_FOLD_LENGTH) + "...</p>";
