@@ -1,5 +1,6 @@
 package org.noova.crawler;
 
+import org.jsoup.nodes.Element;
 import org.noova.flame.FlameContext;
 import org.noova.flame.FlameRDD;
 import org.noova.flame.FlameRDDImpl;
@@ -19,6 +20,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 
 public class Crawler implements Serializable {
 
@@ -65,6 +70,7 @@ public class Crawler implements Serializable {
     private static final boolean ENABLE_BLACKLIST = false;
     private static final boolean ENABLE_CANONICAL = false;
     private static final boolean ENABLE_ONLY_CIS_5550_ROBOTS = true;
+    private static final int LINK_DROP_LENGTH = 128;
 
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
@@ -348,22 +354,50 @@ public class Crawler implements Serializable {
             //String[] normalizedPages = normalizePage(page);
             //String normalizedPage = String.join(" ", normalizedPages);
 
-            String normalizedPageText = filterPage(page);
+            Document doc = Jsoup.parse(page, normalizedUrl);
+            // remove script, style, popup, ad, banner, dialog
+            doc.select("script, style, .popup, .ad, .banner, [role=dialog]").remove();
+            String visibleText = doc.body().text();
+          //  Elements linkElements = doc.select("a");
+           // Elements imgElements = doc.select("img");
+           // Elements addressElements = doc.select(".address, address");
+
+//            for (Element link : linkElements) {
+//                String linkHref = link.attr("href");
+//                String linkText = link.text();
+//                log.info("[crawler] Link: " + linkHref + " Text: " + linkText);
+//            }
+
+            String images = parseImages(doc);
+            String addresses = parseAddresses(doc);
+            String description = parseDescription(doc);
+            String icon = parseIcon(doc, normalizedUrl);
+            String title = doc.title().toLowerCase();
+
+
+            //String normalizedPageText = filterPage(page);
 
             String hashedPage = Hasher.hash(page);
 
-
+            // put the page into the table
+            row.put(PropertyLoader.getProperty("table.crawler.images"), images);
             // scrawled time
             row.put(PropertyLoader.getProperty("table.crawler.timestamp"), String.valueOf(LocalDateTime.now()));
             // put original page to the page column
             row.put(PropertyLoader.getProperty("table.crawler.page"), page);
             // put normalized page to the text column
-            row.put(PropertyLoader.getProperty("table.crawler.text"), normalizedPageText);
+            row.put(PropertyLoader.getProperty("table.crawler.text"), visibleText);
+            ///row.put(PropertyLoader.getProperty("table.crawler.text"), normalizedPageText);
             // parse titles and put them to the title column
-            List<String> titles = parseTitles(page);
-            row.put(PropertyLoader.getProperty("table.crawler.title"), String.join(" ", titles));
+            //List<String> titles = parseTitles(page);
+            //row.put(PropertyLoader.getProperty("table.crawler.title"), String.join(" ", titles));
+            row.put(PropertyLoader.getProperty("table.crawler.title"), title);
 
+            row.put(PropertyLoader.getProperty("table.crawler.addresses"), addresses);
 
+            row.put(PropertyLoader.getProperty("table.crawler.description"), description);
+
+            row.put(PropertyLoader.getProperty("table.crawler.icon"), icon);
 
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
 
@@ -392,6 +426,75 @@ public class Crawler implements Serializable {
             //URL_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
         }
         return new ArrayList<>();
+    }
+
+    static String parseIcon(Document doc, String websiteUrl) throws MalformedURLException {
+        Element iconLink = doc.select("link[rel~=(?i)^(icon|shortcut icon)$]").first();
+        String iconUrl = null;
+
+        if (iconLink != null) {
+            String iconHref = iconLink.attr("href");
+            URL baseUrl = new URL(websiteUrl);
+            iconUrl = new URL(baseUrl, iconHref).toString();
+        } else {
+            iconUrl = websiteUrl + "/favicon.ico";
+        }
+
+        StringBuilder normalizedHtml = new StringBuilder();
+        normalizedHtml.append("<img src=\"").append(iconUrl).append("\" alt=\"icon\" title=\"icon\" onerror=\"this.style.display='none';\" />").append("\n");
+        return normalizedHtml.toString().toLowerCase();
+    }
+
+    static String parseDescription(Document doc){
+
+        Element metaOgDescription = doc.selectFirst("meta[property=og:description]");
+        StringBuilder normalizedHtml = new StringBuilder();
+        if (metaOgDescription != null) {
+            String description = metaOgDescription.attr("content").strip().replace("\n", " ");
+            normalizedHtml.append(description).append("\n");
+        }
+        return normalizedHtml.toString().toLowerCase();
+    }
+
+
+    static String parseAddresses(Document doc){
+
+        Elements addressElements = doc.select(".address, address div.address, span.location, p.contact-info");
+        String addressRegex = "\\d+\\s+[A-Za-z]+(?:\\s+[A-Za-z]+)*,\\s+[A-Za-z]+,\\s+[A-Z]{2}\\s+\\d{5}";
+        Pattern pattern = Pattern.compile(addressRegex);
+
+        StringBuilder normalizedHtml = new StringBuilder();
+
+        for (Element address : addressElements) {
+            String text = address.text().toLowerCase();
+            Matcher matcher = pattern.matcher(text);
+            while (matcher.find()) {
+                String addressText = matcher.group().strip().replace("\n", " ");
+                normalizedHtml.append(addressText).append("\n");
+            }
+        }
+        return normalizedHtml.toString();
+    }
+    static String parseImages(Document doc){
+        Elements imgElements = doc.select("img");
+        StringBuilder normalizedHtml = new StringBuilder();
+
+        for (Element img : imgElements) {
+            String src = img.attr("abs:src").strip();
+            String alt = img.attr("alt").strip().replace("\n", " ").toLowerCase();
+            String title = img.attr("title").strip().replace("\n", " ").toLowerCase();
+
+            if (alt.isEmpty()) {
+                alt = "No description available";
+            }
+            if (title.isEmpty()) {
+                title = "No title available";
+            }
+
+            String normalizedImg = String.format("<img src=\"%s\" alt=\"%s\" title=\"%s\" onerror=\"this.style.display='none';\" />", src, alt, title);
+            normalizedHtml.append(normalizedImg).append("\n");
+        }
+        return normalizedHtml.toString();
     }
 
     static List<String> parsePageLinks(FlameContext ctx, String page, String normalizedUrl, String blacklistTable, Set<String> verticalSeedDomains) throws IOException {
@@ -573,6 +676,11 @@ public class Crawler implements Serializable {
 
     private static boolean shouldDropLink(String normalizedLink, Set<String> verticalSeedDomains) {
         normalizedLink = normalizedLink.toLowerCase();
+
+        if(normalizedLink.length() > LINK_DROP_LENGTH){
+            log.warn("[crawler] URL " + normalizedLink + " is too long. Skipping.");
+            return true;
+        }
 
         if(containsInvalidProtocol(normalizedLink)){
             // this will always drop

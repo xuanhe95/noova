@@ -124,9 +124,23 @@ public class TableManager implements ITableManager {
 
         String page = PropertyLoader.getProperty("table.crawler.page");
         String text = PropertyLoader.getProperty("table.crawler.text");
+        String images = PropertyLoader.getProperty("table.crawler.images");
+        String icon = PropertyLoader.getProperty("table.crawler.icon");
 
-        builder.append("<html><head><title>Table View</title></head><body>");
-        builder.append("<h1>").append("Table: ").append("\"").append(table.key()).append("\"").append("</h1>");
+        builder.append("<html><head>").append("<title>Table View</title>")
+                .append("<style>")
+                .append("img {\n" +
+                        "            max-width: 150px; \n" +
+                        "            max-height: 150px; \n" +
+                        "            width: auto; \n" +
+                        "            height: auto; \n" +
+                        "        }")
+//                .append("img[onerror] {\n" +
+//                        "    display: none;\n" +
+//                        "}")
+                .append("</style>")
+                .append("</head>");
+        builder.append("<body>").append("<h1>").append("Table: ").append("\"").append(table.key()).append("\"").append("</h1>");
         builder.append("<table border=\"1\">");
         // create the header of the table
         builder.append("<thead>");
@@ -137,7 +151,7 @@ public class TableManager implements ITableManager {
                 continue;
             }
 
-            builder.append("<th>").append(columnName).append("</th>");
+            builder.append("<th style=\"min-width: 150px;\">").append(columnName).append("</th>");
         }
         builder.append("</tr>");
         builder.append("</thead>");
@@ -153,10 +167,25 @@ public class TableManager implements ITableManager {
 
                 byte[] value = row.getBytes(columnName);
                 if (value == null) {
+                    log.info("[view] get value: null");
                     builder.append("<td></td>");
                 } else {
+                    log.info("[view] get value: " + new String(value));
                     String textValue = new String(value);
-                    if (ENABLE_VIEW_FOLD && textValue.length() > VIEW_FOLD_LENGTH) {
+                    if(columnName.toLowerCase().strip().equals(icon) || columnName.toLowerCase().strip().equals(images)){
+                        String[] imgs = textValue.split("\n");
+                        int count = 0;
+                        StringBuilder imgBuilder = new StringBuilder();
+                        for(String img : imgs){
+                            if(count++ > 3){
+                                break;
+                            }
+                            imgBuilder.append(img);
+                        }
+                        textValue = imgBuilder.toString();
+                        log.warn("[view] get image: " + textValue);
+                    }
+                    else if (ENABLE_VIEW_FOLD && textValue.length() > VIEW_FOLD_LENGTH) {
                         textValue = textValue.substring(0, VIEW_FOLD_LENGTH) + "...";
                     }
                     builder.append("<td>").append(textValue).append("</td>");
@@ -183,6 +212,7 @@ public class TableManager implements ITableManager {
         }
 
         builder.append("</body></html>");
+        log.info("[view] return view: " + builder.toString());
         return builder.toString();
     }
 
