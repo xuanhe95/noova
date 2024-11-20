@@ -14,6 +14,7 @@ import org.noova.webserver.Server;
 import org.noova.webserver.http.HttpStatus;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -23,6 +24,7 @@ import java.util.WeakHashMap;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 
 public class RouteRegistry {
 
@@ -286,18 +288,27 @@ public class RouteRegistry {
 
                         List<Row> rows = table.getRows(startRow, endRowExclusive);
 
-                        StringBuilder builder = new StringBuilder();
+                        ByteArrayOutputStream batchBuffer = new ByteArrayOutputStream();
+                        int count = 0;
 
                         for(Row row : rows) {
-                            log.info("Row: " + row.key());
-                            builder.append(new String(row.toByteArray()));
-                            builder.append("\n");
-                        }
-                        builder.append("\n");
+                            batchBuffer.write(row.toByteArray());
+                            batchBuffer.write('\n');
+                            count++;
 
-                        res.body(builder.toString());
+                            if (count >= 100) {
+                                res.write(batchBuffer.toByteArray());
+                                batchBuffer.reset();
+                                count = 0;
+                            }
+                        }
+
+                        if (count > 0) {
+                            res.write(batchBuffer.toByteArray());
+                        }
 
                         return null;
+
                     } finally {
                         lock.readLock().unlock();
                     }
