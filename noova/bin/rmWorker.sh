@@ -1,9 +1,17 @@
 #!/bin/bash
 
-# __CLEAR__ files in all-jars/worker# for debugging Crawler
+# __CLEAR__ files in all-jars/worker# and server.log for debugging Crawler
 
 # Navigate to the all-jars directory
 cd all-jars || { echo "Directory 'all-jars' does not exist"; exit 1; }
+
+# Remove server.log if it exists
+if [ -f "server.log" ]; then
+  echo "Removing server.log"
+  rm -f "server.log"
+else
+  echo "No server.log found to remove"
+fi
 
 # Find directories that start with 'worker' followed by any number
 for dir in worker[0-9]*; do

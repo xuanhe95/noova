@@ -24,6 +24,8 @@ import java.util.regex.PatternSyntaxException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.apache.tika.language.detect.LanguageDetector;
+import org.apache.tika.language.detect.LanguageResult;
 
 public class Crawler implements Serializable {
 
@@ -84,7 +86,7 @@ public class Crawler implements Serializable {
     private static final boolean ENABLE_BLACKLIST = false;
     private static final boolean ENABLE_CANONICAL = false;
     private static final boolean ENABLE_ONLY_CIS_5550_ROBOTS = true;
-    private static final int TABLE_RETENTION_NUM = 2; // num of job table on hold before del
+    private static final int TABLE_RETENTION_NUM = 1; // num of job table on hold before del
     private static final int LINK_DROP_LENGTH = 200;
     private static final int CONNECT_TIMEOUT = 3000;
 
@@ -92,6 +94,8 @@ public class Crawler implements Serializable {
     private static final long CACHE_EXPIRATION = 1000 * 60 * 60 * 24; // 24 hours
 
 
+    private static final int MAX_QUEUE_SIZE = 15000; // urlQueue size limit for each batch
+    private static final ConcurrentHashMap<String, Long> rateLimitMap = new ConcurrentHashMap<>(); // handle 429
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
         System.out.println("Crawler is running");
@@ -181,7 +185,14 @@ public class Crawler implements Serializable {
 
 
             while (urlQueue.count() > 0) {
-
+//                // avoid dup
+//                urlQueue = urlQueue.distinct();
+//
+//                // limit queue size
+//                if (urlQueue.count() > MAX_QUEUE_SIZE) {
+//                    log.warn("[crawler] URL queue exceeds limit, sampling down to size.");
+//                    urlQueue = urlQueue.sample((double) MAX_QUEUE_SIZE / urlQueue.count());
+//                }
 
 //                synchronized (Crawler.class) {
                     long iterationStartTime = System.currentTimeMillis();
@@ -300,13 +311,11 @@ public class Crawler implements Serializable {
 
         log.warn("[crawler] Processing URL: " + normalizedUrl);
         try {
-//             filter for dup url
+//             filter for dup url, change return val to row to save getRow call for checkLastAccessTime
             if (isAccessed(ctx, normalizedUrl)) {
                 log.warn("[accessed] URL " + normalizedUrl + " has been processed before. Skipping.");
                 return new ArrayList<>();
             }
-
-
 
             // filter for invalid url
             if(!checkUrlFormat(normalizedUrl)){
@@ -314,17 +323,21 @@ public class Crawler implements Serializable {
                 return new ArrayList<>();
             }
 
-            // filter for domain name
+            // get topLevelDomain
             URL url = new URI(normalizedUrl).toURL();
-//            if (url.getHost() == null||url.getPort() < -1 || url.getPort() > 65535) {
-//                log.warn("[crawler] Invalid host or port in URL: " + normalizedUrl);
-//                return new ArrayList<>();
-//            }
-
-            // skip if not in the same domain as seed url
             String topLevelDomain = getTopLevelDomain(null, url.getHost());
             log.info("[crawler] url domain: "+topLevelDomain);
 
+            // skip if this topLevelDomain is currently rate-limited, caveate this url is marked accessed
+            if (rateLimitMap.containsKey(topLevelDomain)) {
+                long retryTime = rateLimitMap.get(topLevelDomain);
+                if (System.currentTimeMillis() < retryTime) {
+                    log.info("[crawler] Skipping rate-limited domain: " + topLevelDomain);
+                    return new ArrayList<>();
+                }
+            }
+
+            // skip if not in the same domain as seed url
             if (ENABLE_VERTICAL_CRAWL && !verticalSeedDomains.contains(topLevelDomain)) {
 
                 log.warn("[crawler] URL " + normalizedUrl + " is outside the domain " + verticalSeedDomains + ". Skipping.");
@@ -360,12 +373,14 @@ public class Crawler implements Serializable {
 //            }
 
             // this because anchor extraction can create rows before one link being accessed
-
-            Row row = ctx.getKVS().getRow(CRAWLER_TABLE, hashedUrl);
-            if(row == null){
-                row = new Row(hashedUrl);
+            if(ENABLE_ANCHOR_EXTRACTION) {
+                Row row = ctx.getKVS().getRow(CRAWLER_TABLE , hashedUrl);
+                if (row == null) {
+                    row = new Row(hashedUrl);
+                }
+                log.info("[crawler] Row: " + row);
             }
-            log.info("[crawler] Row: " + row);
+
             if (!checkLastAccessTime(ctx, normalizedUrl, getTopLevelDomain(url.getProtocol(), url.getHost()))) {
                 // if the host is accessed too frequently, skip this URL, but still need to put it into the table
                 return List.of(normalizedUrl);
@@ -373,7 +388,7 @@ public class Crawler implements Serializable {
             //parseHostRules(ctx, normalizedUrl);
             updateHostLastAccessTime(ctx, getTopLevelDomain(url.getProtocol(), url.getHost()));
 
-            return requestHead(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains,iterationStartTime);
+            return requestHead(ctx, normalizedUrl, new Row(hashedUrl), blacklistTable, verticalSeedDomains,iterationStartTime);
 
         } catch (Exception e) {
             log.error("[crawler] Error while processing URL: " + rawUrl, e);
@@ -430,7 +445,7 @@ public class Crawler implements Serializable {
         return false;
     }
 
-    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains, long iterationStartTime) throws IOException, URISyntaxException {
+    private static List<String> requestHead(FlameContext ctx, String normalizedUrl, Row row, String blacklistTable, Set<String> verticalSeedDomains, long iterationStartTime) throws IOException, URISyntaxException, InterruptedException {
         URL url = new URI(normalizedUrl).toURL();
         log.info("[crawler] requestHead normalizedUrl: " + normalizedUrl);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -477,6 +492,21 @@ public class Crawler implements Serializable {
                 log.error("[redirect] No location found in the response header. URL: " + normalizedUrl);
                 return new ArrayList<>();
             }
+        } else if (responseCode == 429){
+            String topLevelDomain = getTopLevelDomain(null,url.getHost());
+            log.warn("[response] Too Many Requests (429) received for domain: " + topLevelDomain);
+
+            // get retry delay, update to rateLimitMap for processUrl to check
+            String retryAfter = conn.getHeaderField("Retry-After");
+            long retryDelay = retryAfter != null ? Long.parseLong(retryAfter) * 1000 : 5000; // default delay 5sec
+            rateLimitMap.put(topLevelDomain, System.currentTimeMillis() + retryDelay);
+
+            // option 1 - skip - issue: never processed again, could prune all frontier urls for that domain, need another async process if we still want
+            return new ArrayList<>();
+
+            // option 2 - retry - issue: waste resources while thread waiting, infinite retry?
+//            Thread.sleep(retryDelay);
+//            return requestHead(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains, iterationStartTime);
         } else if (responseCode != 200) {
             log.warn("[response] Error Response code: " + responseCode);
             ctx.getKVS().putRow(CRAWLER_TABLE, row);
@@ -517,6 +547,14 @@ public class Crawler implements Serializable {
             // remove script, style, popup, ad, banner, dialog
             doc.select("script, style, .popup, .ad, .banner, [role=dialog]").remove();
             String visibleText = doc.body().text();
+
+            // filter non-eng page
+            String detectedLanguage = detectLanguage(visibleText);
+            if (!"en".equals(detectedLanguage)) {
+                log.info("[crawler] Non-English page detected (language: " + detectedLanguage + "). Skipping URL: " + normalizedUrl);
+                return new ArrayList<>();
+            }
+            visibleText = sanitizeText(visibleText);
           //  Elements linkElements = doc.select("a");
            // Elements imgElements = doc.select("img");
            // Elements addressElements = doc.select(".address, address");
@@ -528,10 +566,10 @@ public class Crawler implements Serializable {
 //            }
 
             String images = parseImages(doc);
-            String addresses = parseAddresses(doc);
-            String description = parseDescription(doc);
+            String addresses = sanitizeText(parseAddresses(doc));
+            String description = sanitizeText(parseDescription(doc));
             String icon = parseIcon(doc, normalizedUrl);
-            String title = parseTitles(doc);
+            String title = sanitizeText(parseTitles(doc));
             //String location = parseLocation(doc);
             //String zipcodes = parseZipCodes(doc);
             //String keywords = parseKeywords(doc);
@@ -620,7 +658,34 @@ public class Crawler implements Serializable {
         }
 
         return "";
-    }    static String parseTitles(Document doc) {
+    }
+
+    public static String sanitizeText(String text) {
+        // replace common misencodings
+//        text = new String(text.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+//        text = text.replaceAll("â€™", "'") // Apostrophe
+//                .replaceAll("â€“", "-") // En-dash
+//                .replaceAll("â€”", "-") // Em-dash
+//                .replaceAll("â€œ", "\"") // Left double quote
+//                .replaceAll("â€�", "\""); // Right double quote
+
+        // rm unwanted characters (keep letters, numbers, and spaces)
+        text = text.replaceAll("[^\\p{L}\\p{N}\\s']", " ");
+        text = text.replaceAll("\\s+", " ").strip();
+
+        return text;
+    }
+
+    private static String detectLanguage(String text) throws IOException {
+        // use tika to filter non-eng page
+        LanguageDetector detector = LanguageDetector.getDefaultLanguageDetector();
+        detector.loadModels();
+        LanguageResult result = detector.detect(text);
+        return result.getLanguage(); // Returns language code, e.g., "en" for English
+    }
+
+
+    static String parseTitles(Document doc) {
 
         StringBuilder normalizedHtml = new StringBuilder();
 
