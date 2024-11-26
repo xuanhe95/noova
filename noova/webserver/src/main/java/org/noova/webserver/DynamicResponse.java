@@ -146,7 +146,7 @@ public class DynamicResponse implements Response {
     @Override
     public void write(byte[] b) throws Exception {
         if(committed){
-            log.warn("Writing to committed response" + Arrays.toString(b));
+            //log.warn("Writing to committed response" + Arrays.toString(b));
             io.write(b);
             return;
         }
@@ -167,7 +167,7 @@ public class DynamicResponse implements Response {
         }
 
         io.write(b);
-        log.info("Written" + Arrays.toString(b));
+        //log.info("Written" + Arrays.toString(b));
         committed = true;
     }
 

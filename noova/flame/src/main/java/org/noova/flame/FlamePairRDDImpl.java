@@ -5,6 +5,7 @@ import org.noova.tools.KeyEncoder;
 import org.noova.tools.Logger;
 import org.noova.tools.Serializer;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -19,6 +20,10 @@ public class FlamePairRDDImpl implements FlamePairRDD {
     public FlamePairRDDImpl(String id, FlameContext context){
         this.id = id;
         this.context = (FlameContextImpl) context;
+    }
+
+    public String getId() {
+        return id;
     }
 
 
@@ -79,6 +84,19 @@ public class FlamePairRDDImpl implements FlamePairRDD {
         log.info("[save as table] Renaming table " + id + " to " + tableNameArg);
         context.getKVS().rename(id, tableNameArg);
         this.id = tableNameArg;
+    }
+
+    public FlamePairRDDImpl copyAsTable(String tableNameArg) throws Exception {
+        checkDestroyed();
+        log.info("[save as table] Saving table " + id + " to " + tableNameArg);
+
+        Iterator<Row> rows = context.getKVS().scan(id);
+
+        while(rows!=null && rows.hasNext()){
+            Row row = rows.next();
+            context.getKVS().putRow(tableNameArg, row);
+        }
+        return new FlamePairRDDImpl(tableNameArg, context);
     }
 
     @Override

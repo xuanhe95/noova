@@ -10,7 +10,6 @@ import org.noova.tools.URLParser;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,6 +27,13 @@ public class PageRank implements Serializable {
     private static final String URL_DELIMITER = " ";
 
     private static final String DUMMY_URL = "Dummy";
+
+    private static final boolean ENABLE_DELETE_TRANSFER_TABLE = true;
+
+    private static final boolean ENABLE_CHECKPOINT = true;
+
+    private static final int CHECKPOINT_INTERVAL = 5;
+
     private static final double DEFAULT_CONVERGENCE_THRESHOLD = 0.05;
 
     private static int totalPageCount = 0;
@@ -62,7 +68,7 @@ public class PageRank implements Serializable {
             log.info("[page rank] Overall Convergence Threshold: " + convergenceRatioInPercentage);
 
 
-            FlameRDD rdd = ctx.fromTable(CRAWL_TABLE, row -> row.get("url") + URL_PAGE_DELIMITER + row.get("page"));
+            FlameRDD rdd = ctx.fromTable(CRAWL_TABLE, row -> row.get(PropertyLoader.getProperty("table.crawler.url")) + URL_PAGE_DELIMITER + row.get(PropertyLoader.getProperty("table.crawler.links")));
 
 
             totalPageCount = rdd.count();
@@ -75,8 +81,8 @@ public class PageRank implements Serializable {
                 String hashedUrl = Hasher.hash(parts[0]);
                 String page = parts.length > 1 ? parts[1] : "";
                 // extract links from the page
-                List<String> links = parsePageLinks(ctx, page, normalizedUrl, null);
-
+                List<String> links = efficientParsePageLinks(page);
+                //List<String> links = parsePageLinks(ctx, page, normalizedUrl, null);
                 Set<String> linkSet = new HashSet<>(links);
 
 
@@ -92,6 +98,7 @@ public class PageRank implements Serializable {
                     log.warn("[page rank load] This is a sink node: " + normalizedUrl);
                     ctx.getKVS().put("sink", hashedUrl, "url", normalizedUrl );
                 }
+                // this is probably very slow
                 for (String link : linkSet) {
                     log.info("[page rank load] In page link: " + link);
                     Row row = ctx.getKVS().getRow("linkset", normalizedUrl);
@@ -111,11 +118,20 @@ public class PageRank implements Serializable {
 
             // AtomicInteger count = new AtomicInteger(1);
             log.info("[page rank] Starting iterations");
-            stateTable = updateTable(stateTable);
+            stateTable = updateTable(ctx, stateTable);
+
+
+            int checkpointCount = 0;
+
             log.info("Updated table");
             while(!isConverged(stateTable)) {
                 // log.info("Iteration: " + count.incrementAndGet());
-                stateTable = updateTable(stateTable);
+                stateTable = updateTable(ctx, stateTable);
+
+                if(ENABLE_CHECKPOINT && checkpointCount++ % CHECKPOINT_INTERVAL == 0){
+                    log.info("[page rank] Checkpointing");
+                    ((FlamePairRDDImpl) stateTable).copyAsTable(PropertyLoader.getProperty("table.pagerank") + "_checkpoint_" + checkpointCount);
+                }
             }
             // log.info("[page rank] Converged after " + count.get() + " iterations");
 
@@ -134,6 +150,8 @@ public class PageRank implements Serializable {
                 return new ArrayList<>();
             });
 
+
+
             log.info("[page rank] Finished");
 
         } catch (Exception e) {
@@ -142,7 +160,8 @@ public class PageRank implements Serializable {
     }
 
 
-    private static FlamePairRDD transferTable(FlamePairRDD stateTable) throws Exception {
+    private static FlamePairRDD transferTable(FlameContext ctx, FlamePairRDD stateTable) throws Exception {
+        // this table is big, contains all the links
         FlamePairRDD rdd = stateTable.flatMapToPair(hashedUrlWithState -> {
             log.info("[transfer] ===========================================");
             String hashedUrl = hashedUrlWithState._1();
@@ -201,18 +220,25 @@ public class PageRank implements Serializable {
 //        });
 //        log.info("[transfer] Collected " + count.get() + " rows");
 
-        return rdd.foldByKey("0", (s, t) -> {
+        // WARN: this should not delete at here
+        //ctx.getKVS().delete(((FlamePairRDDImpl) stateTable).getId());
+        FlamePairRDD newPairRdd = rdd.foldByKey("0", (s, t) -> {
             double v1 = Double.parseDouble(s);
             double v2 = Double.parseDouble(t);
             log.info("[decayed sum] Fold: " + v1 + " " + v2);
             log.info("[decayed sum]" + (v1 + v2));
             return String.valueOf(v1 + v2);
         });
+
+        if(ENABLE_DELETE_TRANSFER_TABLE) {
+            ctx.getKVS().delete(((FlamePairRDDImpl) rdd).getId());
+        }
+        return newPairRdd;
     }
 
-    private static FlamePairRDD updateTable(FlamePairRDD stateTable) throws Exception {
+    private static FlamePairRDD updateTable(FlameContext ctx, FlamePairRDD stateTable) throws Exception {
         log.info("[page rank] Updating table");
-        FlamePairRDD transferTable = transferTable(stateTable);
+        FlamePairRDD transferTable = transferTable(ctx, stateTable);
 
 //        stateTable.collect().forEach(pair -> {
 //            log.info("[page rank] State: " + pair);
@@ -222,8 +248,16 @@ public class PageRank implements Serializable {
 //            log.info("[page rank] Transfer: " + pair);
 //        });
 
+        FlamePairRDD joinedTable = stateTable.join(transferTable);
 
-        return stateTable.join(transferTable).flatMapToPair(hashedUrlWithState -> {
+        if(ENABLE_DELETE_TRANSFER_TABLE){
+            ctx.getKVS().delete(((FlamePairRDDImpl) transferTable).getId());
+            ctx.getKVS().delete(((FlamePairRDDImpl) stateTable).getId());
+        }
+
+
+
+        FlamePairRDD newStateTable = joinedTable.flatMapToPair(hashedUrlWithState -> {
             log.info("[update] ===========================================");
             String hashedUrl = hashedUrlWithState._1();
             String[] state = hashedUrlWithState._2().split(",");
@@ -251,6 +285,13 @@ public class PageRank implements Serializable {
             FlamePair newHashedUrlWithState = new FlamePair(hashedUrl, newRankCurrent + "," + newRankPrevious + "," + pageUrls);
             return Collections.singletonList(newHashedUrlWithState);
         });
+
+
+        if(ENABLE_DELETE_TRANSFER_TABLE) {
+            ctx.getKVS().delete(((FlamePairRDDImpl) joinedTable).getId());
+        }
+
+        return newStateTable;
     }
 
     private static boolean checkAndUpdateConvergedState(String hashedUrl, double newRankCurrent, double newRankPrevious){
@@ -272,6 +313,7 @@ public class PageRank implements Serializable {
             log.info("[check convergence] Converged by threshold: " + "Total: " + totalPageCount + " Converged: " + convergedCount + " Threshold: " + convergenceRatioInPercentage);
             return true;
         }
+        log.info("[check convergence] totalPageCount: " + totalPageCount + " convergedCount: " + convergedCount);
         return false;
 
 //        String maxValues = stateTable.flatMap(hashedUrlWithState -> {
@@ -330,6 +372,12 @@ public class PageRank implements Serializable {
         String regex = "<[^>]*>";
         return page.replaceAll(regex, "");
     }
+
+    static List<String> efficientParsePageLinks(String rawLinks) throws IOException {
+        List<String> links = new ArrayList<>(List.of(rawLinks.split("\n")));
+        return links;
+    }
+
     static List<String> parsePageLinks(FlameContext ctx, String page, String normalizedUrl, String blacklistTable) throws IOException {
         List<String> links = new ArrayList<>();
         log.info("[crawler] Parsing links from URL: " + normalizedUrl);

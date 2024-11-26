@@ -178,6 +178,8 @@ public class Crawler implements Serializable {
 
 
             List<String> recentTables = new LinkedList<>();
+
+
             while (urlQueue.count() > 0) {
 
 
@@ -595,7 +597,11 @@ public class Crawler implements Serializable {
                 return List.of(normalizedUrl);
             }
 
-            return parsePageLinks(ctx, page, normalizedUrl, blacklistTable, verticalSeedDomains);
+            List<String> links = parsePageLinks(ctx, page, normalizedUrl, blacklistTable, verticalSeedDomains);
+
+            ctx.getKVS().put(CRAWLER_TABLE, row.key(), PropertyLoader.getProperty("table.crawler.links"), String.join("\n", links));
+
+            return links;
 
             //String hashedUrl = Hasher.hash(normalizedUrl);
             //URL_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
