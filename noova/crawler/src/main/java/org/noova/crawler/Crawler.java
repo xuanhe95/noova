@@ -545,8 +545,10 @@ public class Crawler implements Serializable {
 
             Document doc = Jsoup.parse(page, normalizedUrl);
             // remove script, style, popup, ad, banner, dialog
-            doc.select("script, style, .popup, .ad, .banner, [role=dialog]").remove();
-            String visibleText = doc.body().text();
+            doc.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, .advertisement, span[data-icid=body-top-marquee]").remove();
+//            String visibleText = doc.body().text();
+
+            String visibleText = parseVisibleText(doc);
 
             // filter non-eng page
             String detectedLanguage = detectLanguage(visibleText);
@@ -658,6 +660,34 @@ public class Crawler implements Serializable {
         }
 
         return "";
+    }
+
+    public static String parseVisibleText (Document doc){
+        // Extract text from meaningful sections
+        Elements meaningfulSections = doc.body().select("main, article, section, p, h1, h2");
+        String meaningfulContent = meaningfulSections.text();
+
+        // Dynamically filter ad-like phrases and noise
+        String[] lines = meaningfulContent.split("\\r?\\n");
+        StringBuilder filteredContent = new StringBuilder();
+
+        for (String line : lines) {
+            if (line.matches("(?i).*\\b(ad|sponsored|click here|buy now|feedback|marqueeBreaking)\\b.*")) {
+                continue; // Skip ad-related lines
+            }
+            if (line.length() < 20 || line.matches(".*http.*")) {
+                continue; // Skip short lines or lines with URLs
+            }
+            filteredContent.append(line).append("\n");
+        }
+
+        // Normalize and sanitize text
+        String sanitizedText = filteredContent.toString()
+                .replaceAll("\\s{2,}", " ") // Normalize extra spaces
+                .strip(); // Trim leading and trailing spaces
+
+        return sanitizedText;
+
     }
 
     public static String sanitizeText(String text) {
@@ -1030,6 +1060,18 @@ public class Crawler implements Serializable {
 
         if(normalizedLink.length() > LINK_DROP_LENGTH){
             log.warn("[crawler] URL " + normalizedLink + " is too long. Skipping.");
+            return true;
+        }
+
+        // nbc ad links - https://www.nbcnews.com/select
+        if (normalizedLink.matches("https?://(www\\.)?nbcnews\\.com(:\\d+)?/select.*")) {
+            log.warn("[crawler] NBC ad link detected: " + normalizedLink + ". Skipping.");
+            return true;
+        }
+
+        // general ad link drop
+        if (normalizedLink.matches(".*(ad|track|utm|promo|sponsored).*")) {
+            log.warn("[crawler] Ad-related link detected: " + normalizedLink + ". Skipping.");
             return true;
         }
 
