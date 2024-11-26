@@ -255,6 +255,7 @@ public class Crawler implements Serializable {
                             Thread.sleep(CACHE_EXPIRATION);
                             URL_ACCESS_CACHE.entrySet().removeIf(entry -> entry.getValue().get() == null);
                             ROBOT_ACCESS_CACHE.entrySet().removeIf(entry -> entry.getValue().get() == null);
+//                            rateLimitMap.entrySet().removeIf(entry -> entry.getValue() == null);
                         } catch (InterruptedException e) {
                             log.error("[crawler] Cache thread interrupted", e);
                         }
@@ -544,19 +545,20 @@ public class Crawler implements Serializable {
             //String normalizedPage = String.join(" ", normalizedPages);
 
             Document doc = Jsoup.parse(page, normalizedUrl);
-            // remove script, style, popup, ad, banner, dialog
-            doc.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, .advertisement, span[data-icid=body-top-marquee]").remove();
-//            String visibleText = doc.body().text();
-
-            String visibleText = parseVisibleText(doc);
 
             // filter non-eng page
-            String detectedLanguage = detectLanguage(visibleText);
-            if (!"en".equals(detectedLanguage)) {
-                log.info("[crawler] Non-English page detected (language: " + detectedLanguage + "). Skipping URL: " + normalizedUrl);
+            if (!isEnglishPage(doc, page)) {
+                log.info("[crawler] Skipping non-English page: " + normalizedUrl);
                 return new ArrayList<>();
             }
-            visibleText = sanitizeText(visibleText);
+
+
+            // remove script, style, popup, ad, banner, dialog
+            doc.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
+                    ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
+//            String visibleText = doc.body().text();
+
+            String visibleText = sanitizeText(parseVisibleText(doc));
           //  Elements linkElements = doc.select("a");
            // Elements imgElements = doc.select("img");
            // Elements addressElements = doc.select(".address, address");
@@ -672,7 +674,7 @@ public class Crawler implements Serializable {
         StringBuilder filteredContent = new StringBuilder();
 
         for (String line : lines) {
-            if (line.matches("(?i).*\\b(ad|sponsored|click here|buy now|feedback|marqueeBreaking)\\b.*")) {
+            if (line.matches("(?i).*\\b(ad|sponsored|click here|buy now|feedback|promo|offers)\\b.*")) {
                 continue; // Skip ad-related lines
             }
             if (line.length() < 20 || line.matches(".*http.*")) {
@@ -691,14 +693,6 @@ public class Crawler implements Serializable {
     }
 
     public static String sanitizeText(String text) {
-        // replace common misencodings
-//        text = new String(text.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
-//        text = text.replaceAll("â€™", "'") // Apostrophe
-//                .replaceAll("â€“", "-") // En-dash
-//                .replaceAll("â€”", "-") // Em-dash
-//                .replaceAll("â€œ", "\"") // Left double quote
-//                .replaceAll("â€�", "\""); // Right double quote
-
         // rm unwanted characters (keep letters, numbers, and spaces)
         text = text.replaceAll("[^\\p{L}\\p{N}\\s']", " ");
         text = text.replaceAll("\\s+", " ").strip();
@@ -706,17 +700,36 @@ public class Crawler implements Serializable {
         return text;
     }
 
-    private static String detectLanguage(String text) throws IOException {
-        // use tika to filter non-eng page
+    private static boolean isEnglishPage(Document doc, String rawPage) throws IOException {
+        // check html lang tag
+        String htmlLang = doc.select("html").attr("lang");
+        if (!htmlLang.isEmpty()) {
+            if ("en".equalsIgnoreCase(htmlLang)|| htmlLang.toLowerCase().startsWith("en-")) {
+//                log.info("[crawler] English page detected by lang attribute.");
+                return true;
+            } else {
+                log.info("[crawler] Non-English page detected by lang attribute (lang: " + htmlLang + ").");
+                return false;
+            }
+        }
+
+        // use tika if html lang tag missing
         LanguageDetector detector = LanguageDetector.getDefaultLanguageDetector();
         detector.loadModels();
-        LanguageResult result = detector.detect(text);
-        return result.getLanguage(); // Returns language code, e.g., "en" for English
+        LanguageResult result = detector.detect(rawPage);
+        String detectedLanguage = result.getLanguage();
+        if ("en".equals(detectedLanguage)) {
+//            log.info("[crawler] English page detected by Tika.");
+            return true;
+        } else {
+            log.info("[crawler] Non-English page detected by Tika (language: " + detectedLanguage + ").");
+            return false;
+        }
     }
 
 
     static String parseTitles(Document doc) {
-
+//        prioritize just one single most important title instead agg mult titles
         StringBuilder normalizedHtml = new StringBuilder();
 
 
@@ -724,7 +737,8 @@ public class Crawler implements Serializable {
         if (ogTitleElement != null) {
             String ogTitle = ogTitleElement.attr("content");
             if (!ogTitle.isEmpty()) {
-                normalizedHtml.append(ogTitle).append("\n");
+//                normalizedHtml.append(ogTitle).append("\n");
+                return ogTitle.trim().toLowerCase();
             }
         }
 
@@ -733,7 +747,8 @@ public class Crawler implements Serializable {
         if (titleElement != null) {
             String title = titleElement.text();
             if (!title.isEmpty()) {
-                normalizedHtml.append(title).append("\n");
+//                normalizedHtml.append(title).append("\n");
+                return title.trim().toLowerCase();
             }
         }
 
@@ -742,11 +757,13 @@ public class Crawler implements Serializable {
         if (descriptionElement != null) {
             String description = descriptionElement.attr("content");
             if (!description.isEmpty()) {
-                normalizedHtml.append(description).append("\n");
+//                normalizedHtml.append(description).append("\n");
+                return description.trim().toLowerCase();
             }
         }
 
-        return normalizedHtml.toString().toLowerCase();
+//        return normalizedHtml.toString().toLowerCase();
+        return ""; // defaut no title
     }
     public static String parseIcon(Document doc, String websiteUrl) {
 
@@ -1072,6 +1089,11 @@ public class Crawler implements Serializable {
         // general ad link drop
         if (normalizedLink.matches(".*(ad|track|utm|promo|sponsored).*")) {
             log.warn("[crawler] Ad-related link detected: " + normalizedLink + ". Skipping.");
+            return true;
+        }
+
+        if (normalizedLink.matches(".*(/ads/|/sponsored/).*")) {
+            log.info("[crawler] Skipping ad-related URL: " + normalizedLink);
             return true;
         }
 
