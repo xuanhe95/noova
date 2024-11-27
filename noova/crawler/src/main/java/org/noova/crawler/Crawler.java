@@ -47,8 +47,8 @@ public class Crawler implements Serializable {
     private static final String RULE_DISALLOW = "Disallow";
     private static final String RULE_ALLOW = "Allow";
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
-    private static final boolean ENABLE_LOOP_INTERVAL = false;
-    private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
+    private static final boolean ENABLE_LOOP_INTERVAL = true;
+    private static final boolean ENABLE_LOCK_ACCESS_RATING = true;
     private static final boolean ENABLE_VERTICAL_CRAWL = true;
     private static final boolean ENABLE_CHECKPOINT = false;
 
@@ -67,8 +67,6 @@ public class Crawler implements Serializable {
     private static final long ITERATION_TIMEOUT = 50000;
 
     private static final boolean ENABLE_URL_CACHE = true;
-
-
 
     private static final List<String> US_CITIES = List.of(
             "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
@@ -899,10 +897,10 @@ public class Crawler implements Serializable {
             String title = img.attr("title").strip().replace("\n", " ").toLowerCase();
 
             if (alt.isEmpty()) {
-                alt = "No description available";
+                alt = "";
             }
             if (title.isEmpty()) {
-                title = "No title available";
+                title = "";
             }
 
             String normalizedImg = String.format("<img src=\"%s\" alt=\"%s\" title=\"%s\" onerror=\"this.style.display='none';\" />", src, alt, title);
