@@ -22,11 +22,11 @@ public class PageRank implements Serializable {
 
     private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
 
-    private static final String URL_PAGE_DELIMITER = "___";
+    static final String URL_PAGE_DELIMITER = "___";
 
-    private static final String URL_DELIMITER = " ";
+    static final String URL_DELIMITER = " ";
 
-    private static final String DUMMY_URL = "Dummy";
+    static final String DUMMY_URL = "Dummy";
 
     private static final boolean ENABLE_DELETE_TRANSFER_TABLE = true;
 
