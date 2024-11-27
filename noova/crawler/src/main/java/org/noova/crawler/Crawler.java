@@ -10,6 +10,8 @@ import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
 import org.noova.tools.URLParser;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
@@ -20,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -107,14 +110,20 @@ public class Crawler implements Serializable {
             ctx.setConcurrencyLevel(concurrencyLevel);
             log.info("[crawler] Concurrency level set to: " + concurrencyLevel);
 
+            List<String> seedUrls;
             if (args == null || args.length < 1) {
-                log.error("Usage: Crawler <seed-url>");
-                ctx.output("Seed URL is not found");
-                return;
+                log.info("[crawler] No seed URL provided in args. Reading from config...");
+                seedUrls = readSeedUrlsFromConfig("crawler_url.properties");
+                if (seedUrls.isEmpty()) {
+                    log.error("No seed URLs found in crawler_url.properties.");
+                    ctx.output("No seed URLs provided in args or config file.");
+                    return;
+                }
+            }else {
+                seedUrls = List.of(args);
             }
 
             // limit to seed urls' domain for crawling first 200k pages
-            List<String> seedUrls = List.of(args);
             Set<String> verticalSeedDomains = new HashSet<>();
             for(String url : seedUrls){
                 log.info("[crawler] seed url: "+ url);
@@ -1795,6 +1804,15 @@ public class Crawler implements Serializable {
             return parts[parts.length - 2] + "." + parts[parts.length - 1];
         }
         return protocol + "://" + parts[parts.length - 2] + "." + parts[parts.length - 1];
+    }
+
+    private static List<String> readSeedUrlsFromConfig(String filePath) throws Exception {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            return reader.lines()
+                    .filter(line -> !line.isBlank()) // Ignore blank lines
+                    .map(String::trim)              // Remove unnecessary whitespace
+                    .collect(Collectors.toList());
+        }
     }
 
 }
