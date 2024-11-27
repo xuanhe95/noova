@@ -28,7 +28,7 @@ public class Indexer implements Serializable {
                     row -> {
 
                         String url = row.get(PropertyLoader.getProperty("table.crawler.url"));
-                        String page = row.get(PropertyLoader.getProperty("table.crawler.page"));
+                        String page = row.get(PropertyLoader.getProperty("table.crawler.text"));
                         String ip = row.get(PropertyLoader.getProperty("table.crawler.ip"));
 
                         if(ENABLE_IP_INDEX){
@@ -59,8 +59,9 @@ public class Indexer implements Serializable {
 
                 //List<String> links = Crawler.parsePageLinks(ctx, page, url, null);
 
-                String filteredContent = filterPage(page);
-                String[] words = filteredContent.split(" +");
+                //String filteredContent = filterPage(page);
+                //String[] words = filteredContent.split(" +");
+                String[] words = page.split(" +");
 
                 if(words.length == 0 || words[0].isEmpty()) {
                     log.warn("[indexer] No words found");
