@@ -62,44 +62,22 @@ public class DirectPageRank implements Serializable {
             webGraph.put(url, linkSet);
         }
 
-//        Map<String, Set<String>> reversedWebGraph = new HashMap<>();
-//        webGraph.forEach((page, links) -> {
-//            links.forEach(link -> {
-//                reversedWebGraph.computeIfAbsent(link, k -> new HashSet<>()).add(page);
-//            });
-//        });
-
-
-        Map<String, Map<String, Set<String>>> bidirectionalWebGraph = new ConcurrentHashMap<>();
+        Map<String, Set<String>> reversedWebGraph = new HashMap<>();
         webGraph.forEach((page, links) -> {
-            // 确保页面节点存在，并添加正向链接
-            bidirectionalWebGraph
-                    .computeIfAbsent(page, k -> new ConcurrentHashMap<>())
-                    .computeIfAbsent("out", k -> new HashSet<>())
-                    .addAll(links);
-
-            // 确保链接的目标节点存在，并添加反向链接
-            links.forEach(link ->
-                    bidirectionalWebGraph
-                            .computeIfAbsent(link, k -> new ConcurrentHashMap<>())
-                            .computeIfAbsent("in", k -> new HashSet<>())
-                            .add(page)
-            );
+            links.forEach(link -> {
+                reversedWebGraph.computeIfAbsent(link, k -> new HashSet<>()).add(page);
+            });
         });
 
 
 
         // 计算 PageRank
-        Map<String, Double> pageRanks = calculatePageRank(bidirectionalWebGraph, totalPages);
+        Map<String, Double> pageRanks = calculatePageRank(webGraph, reversedWebGraph, totalPages);
 
         Map<String, Integer> rankDistribution = new HashMap<>();
 
         // 输出结果
         pageRanks.forEach((page, rank) -> {
-
-            if(webGraph.get(page) == null){
-                return;
-            }
 
             double roundedRank = Math.floor(rank * 100) / 100.0;
             rankDistribution.merge(String.valueOf(roundedRank), 1, Integer::sum);
@@ -121,17 +99,16 @@ public class DirectPageRank implements Serializable {
         );
     }
 
-    private static Map<String, Double> calculatePageRankParallel(Map<String, Map<String, Set<String>>> bidirectionalGraph, Map<String, Double> prevPageRanks){
-        Map<String, Double> pageRanks = bidirectionalGraph.keySet().parallelStream().collect(
+    private static Map<String, Double> calculatePageRankParallel(Map<String, Set<String>> webGraph, Map<String, Set<String>> reversedWebGraph, Map<String, Double> prevPageRanks){
+        Map<String, Double> pageRanks = webGraph.keySet().parallelStream().collect(
                 Collectors.toMap(page -> page, page ->{
                     double rankSum = 0.0;
                     double sinkPR = 0.0;
 
-                    var linkToPages = getInLinks(bidirectionalGraph, page);
-                    // not sink
+                    var linkToPages = reversedWebGraph.get(page);
                     if(linkToPages != null){
                         for(String link : linkToPages){
-                            Set<String> links = getOutLinks(bidirectionalGraph, link);
+                            Set<String> links = webGraph.get(link);
                             rankSum += prevPageRanks.get(link) / links.size();
                         }
                     } else{
@@ -178,21 +155,13 @@ public class DirectPageRank implements Serializable {
         return pageRanks;
     }
 
-    private static synchronized  Set<String> getOutLinks(Map<String, Map<String, Set<String>>> bidirectionalWebGraph, String page){
-        return bidirectionalWebGraph.get(page).get("out");
-    }
 
-    private static synchronized Set<String> getInLinks(Map<String, Map<String, Set<String>>> bidirectionalWebGraph, String page){
-        return bidirectionalWebGraph.get(page).get("in");
-    }
-
-
-    public static Map<String, Double> calculatePageRank(Map<String, Map<String, Set<String>>> bidirectionalWebGraph, int totalPages) {
+    public static Map<String, Double> calculatePageRank(Map<String, Set<String>> webGraph, Map<String, Set<String>> reversedWebGraph, int totalPages) {
         Map<String, Double> pageRanks = new HashMap<>();
         Map<String, Double> prevPageRanks;
 
-        // initialize page ranks
-        for(String page : bidirectionalWebGraph.keySet()){
+        // 初始化 PageRank 值
+        for (String page : webGraph.keySet()) {
             pageRanks.put(page, 1.0);
         }
 
@@ -203,7 +172,7 @@ public class DirectPageRank implements Serializable {
 
         do {
             prevPageRanks = pageRanks;
-            pageRanks = calculatePageRankParallel(bidirectionalWebGraph, prevPageRanks);
+            pageRanks = calculatePageRankParallel(webGraph, reversedWebGraph, prevPageRanks);
 
             converged = checkConvergence(pageRanks, prevPageRanks, CONVERGENCE_THRESHOLD, convergedPages);
             iteration++;
