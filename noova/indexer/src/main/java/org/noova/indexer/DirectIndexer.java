@@ -19,6 +19,8 @@ public class DirectIndexer {
         public static void main(String[] args) throws InterruptedException {
             KVS kvs = new KVSClient("localhost:8000");
 
+            long start = System.currentTimeMillis();
+
             Iterator<Row> pages = null;
             try {
                 pages = kvs.scan(PropertyLoader.getProperty("table.crawler"), null, null);
@@ -27,6 +29,10 @@ public class DirectIndexer {
             }
 
             generateInvertedIndexBatch(kvs, pages);
+
+            long end = System.currentTimeMillis();
+
+            System.out.println("Time: " + (end - start) + "ms");
 
         }
 
@@ -80,7 +86,7 @@ public class DirectIndexer {
                 } else{
                     links = links + DELIMITER + urls;
                 }
-                System.out.println("word: " + word + " links: " + links);
+                //System.out.println("word: " + word + " links: " + links);
                 row.put(PropertyLoader.getProperty("table.index.links"), links);
                 //Thread.sleep(10);
                 try {
