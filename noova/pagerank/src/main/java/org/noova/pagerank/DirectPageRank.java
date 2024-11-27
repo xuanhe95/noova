@@ -60,18 +60,29 @@ public class DirectPageRank implements Serializable {
 
 
 
+        Map<String, Integer> rankDistribution = new HashMap<>();
 
         // 输出结果
         pageRanks.forEach((page, rank) -> {
 
+            double roundedRank = Math.floor(rank * 100) / 100.0;
+            rankDistribution.merge(String.valueOf(roundedRank), 1, Integer::sum);
             try {
-                kvs.put("pt-pgrk", page, "rank", String.valueOf(rank).getBytes());
+                kvs.put("pt-pgrk", Hasher.hash(page), "rank", String.valueOf(rank).getBytes());
             } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
 
             System.out.println("Page: " + page + ", Rank: " + rank);
         });
+        rankDistribution.forEach((roundedRank, count) ->
+                System.out.println("Rank: " + roundedRank + ", Count: " + count)
+        );
     }
     public static Map<String, Double> calculatePageRank(Map<String, List<String>> webGraph) {
         // 初始化 PageRank 值
@@ -80,7 +91,7 @@ public class DirectPageRank implements Serializable {
         Map<String, Double> prevPageRanks = new HashMap<>();
 
         for (String page : webGraph.keySet()) {
-            pageRanks.put(page, 1.0 / totalPages);
+            pageRanks.put(page, 1.0);
         }
 
         int iteration = 0;
@@ -114,7 +125,7 @@ public class DirectPageRank implements Serializable {
 
                 // 加入 sink 节点的贡献和跳转因子
                 double sinkContribution = DECAY_RATE * sinkPR / totalPages;
-                double randomJump = (1 - DECAY_RATE) / totalPages;
+                double randomJump = (1 - DECAY_RATE) ;
 
                 tempRanks.put(page, randomJump + DECAY_RATE * rankSum + sinkContribution);
             }
