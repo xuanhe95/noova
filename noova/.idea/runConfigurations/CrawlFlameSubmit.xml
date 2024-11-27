@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="CrawlFlameSubmit" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="org.noova.flame.FlameSubmit" />
+    <module name="flame" />
+    <option name="PROGRAM_PARAMETERS" value="localhost:9000 all-jars/crawler-1.0-SNAPSHOT.jar org.noova.crawler.Crawler https://www.fandom.com/ https://www.imdb.com/ https://www.cnn.com/ https://www.youtube.com/ https://www.twitter.com/" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="org.noova.flame.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
