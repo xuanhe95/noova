@@ -95,8 +95,8 @@ public class Crawler implements Serializable {
     private static final long CACHE_EXPIRATION = 1000 * 60 * 60 * 24; // 24 hours
 
 
-    private static final int MAX_QUEUE_SIZE = 15000; // urlQueue size limit for each batch
-    private static final ConcurrentHashMap<String, Long> rateLimitMap = new ConcurrentHashMap<>(); // handle 429
+//    private static final int MAX_QUEUE_SIZE = 15000; // urlQueue size limit for each batch
+    private static final ConcurrentHashMap<String, Long> RATE_LIMIT_MAP = new ConcurrentHashMap<>(); // handle 429
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
         System.out.println("Crawler is running");
@@ -262,7 +262,7 @@ public class Crawler implements Serializable {
                             Thread.sleep(CACHE_EXPIRATION);
                             URL_ACCESS_CACHE.entrySet().removeIf(entry -> entry.getValue().get() == null);
                             ROBOT_ACCESS_CACHE.entrySet().removeIf(entry -> entry.getValue().get() == null);
-//                            rateLimitMap.entrySet().removeIf(entry -> entry.getValue() == null);
+//                            RATE_LIMIT_MAP.entrySet().removeIf(entry -> entry.getValue() == null);
                         } catch (InterruptedException e) {
                             log.error("[crawler] Cache thread interrupted", e);
                         }
@@ -337,8 +337,8 @@ public class Crawler implements Serializable {
             log.info("[crawler] url domain: "+topLevelDomain);
 
             // skip if this topLevelDomain is currently rate-limited, caveate this url is marked accessed
-            if (rateLimitMap.containsKey(topLevelDomain)) {
-                long retryTime = rateLimitMap.get(topLevelDomain);
+            if (RATE_LIMIT_MAP.containsKey(topLevelDomain)) {
+                long retryTime = RATE_LIMIT_MAP.get(topLevelDomain);
                 if (System.currentTimeMillis() < retryTime) {
                     log.info("[crawler] Skipping rate-limited domain: " + topLevelDomain);
                     return new ArrayList<>();
@@ -504,10 +504,10 @@ public class Crawler implements Serializable {
             String topLevelDomain = getTopLevelDomain(null,url.getHost());
             log.warn("[response] Too Many Requests (429) received for domain: " + topLevelDomain);
 
-            // get retry delay, update to rateLimitMap for processUrl to check
+            // get retry delay, update to RATE_LIMIT_MAP for processUrl to check
             String retryAfter = conn.getHeaderField("Retry-After");
             long retryDelay = retryAfter != null ? Long.parseLong(retryAfter) * 1000 : 5000; // default delay 5sec
-            rateLimitMap.put(topLevelDomain, System.currentTimeMillis() + retryDelay);
+            RATE_LIMIT_MAP.put(topLevelDomain, System.currentTimeMillis() + retryDelay);
 
             // option 1 - skip - issue: never processed again, could prune all frontier urls for that domain, need another async process if we still want
             return new ArrayList<>();
@@ -1711,7 +1711,7 @@ public class Crawler implements Serializable {
             }
 
             // after parse, get again
-            row = ctx.getKVS().getRow(HOSTS_TABLE, topLevelDomainName);
+            row = ctx.getKVS().getRow(HOSTS_TABLE, hashedTopLevelDomain);
             if (row == null) {
                 // if the host is still not in the table, return true
                 return true;
