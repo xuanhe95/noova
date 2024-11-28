@@ -40,6 +40,7 @@ public interface FlamePairRDD {
     // names of the columns can be anything.
 
     public void saveAsTable(String tableNameArg) throws Exception;
+    FlamePairRDD copyAsTable(String tableNameArg) throws Exception;
 
     // flatMap() should invoke the provided lambda once for each pair in the PairRDD,
     // and it should return a new RDD that contains all the strings from the Iterables
