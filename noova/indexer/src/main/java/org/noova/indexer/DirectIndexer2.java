@@ -8,16 +8,15 @@ import org.noova.tools.PropertyLoader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.time.LocalDateTime;
 
 
-public class DirectIndexer {
+public class DirectIndexer2 {
 
         private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
 
@@ -48,12 +47,12 @@ public class DirectIndexer {
 
             Iterator<Row> indexes = null;
             try {
-                indexes = kvs.scan(PropertyLoader.getProperty("table.index"), startKey, endKey);
+                indexes = kvs.scan(PropertyLoader.getProperty("table.index"), null, null);
             } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
             }
 
-            generateInvertedIndexBatch(kvs, pages,indexes);
+            generateInvertedIndexBatch(kvs, pages, indexes);
 
             long end = System.currentTimeMillis();
 
@@ -111,6 +110,7 @@ public class DirectIndexer {
 
             System.out.println("Total pages processed: " + pageCount);
 
+
             Set<String> mergedWords = new HashSet<>(wordMap.keySet());
             mergedWords.addAll(imageMap.keySet());
 
@@ -118,25 +118,63 @@ public class DirectIndexer {
             long lastTime = System.nanoTime();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+            Map<String, LinkImageEntry> indexedMap = new HashMap<>();
+
+            while (indexes != null && indexes.hasNext()) {
+                Row index = indexes.next();
+                String key = index.key();
+                String indexedLinks = index.get("links");
+                String indexedImgs = index.get("images");
+                indexedMap.put(key, new LinkImageEntry(indexedLinks, indexedImgs));
+            }
+
+            final int[] tempCount = {0}; // Counter to track the number of entries printed
+            indexedMap.forEach((key, entry) -> {
+                if (tempCount[0] < 5) { // Print only the first 5 entries
+                    System.out.println("Key: " + key + ", " + entry);
+                    tempCount[0]++;
+                }
+            });
+            ///int check_count = 1;
             for(String word : mergedWords){
+//                check_count++;
+//                if (check_count>50){
+//                    return;
+//                }
                 String urls = wordMap.get(word) == null ? "" : wordMap.get(word).toString();
                 String images = imageMap.get(word) == null ? "" : imageMap.get(word).toString();
 
                 Row row = null;
-                try {
-                    row = kvs.getRow(PropertyLoader.getProperty("table.index"), word);
-                } catch (IOException e) {
-                    System.out.println("Error: " + e.getMessage());
-                }
-                if(row == null){
+                String links="";
+                String imgs="";
+                if (indexedMap.containsKey(word)) {
                     row = new Row(word);
+                    LinkImageEntry entry = indexedMap.get(word);
+                    links= entry.getLinks();
+                    imgs = entry.getImgs();
+//                    System.out.println("From indexer: " );
+//                    System.out.println("Word: " + word);
+//                    System.out.println("Links: " + (links != null ? links : "No links available"));
+//                    System.out.println("Images: " + (imgs != null ? imgs : "No images available"));
+//                    System.out.println("------------------------");
                 }
-                if(row.key().isEmpty()){
-                    System.out.println("row key " + row.key() );
-                }
+                else{
+                    try {
+                        row = kvs.getRow(PropertyLoader.getProperty("table.index"), word);
+                    } catch (IOException e) {
+                        System.out.println("Error: " + e.getMessage());
+                    }
+                    if(row == null){
+                        row = new Row(word);
+                    }
+                    if(row.key().isEmpty()){
+                        System.out.println("row key " + row.key() );
+                    }
 
-                String links = row.get(PropertyLoader.getProperty("table.index.links"));
-                String imgs = row.get(PropertyLoader.getProperty("table.index.images"));
+                    links = row.get(PropertyLoader.getProperty("table.index.links"));
+                    imgs = row.get(PropertyLoader.getProperty("table.index.images"));
+
+                }
 
                 if(links == null){
                     links = urls;
@@ -167,11 +205,13 @@ public class DirectIndexer {
                         lastTime = currentTime;
                     }
                     kvs.putRow(PropertyLoader.getProperty("table.index"), row);
+
                 } catch (Exception e) {
                     System.out.println("link: " + links + "row key" + row.key() );
                     System.out.println("Error: " + e.getMessage());
 
                 }
+
             }
 
             try (BufferedWriter pageWriter = new BufferedWriter(new FileWriter("pages_processed.txt", true))) {
@@ -231,4 +271,6 @@ public class DirectIndexer {
         }
         return "";
     }
+
 }
+
