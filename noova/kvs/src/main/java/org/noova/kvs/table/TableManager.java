@@ -45,7 +45,7 @@ public class TableManager implements ITableManager {
         return instance;
     }
 
-    private static synchronized void scanPersistTables(){
+    private static void scanPersistTables(){
         log.info("scan persist tables");
         File file = new File(storageDir);
         if(!file.exists()){
@@ -58,8 +58,12 @@ public class TableManager implements ITableManager {
         }
 
         for(File f : files){
+            String tableName = f.getName();
+            // if the table already exists, skip the table
+            if(TABLE_MAP.containsKey(tableName)){
+                continue;
+            }
             if(f.isDirectory()){
-                String tableName = f.getName();
                 // only load the table if the table name starts with the prefix and the table does not exist
                 if(tableName.startsWith(PERSIST_TABLE_PREFIX) && !TABLE_MAP.containsKey(tableName)){
                     log.info("load persist table: " + tableName);
@@ -95,7 +99,7 @@ public class TableManager implements ITableManager {
         return new HashSet<>(TABLE_MAP.keySet());
     }
 
-    public synchronized String view(String tableKey, String startRowKey, int limit){
+    public String view(String tableKey, String startRowKey, int limit){
 
         Table table = getTable(tableKey);
         log.info("[view] get table: " + tableKey);
@@ -251,7 +255,7 @@ public class TableManager implements ITableManager {
         return builder.toString();
     }
 
-    public synchronized Table addTable(String tableKey) {
+    public Table addTable(String tableKey) {
         if(tableKey == null){
             log.error("table key is null");
             return null;
