@@ -16,7 +16,7 @@ public class Indexer implements Serializable {
     static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
     private static final boolean ENABLE_PORTER_STEMMING = true;
     private static final boolean ENABLE_IP_INDEX = true;
-    private static final String DELIMITER = PropertyLoader.getProperty("default.delimiter");
+    private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
     private static final int PAGE_LIMIT = 5;
 
     public static void run(FlameContext ctx, String[] args) {
@@ -28,7 +28,7 @@ public class Indexer implements Serializable {
                     row -> {
 
                         String url = row.get(PropertyLoader.getProperty("table.crawler.url"));
-                        String page = row.get(PropertyLoader.getProperty("table.crawler.page"));
+                        String page = row.get(PropertyLoader.getProperty("table.crawler.text"));
                         String ip = row.get(PropertyLoader.getProperty("table.crawler.ip"));
 
                         if(ENABLE_IP_INDEX){
@@ -59,8 +59,9 @@ public class Indexer implements Serializable {
 
                 //List<String> links = Crawler.parsePageLinks(ctx, page, url, null);
 
-                String filteredContent = filterPage(page);
-                String[] words = filteredContent.split(" +");
+                //String filteredContent = filterPage(page);
+                //String[] words = filteredContent.split(" +");
+                String[] words = page.split(" +");
 
                 if(words.length == 0 || words[0].isEmpty()) {
                     log.warn("[indexer] No words found");

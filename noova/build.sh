@@ -16,6 +16,7 @@ echo "All JAR files have been copied to $OUTPUT_DIR"
 
 cp log.properties "$OUTPUT_DIR"
 cp config.properties "$OUTPUT_DIR"
+cp crawler_url.properties "$OUTPUT_DIR"
 
 echo "Copied configs file to $OUTPUT_DIR"
 

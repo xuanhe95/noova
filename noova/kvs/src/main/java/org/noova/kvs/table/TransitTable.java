@@ -56,7 +56,7 @@ public class TransitTable implements Table{
     // since this method supports versioning, it is important to create a new version of the row first.
     // since there is a versioning, this method may not properly describe the behavior of the method
     @Deprecated
-    public synchronized Version<Row> addRow(String rowName){
+    public Version<Row> addRow(String rowName){
         // create a new row if the row does not exist
         if(MANAGER_MAP.containsKey(rowName)){
             return MANAGER_MAP.get(rowName).getNewVersion();
@@ -70,7 +70,7 @@ public class TransitTable implements Table{
     }
 
     @Override
-    public synchronized void putRow(Row row){
+    public void putRow(Row row){
         // put the row in the table
         if(MANAGER_MAP.containsKey(row.key())){
             MANAGER_MAP.get(row.key()).putNewVersion(row);
@@ -84,7 +84,7 @@ public class TransitTable implements Table{
 
     // since this method supports versioning, put row will create a new version of the row
     @Override
-    public synchronized void putRow(String rowName, Row row) {
+    public void putRow(String rowName, Row row) {
         if(MANAGER_MAP.containsKey(rowName)){
             MANAGER_MAP.get(rowName).putNewVersion(row);
             return;
@@ -96,7 +96,7 @@ public class TransitTable implements Table{
     }
 
     @Override
-    public synchronized Version<Row> putRow(String rowName) {
+    public Version<Row> putRow(String rowName) {
         if(MANAGER_MAP.containsKey(rowName)){
             return MANAGER_MAP.get(rowName).getNewVersion();
         }
@@ -160,7 +160,7 @@ public class TransitTable implements Table{
     }
 
     @Override
-    public synchronized Vector<Row> getSortedRows(String startKey, int limit){
+    public Vector<Row> getSortedRows(String startKey, int limit){
 
         SORTED_KEYS.addAll(MANAGER_MAP.keySet());
         log.info("sorted keys updated");

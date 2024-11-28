@@ -10,6 +10,8 @@ import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
 import org.noova.tools.URLParser;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
@@ -20,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -44,8 +47,8 @@ public class Crawler implements Serializable {
     private static final String RULE_DISALLOW = "Disallow";
     private static final String RULE_ALLOW = "Allow";
     private static final String RULE_CRAWL_DELAY = "Crawl-delay";
-    private static final boolean ENABLE_LOOP_INTERVAL = false;
-    private static final boolean ENABLE_LOCK_ACCESS_RATING = false;
+    private static final boolean ENABLE_LOOP_INTERVAL = true;
+    private static final boolean ENABLE_LOCK_ACCESS_RATING = true;
     private static final boolean ENABLE_VERTICAL_CRAWL = true;
     private static final boolean ENABLE_CHECKPOINT = false;
 
@@ -64,8 +67,6 @@ public class Crawler implements Serializable {
     private static final long ITERATION_TIMEOUT = 50000;
 
     private static final boolean ENABLE_URL_CACHE = true;
-
-
 
     private static final List<String> US_CITIES = List.of(
             "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
@@ -94,8 +95,8 @@ public class Crawler implements Serializable {
     private static final long CACHE_EXPIRATION = 1000 * 60 * 60 * 24; // 24 hours
 
 
-    private static final int MAX_QUEUE_SIZE = 15000; // urlQueue size limit for each batch
-    private static final ConcurrentHashMap<String, Long> rateLimitMap = new ConcurrentHashMap<>(); // handle 429
+//    private static final int MAX_QUEUE_SIZE = 15000; // urlQueue size limit for each batch
+    private static final ConcurrentHashMap<String, Long> RATE_LIMIT_MAP = new ConcurrentHashMap<>(); // handle 429
 
     public static void run(FlameContext ctx, String[] args) throws Exception {
         System.out.println("Crawler is running");
@@ -107,14 +108,20 @@ public class Crawler implements Serializable {
             ctx.setConcurrencyLevel(concurrencyLevel);
             log.info("[crawler] Concurrency level set to: " + concurrencyLevel);
 
+            List<String> seedUrls;
             if (args == null || args.length < 1) {
-                log.error("Usage: Crawler <seed-url>");
-                ctx.output("Seed URL is not found");
-                return;
+                log.info("[crawler] No seed URL provided in args. Reading from config...");
+                seedUrls = readSeedUrlsFromConfig("crawler_url.properties");
+                if (seedUrls.isEmpty()) {
+                    log.error("No seed URLs found in crawler_url.properties.");
+                    ctx.output("No seed URLs provided in args or config file.");
+                    return;
+                }
+            }else {
+                seedUrls = List.of(args);
             }
 
             // limit to seed urls' domain for crawling first 200k pages
-            List<String> seedUrls = List.of(args);
             Set<String> verticalSeedDomains = new HashSet<>();
             for(String url : seedUrls){
                 log.info("[crawler] seed url: "+ url);
@@ -255,7 +262,7 @@ public class Crawler implements Serializable {
                             Thread.sleep(CACHE_EXPIRATION);
                             URL_ACCESS_CACHE.entrySet().removeIf(entry -> entry.getValue().get() == null);
                             ROBOT_ACCESS_CACHE.entrySet().removeIf(entry -> entry.getValue().get() == null);
-//                            rateLimitMap.entrySet().removeIf(entry -> entry.getValue() == null);
+//                            RATE_LIMIT_MAP.entrySet().removeIf(entry -> entry.getValue() == null);
                         } catch (InterruptedException e) {
                             log.error("[crawler] Cache thread interrupted", e);
                         }
@@ -330,8 +337,8 @@ public class Crawler implements Serializable {
             log.info("[crawler] url domain: "+topLevelDomain);
 
             // skip if this topLevelDomain is currently rate-limited, caveate this url is marked accessed
-            if (rateLimitMap.containsKey(topLevelDomain)) {
-                long retryTime = rateLimitMap.get(topLevelDomain);
+            if (RATE_LIMIT_MAP.containsKey(topLevelDomain)) {
+                long retryTime = RATE_LIMIT_MAP.get(topLevelDomain);
                 if (System.currentTimeMillis() < retryTime) {
                     log.info("[crawler] Skipping rate-limited domain: " + topLevelDomain);
                     return new ArrayList<>();
@@ -497,10 +504,10 @@ public class Crawler implements Serializable {
             String topLevelDomain = getTopLevelDomain(null,url.getHost());
             log.warn("[response] Too Many Requests (429) received for domain: " + topLevelDomain);
 
-            // get retry delay, update to rateLimitMap for processUrl to check
+            // get retry delay, update to RATE_LIMIT_MAP for processUrl to check
             String retryAfter = conn.getHeaderField("Retry-After");
             long retryDelay = retryAfter != null ? Long.parseLong(retryAfter) * 1000 : 5000; // default delay 5sec
-            rateLimitMap.put(topLevelDomain, System.currentTimeMillis() + retryDelay);
+            RATE_LIMIT_MAP.put(topLevelDomain, System.currentTimeMillis() + retryDelay);
 
             // option 1 - skip - issue: never processed again, could prune all frontier urls for that domain, need another async process if we still want
             return new ArrayList<>();
@@ -890,10 +897,10 @@ public class Crawler implements Serializable {
             String title = img.attr("title").strip().replace("\n", " ").toLowerCase();
 
             if (alt.isEmpty()) {
-                alt = "No description available";
+                alt = "";
             }
             if (title.isEmpty()) {
-                title = "No title available";
+                title = "";
             }
 
             String normalizedImg = String.format("<img src=\"%s\" alt=\"%s\" title=\"%s\" onerror=\"this.style.display='none';\" />", src, alt, title);
@@ -1704,7 +1711,7 @@ public class Crawler implements Serializable {
             }
 
             // after parse, get again
-            row = ctx.getKVS().getRow(HOSTS_TABLE, topLevelDomainName);
+            row = ctx.getKVS().getRow(HOSTS_TABLE, hashedTopLevelDomain);
             if (row == null) {
                 // if the host is still not in the table, return true
                 return true;
@@ -1795,6 +1802,15 @@ public class Crawler implements Serializable {
             return parts[parts.length - 2] + "." + parts[parts.length - 1];
         }
         return protocol + "://" + parts[parts.length - 2] + "." + parts[parts.length - 1];
+    }
+
+    private static List<String> readSeedUrlsFromConfig(String filePath) throws Exception {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            return reader.lines()
+                    .filter(line -> !line.isBlank()) // Ignore blank lines
+                    .map(String::trim)              // Remove unnecessary whitespace
+                    .collect(Collectors.toList());
+        }
     }
 
 }

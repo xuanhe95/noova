@@ -177,7 +177,7 @@
             align-items: center;
             justify-content: space-between;
             background-color: #f1f1f1;
-            padding: 20px 30px;
+            padding: 17px 25px;
             font-family: Arial, sans-serif;
             font-size: 14px;
             color: #333;
@@ -192,6 +192,36 @@
             display: flex;
             align-items: center;
             color: #333;
+        }
+
+        .popup-menu {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 2000;
+            width: 300px;
+        }
+
+        .popup-menu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .popup-menu li {
+            margin: 5px 0;
+        }
+
+        .popup-menu a {
+            text-decoration: none;
+            color: #007BFF;
+        }
+
+        .popup-menu a:hover {
+            text-decoration: underline;
         }
 
         /* Mobile adjustments */
@@ -212,6 +242,7 @@
                 font-size: 14px;
             }
         }
+
     </style>
 </head>
 <body>
@@ -238,6 +269,20 @@
 <footer>
     <div id="location-info" class="location-info">
     </div>
+    <div id="container" style="position: relative;">
+        <p>
+            <a href="#" id="noova-link">@Noova</a>
+        </p>
+        <div id="popup-menu" class="popup-menu">
+            <b>Team Noova</b>
+            <ul>
+                <li>Xuanhe Zhang: <a href="mailto:xuanhe@seas.upenn.edu">xuanhe@seas.upenn.edu</a></li>
+                <li>Ying Zhang: <a href="mailto:yzhang9@seas.upenn.edu">yzhang9@seas.upenn.edu</a></li>
+                <li>Zhe Huang: <a href="mailto:zhehuang@seas.upenn.edu">zhehuang@seas.upenn.edu</a></li>
+                <li>Yuan Ding: <a href="mailto:yding42@seas.upenn.edu">yding42@seas.upenn.edu</a></li>
+            </ul>
+        </div>
+    </div>
 </footer>
 
 </body>
@@ -254,6 +299,30 @@
             console.error("Error fetching location:", error);
             document.getElementById('location-info').innerText = "Unable to load location";
         });
+
+    const link = document.getElementById('noova-link');
+    const popup = document.getElementById('popup-menu');
+
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        // Toggle popup visibility
+        popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+
+        // Position the popup relative to the link
+        const rect = link.getBoundingClientRect();
+        const container = document.getElementById('container').getBoundingClientRect();
+
+        popup.style.left = `${rect.left - container.left-250}px`; // Adjust relative to container
+        popup.style.top = `${rect.bottom - container.top-200}px`;
+    });
+
+    // Close the popup when clicking outside
+    document.addEventListener('click', (e) => {
+        if (e.target !== link && !popup.contains(e.target)) {
+            popup.style.display = 'none';
+        }
+    });
 
     $(document).ready(function () {
         const $searchBox = $('#search-query');
