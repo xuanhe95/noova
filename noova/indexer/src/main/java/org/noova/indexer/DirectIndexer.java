@@ -14,12 +14,10 @@ import java.util.stream.Collectors;
 
 public class DirectIndexer {
 
-        private static final String DELIMITER = "|||";
-        private static final boolean ENABLE_PORTER_STEMMING = true;
-        private static final boolean ENABLE_IP_INDEX = true;
+        private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
 
         public static void main(String[] args) throws InterruptedException {
-            KVS kvs = new KVSClient("localhost:8000");
+            KVS kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
 
             String startKey = null;
             String endKey = null;
