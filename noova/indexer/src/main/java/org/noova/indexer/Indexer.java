@@ -16,7 +16,7 @@ public class Indexer implements Serializable {
     static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
     private static final boolean ENABLE_PORTER_STEMMING = true;
     private static final boolean ENABLE_IP_INDEX = true;
-    private static final String DELIMITER = PropertyLoader.getProperty("default.delimiter");
+    private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
     private static final int PAGE_LIMIT = 5;
 
     public static void run(FlameContext ctx, String[] args) {
