@@ -17,19 +17,29 @@ public class Indexer implements Serializable {
     private static final boolean ENABLE_PORTER_STEMMING = true;
     private static final boolean ENABLE_IP_INDEX = true;
     private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
+    private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
+    private static final String CRAWL_URL = PropertyLoader.getProperty("table.crawler.url");
+    private static final String CRAWL_PAGE = PropertyLoader.getProperty("table.crawler.text");
+    private static final String CRAWL_IP = PropertyLoader.getProperty("table.crawler.ip");
+
     private static final int PAGE_LIMIT = 5;
 
     public static void run(FlameContext ctx, String[] args) {
 
 
         try {
+            // each worker work on separate ranges in parallel, e.g., on separate cores.
+            int concurrencyLevel = ctx.calculateConcurrencyLevel();
+            ctx.setConcurrencyLevel(concurrencyLevel);
+            log.info("[crawler] Concurrency level set to: " + concurrencyLevel);
+
             FlameRDD rdd = ctx.fromTable(
-                    PropertyLoader.getProperty("table.crawler"),
+                    CRAWL_TABLE,
                     row -> {
 
-                        String url = row.get(PropertyLoader.getProperty("table.crawler.url"));
-                        String page = row.get(PropertyLoader.getProperty("table.crawler.text"));
-                        String ip = row.get(PropertyLoader.getProperty("table.crawler.ip"));
+                        String url = row.get(CRAWL_URL);
+                        String page = row.get(CRAWL_PAGE);
+                        String ip = row.get(CRAWL_IP);
 
                         if(ENABLE_IP_INDEX){
                             return url + DELIMITER + page + DELIMITER + ip;
@@ -158,7 +168,7 @@ public class Indexer implements Serializable {
                         return t;
                     }
                     return s + "," + t;
-                }).saveAsTable(PropertyLoader.getProperty("table.url"));
+                }).saveAsTable(CRAWL_URL);
 
             }
 

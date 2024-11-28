@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Run rmPort.sh script
-echo "Running './rmPort.sh'..."
-./rmPort.sh
+# Run rmPort.sh script to clear port
+echo "Running './bin/rmPort.sh'..."
+./bin/rmPort.sh
 
 # Parameter settings: Receive the number of different types of Workers
 KVS_WORKER_COUNT=$1            # Receive the number of KVSWorkers from command-line arguments

@@ -121,6 +121,6 @@ public class FlatMapParallelOperation implements Operation{
             }
         });
 
-        log.info("[flat map] Processed " + count.get() + " rows, to table: " + ctx.output());
+//        log.info("[flat map] Processed " + count.get() + " rows, to table: " + ctx.output());
     }
 }

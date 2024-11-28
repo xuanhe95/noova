@@ -251,8 +251,7 @@ public class FlameContextImpl implements FlameContext, Serializable {
     public int calculateConcurrencyLevel(){
 //        int numFlameWorkers = Coordinator.getWorkers().size();
 //        int numKVSWorkers = getKVSWorkers().size();
-        int cores = Runtime.getRuntime().availableProcessors();
-        return cores;
+        return Runtime.getRuntime().availableProcessors();
 //        int concurrencyLevel = Math.min(numFlameWorkers, numKVSWorkers)*cores;
 //        return Math.max((int)(concurrencyLevel *1.5), (int)(cores * 1.5));
     }

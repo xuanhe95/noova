@@ -54,7 +54,7 @@ public class Crawler implements Serializable {
 
     private static final Random RANDOM_GENERATOR = new Random();
 
-    private static final boolean ENABLE_RANDOM_DROP = true;
+    private static final boolean ENABLE_RANDOM_DROP = false;
 
     private static final double NORMAL_DROP_RATE = 0.3;
 
@@ -82,7 +82,7 @@ public class Crawler implements Serializable {
 
     private static final Map<String, SoftReference<String>> URL_ACCESS_CACHE = new HashMap<>();
     private static final Map<String, SoftReference<String>> ROBOT_ACCESS_CACHE = new HashMap<>();
-    private static final Map<String, Boolean> BLACKLIST = new ConcurrentHashMap<>();
+//    private static final Map<String, Boolean> BLACKLIST = new ConcurrentHashMap<>();
     private static final boolean ENABLE_ANCHOR_EXTRACTION = false;
     private static final boolean ENABLE_BLACKLIST = false;
     private static final boolean ENABLE_CANONICAL = false;
@@ -319,7 +319,7 @@ public class Crawler implements Serializable {
 
         log.warn("[crawler] Processing URL: " + normalizedUrl);
         try {
-//             filter for dup url, change return val to row to save getRow call for checkLastAccessTime
+//             filter for dup url
             if (isAccessed(ctx, normalizedUrl)) {
                 log.warn("[accessed] URL " + normalizedUrl + " has been processed before. Skipping.");
                 return new ArrayList<>();
@@ -336,12 +336,13 @@ public class Crawler implements Serializable {
             String topLevelDomain = getTopLevelDomain(null, url.getHost());
             log.info("[crawler] url domain: "+topLevelDomain);
 
-            // skip if this topLevelDomain is currently rate-limited, caveate this url is marked accessed
+            // skip if this topLevelDomain is currently rate-limited
             if (RATE_LIMIT_MAP.containsKey(topLevelDomain)) {
                 long retryTime = RATE_LIMIT_MAP.get(topLevelDomain);
                 if (System.currentTimeMillis() < retryTime) {
                     log.info("[crawler] Skipping rate-limited domain: " + topLevelDomain);
-                    return new ArrayList<>();
+//                    return new ArrayList<>();
+                    return List.of(normalizedUrl);
                 }
             }
 
@@ -512,9 +513,12 @@ public class Crawler implements Serializable {
             // option 1 - skip - issue: never processed again, could prune all frontier urls for that domain, need another async process if we still want
             return new ArrayList<>();
 
-            // option 2 - retry - issue: waste resources while thread waiting, infinite retry?
+            // option 2 - retry at curr point - issue: waste resources while thread waiting, infinite retry?
 //            Thread.sleep(retryDelay);
 //            return requestHead(ctx, normalizedUrl, row, blacklistTable, verticalSeedDomains, iterationStartTime);
+
+            // option 3 - retry from the beginning - issue: added io, better to do a separate async queue
+//            return List.of(normalizedUrl);
         } else if (responseCode != 200) {
             log.warn("[response] Error Response code: " + responseCode);
             ctx.getKVS().putRow(CRAWLER_TABLE, row);

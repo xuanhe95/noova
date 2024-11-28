@@ -77,9 +77,14 @@ public class DirectPageRank implements Serializable {
 
         System.out.println("size: " + kvs.count(PropertyLoader.getProperty("table.crawler")));
         System.out.println("Building graph");
-        Map<String, String> hashToUrl = buildGraphBatch(kvs, it);
-        Map<String, Double> pageRanks = calculatePageRank(kvs, startKey, endKeyExclusive, totalPages);
 
+//        Map<String, String> hashToUrl = buildGraphBatch(kvs, it);
+
+//        buildGraphBatch(kvs, it);
+
+
+        Map<String, Double> pageRanks = calculatePageRank(kvs, startKey, endKeyExclusive, totalPages);
+//---
 
 
 
@@ -94,6 +99,7 @@ public class DirectPageRank implements Serializable {
 //        // 计算 PageRank
 //        Map<String, Double> pageRanks = calculatePageRank(webGraph, reversedWebGraph, totalPages);
 
+//---
         Map<String, Integer> rankDistribution = new HashMap<>();
 
         // 输出结果
@@ -104,7 +110,7 @@ public class DirectPageRank implements Serializable {
             try {
                 Row row = new Row(page);
                 row.put("rank", String.valueOf(rank).getBytes());
-                row.put("url", hashToUrl.get(page).getBytes());
+//                row.put("url", hashToUrl.get(page).getBytes());
                 kvs.putRow("pt-pgrk", row);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -180,7 +186,7 @@ public class DirectPageRank implements Serializable {
                 linkRow.put(INCOMING_COLUMN, linkToPages.getBytes());
             }
 
-            //webGraph.put(url, linkSet);
+//            webGraph.put(url, linkSet);
         }
 
         for(Map.Entry<String, Row> entry : graphRows.entrySet()) {

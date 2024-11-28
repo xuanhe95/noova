@@ -49,6 +49,11 @@ public class PageRank implements Serializable {
 
 
         try {
+            // each worker work on separate ranges in parallel, e.g., on separate cores.
+            int concurrencyLevel = ctx.calculateConcurrencyLevel();
+            ctx.setConcurrencyLevel(concurrencyLevel);
+            log.info("[crawler] Concurrency level set to: " + concurrencyLevel);
+
             ctx.getKVS().delete(PAGE_RANK_TABLE);
             ctx.getKVS().delete("sink");
             ctx.getKVS().delete("linkset");

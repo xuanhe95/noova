@@ -52,7 +52,7 @@ public class DirectIndexer {
 
         Iterator<Row> indexes = null;
         try {
-            indexes = kvs.scan(PropertyLoader.getProperty("table.index"), null, null);
+            indexes = kvs.scan(PropertyLoader.getProperty("table.index"), startKey, endKey);
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
         }
@@ -241,7 +241,7 @@ public class DirectIndexer {
         Matcher matcher = pattern.matcher(html);
 
         if (matcher.find()) {
-            // 返回 alt 属性的值
+            // return alt
             return matcher.group(1);
         }
         return "";
