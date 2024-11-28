@@ -305,7 +305,8 @@ public class DirectPageRank implements Serializable {
         Map<String, Double> pageRanks = new HashMap<>();
         Map<String, Double> prevPageRanks;
 
-        Iterator<Row> pages = kvs.scan(GRAPH_TABLE, startKey, endKeyExclusive);
+        // this part should scan all data to make sure all pages (vertices) are included
+        Iterator<Row> pages = kvs.scan(GRAPH_TABLE, null, null);
         while(pages != null && pages.hasNext()){
             Row page = pages.next();
             Set<String> columns = page.columns();
@@ -324,7 +325,7 @@ public class DirectPageRank implements Serializable {
 
         do {
             prevPageRanks = pageRanks;
-            pageRanks = calculatePageRankParallel(kvs, prevPageRanks, startKey, endKeyExclusive, totalPages);
+            pageRanks = calculatePageRankParallel(kvs, prevPageRanks, null, null, totalPages);
 
             converged = checkConvergence(pageRanks, prevPageRanks, CONVERGENCE_THRESHOLD, convergedPages);
             iteration++;
