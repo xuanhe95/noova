@@ -21,11 +21,24 @@ public class DirectIndexer {
         public static void main(String[] args) throws InterruptedException {
             KVS kvs = new KVSClient("localhost:8000");
 
-            long start = System.currentTimeMillis();
+            String startKey = null;
+            String endKey = null;
+            if(args.length == 1){
+                startKey = args[0];
+            } else if(args.length > 1){
+                startKey = args[0];
+                endKey = args[1];
+            } else{
+                System.out.println("No key range specified, scan all tables");
+            }
 
+            System.out.println("Key range: " + startKey + " - " + endKey);
+
+            long start = System.currentTimeMillis();
+            System.out.println("Start indexing");
             Iterator<Row> pages = null;
             try {
-                pages = kvs.scan(PropertyLoader.getProperty("table.crawler"), null, null);
+                pages = kvs.scan(PropertyLoader.getProperty("table.crawler"), startKey, endKey);
             } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
             }
