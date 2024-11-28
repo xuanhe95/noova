@@ -5,16 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/crawler_url.properties" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler_url.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameContextImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/FlameContextImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/operation/FlatMapParallelOperation.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/flame/src/main/java/org/noova/flame/operation/FlatMapParallelOperation.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/Indexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/Indexer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer2.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer2.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/DirectPageRank.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/DirectPageRank.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/PageRank.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/PageRank.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/start.sh" beforeDir="false" afterPath="$PROJECT_DIR$/noova/start.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -122,9 +115,24 @@
       <recent name="org.noova.flame.operation" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.DirectPageRank">
+  <component name="RunManager" selected="Application.DirectIndexer2">
     <configuration name="DirectIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.indexer.DirectIndexer" />
+      <module name="indexer" />
+      <option name="PROGRAM_PARAMETERS" value="a m" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.indexer.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="DirectIndexer2" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.DirectIndexer2" />
       <module name="indexer" />
       <option name="PROGRAM_PARAMETERS" value="a m" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
@@ -217,6 +225,7 @@
       </method>
     </configuration>
     <list>
+      <item itemvalue="Application.DirectIndexer2" />
       <item itemvalue="Application.DirectIndexer" />
       <item itemvalue="Application.FlameCoordinator" />
       <item itemvalue="Application.FlameWorker1" />

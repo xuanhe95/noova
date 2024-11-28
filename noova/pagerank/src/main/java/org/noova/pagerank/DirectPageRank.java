@@ -78,7 +78,9 @@ public class DirectPageRank implements Serializable {
         System.out.println("size: " + kvs.count(PropertyLoader.getProperty("table.crawler")));
         System.out.println("Building graph");
 
+        // --- STEP 1, run graph in partition ---
 //        Map<String, String> hashToUrl = buildGraphBatch(kvs, it);
+        // --- ------------------------------ ---
 
 //        buildGraphBatch(kvs, it);
 

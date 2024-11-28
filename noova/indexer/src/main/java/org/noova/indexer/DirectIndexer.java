@@ -52,7 +52,7 @@ public class DirectIndexer {
 
         Iterator<Row> indexes = null;
         try {
-            indexes = kvs.scan(PropertyLoader.getProperty("table.index"), startKey, endKey);
+            indexes = kvs.scan(PropertyLoader.getProperty("table.index"), null, null);
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
         }

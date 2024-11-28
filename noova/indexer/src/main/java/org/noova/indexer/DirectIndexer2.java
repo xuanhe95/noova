@@ -19,6 +19,16 @@ import java.util.regex.Pattern;
 public class DirectIndexer2 {
 
         private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
+        private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
+        private static final String CRAWL_URL = PropertyLoader.getProperty("table.crawler.url");
+        private static final String CRAWL_TEXT = PropertyLoader.getProperty("table.crawler.text");
+        private static final String CRAWL_IP = PropertyLoader.getProperty("table.crawler.ip");
+        private static final String CRAWL_IMAGES = PropertyLoader.getProperty("table.crawler.images");
+        private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
+        private static final String INDEX_LINKS = PropertyLoader.getProperty("table.index.links");
+        private static final String INDEX_IMAGES = PropertyLoader.getProperty("table.index.images");
+        static int pageCount = 0;
+        static List<String> pageDetails = new ArrayList<>();
 
         public static void main(String[] args) throws InterruptedException {
             KVS kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
@@ -40,14 +50,14 @@ public class DirectIndexer2 {
             System.out.println("Start indexing");
             Iterator<Row> pages = null;
             try {
-                pages = kvs.scan(PropertyLoader.getProperty("table.crawler"), startKey, endKey);
+                pages = kvs.scan(CRAWL_TABLE, startKey, endKey);
             } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
             }
 
             Iterator<Row> indexes = null;
             try {
-                indexes = kvs.scan(PropertyLoader.getProperty("table.index"), null, null);
+                indexes = kvs.scan(INDEX_TABLE, null, null);
             } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
             }
@@ -60,28 +70,21 @@ public class DirectIndexer2 {
 
         }
 
-        private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) throws InterruptedException {
-            Map<String, StringBuilder> wordMap = new ConcurrentHashMap<>();
-            Map<String, StringBuilder> imageMap = new ConcurrentHashMap<>();
-            int pageCount = 0;
-            List<String> pageDetails = new ArrayList<>();
+        private static void processPage(Row page, Map<String, StringBuilder> wordMap, Map<String, StringBuilder> imageMap) throws InterruptedException{
+            pageCount++;
+            pageDetails.add(page.key()+"\n");
 
-            while(pages != null && pages.hasNext()) {
-                Row page = pages.next();
-                pageCount++;
-                pageDetails.add(page.key()+"\n");
+            String url = page.get(CRAWL_URL);
+            String text = page.get(CRAWL_TEXT);
+            //String ip = page.get(CRAWL_IP);
+            String images = page.get(CRAWL_IMAGES);
 
-                String url = page.get(PropertyLoader.getProperty("table.crawler.url"));
-                String text = page.get(PropertyLoader.getProperty("table.crawler.text"));
-                //String ip = page.get(PropertyLoader.getProperty("table.crawler.ip"));
-                String images = page.get(PropertyLoader.getProperty("table.crawler.images"));
+            //String[] words = text == null ? new String[0] : text.split(" +");
+            //String[] image = images.split(" +");
 
-                //String[] words = text == null ? new String[0] : text.split(" +");
-                //String[] image = images.split(" +");
+            String[] words = normalizeWord(text);
 
-                String[] words = normalizeWord(text);
-
-                Map<String, Set<String>> wordImageMap = parseImages(images);
+            Map<String, Set<String>> wordImageMap = parseImages(images);
 
 //                Arrays.stream(words).parallel().forEach(
 //                        word -> {
@@ -90,23 +93,38 @@ public class DirectIndexer2 {
 //                        }
 //                );
 
-                for(String word : words) {
-                    if(word == null || word.isEmpty() || url == null || url.isEmpty()){
-                        continue;
-                    }
-                    StringBuilder builder = wordMap.computeIfAbsent(word, k -> new StringBuilder());
-                    builder.append(url).append(DELIMITER);
+            for(String word : words) {
+                if(word == null || word.isEmpty() || url == null || url.isEmpty()){
+                    continue;
                 }
+                StringBuilder builder = wordMap.computeIfAbsent(word, k -> new StringBuilder());
+                builder.append(url).append(DELIMITER);
+            }
 
-                for(Map.Entry<String, Set<String>> entry : wordImageMap.entrySet()){
-                    String word = entry.getKey();
-                    Set<String> imageSet = entry.getValue();
-                    StringBuilder builder = imageMap.computeIfAbsent(word, k -> new StringBuilder());
-                    for(String image : imageSet){
-                        builder.append(image).append(DELIMITER);
-                    }
+            for(Map.Entry<String, Set<String>> entry : wordImageMap.entrySet()){
+                String word = entry.getKey();
+                Set<String> imageSet = entry.getValue();
+                StringBuilder builder = imageMap.computeIfAbsent(word, k -> new StringBuilder());
+                for(String image : imageSet){
+                    builder.append(image).append(DELIMITER);
                 }
             }
+        }
+
+        private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) throws InterruptedException {
+            Map<String, StringBuilder> wordMap = new ConcurrentHashMap<>();
+            Map<String, StringBuilder> imageMap = new ConcurrentHashMap<>();
+//            int pageCount = 0;
+//            List<String> pageDetails = new ArrayList<>();
+
+            pages.forEachRemaining(page -> {
+                // stream parallel processing
+                try {
+                    processPage(page, wordMap, imageMap);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
 
             System.out.println("Total pages processed: " + pageCount);
 
@@ -160,7 +178,7 @@ public class DirectIndexer2 {
                 }
                 else{
                     try {
-                        row = kvs.getRow(PropertyLoader.getProperty("table.index"), word);
+                        row = kvs.getRow(INDEX_TABLE, word);
                     } catch (IOException e) {
                         System.out.println("Error: " + e.getMessage());
                     }
@@ -171,8 +189,8 @@ public class DirectIndexer2 {
                         System.out.println("row key " + row.key() );
                     }
 
-                    links = row.get(PropertyLoader.getProperty("table.index.links"));
-                    imgs = row.get(PropertyLoader.getProperty("table.index.images"));
+                    links = row.get(INDEX_LINKS);
+                    imgs = row.get(INDEX_IMAGES);
 
                 }
 
@@ -190,8 +208,8 @@ public class DirectIndexer2 {
 
                 try {
                 //System.out.println("word: " + word + " links: " + links);
-                row.put(PropertyLoader.getProperty("table.index.links"), links);
-                row.put(PropertyLoader.getProperty("table.index.images"), imgs);
+                row.put(INDEX_LINKS, links);
+                row.put(INDEX_IMAGES, imgs);
                 //Thread.sleep(10);
 
                     count++;
@@ -204,7 +222,7 @@ public class DirectIndexer2 {
                                 count, remainder, formattedTime, deltaTime);
                         lastTime = currentTime;
                     }
-                    kvs.putRow(PropertyLoader.getProperty("table.index"), row);
+                    kvs.putRow(INDEX_TABLE, row);
 
                 } catch (Exception e) {
                     System.out.println("link: " + links + "row key" + row.key() );
@@ -266,7 +284,7 @@ public class DirectIndexer2 {
         Matcher matcher = pattern.matcher(html);
 
         if (matcher.find()) {
-            // 返回 alt 属性的值
+            // return alt
             return matcher.group(1);
         }
         return "";
