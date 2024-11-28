@@ -20,6 +20,16 @@ public class DirectPageRank implements Serializable {
     private static final double CONVERGENCE_THRESHOLD = 0.01;
     private static final int MAX_ITERATIONS = 1000000;
 
+    private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
+
+    private static final String LINE_BREAK_DELIMITER = PropertyLoader.getProperty("delimiter.linebreak");
+
+    private static final String OUTGOING_COLUMN = PropertyLoader.getProperty("table.graph.outgoing");
+
+    private static final String GRAPH_TABLE = PropertyLoader.getProperty("table.graph");
+
+    private static final String INCOMING_COLUMN = PropertyLoader.getProperty("table.graph.incoming");
+    private static final boolean ENABLE_ONLY_BIDIRECTIONAL = true;
     static double convergenceRatioInPercentage = 100.0;
 
     private static final Logger log = Logger.getLogger(DirectPageRank.class);
@@ -40,39 +50,49 @@ public class DirectPageRank implements Serializable {
     public static void main(String[] args) throws Exception {
 
 
-        KVS kvs = new KVSClient("localhost:8000");
+        KVS kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
 
-        // 示例：初始化网页及其链接
-        Map<String, Set<String>> webGraph = new HashMap<>();
+
+        // Map<String, Set<String>> webGraph = new HashMap<>();
+
+        String startKey = null;
+        String endKeyExclusive = null;
+
+        if(args.length == 1){
+            startKey = args[0];
+        } else if(args.length > 1){
+            startKey = args[0];
+            endKeyExclusive = args[1];
+        } else{
+            System.out.println("No key range specified, scan all tables");
+        }
 
 
 
         System.out.println("start");
-        Iterator<Row> it = kvs.scan(PropertyLoader.getProperty("table.crawler"), null, null);
+        Iterator<Row> it = kvs.scan(PropertyLoader.getProperty("table.crawler"), startKey, endKeyExclusive);
 
         totalPages = kvs.count(PropertyLoader.getProperty("table.crawler"));
 
         System.out.println("size: " + kvs.count(PropertyLoader.getProperty("table.crawler")));
+        System.out.println("Building graph");
+        //buildGraphBatch(kvs, it);
 
-        while(it != null && it.hasNext()){
-            Row row = it.next();
-            String url = row.get(PropertyLoader.getProperty("table.crawler.url"));
-            String links = row.get(PropertyLoader.getProperty("table.crawler.links"));
-            Set<String> linkSet = efficientParsePageLinks(links);
-            webGraph.put(url, linkSet);
-        }
-
-        Map<String, Set<String>> reversedWebGraph = new HashMap<>();
-        webGraph.forEach((page, links) -> {
-            links.forEach(link -> {
-                reversedWebGraph.computeIfAbsent(link, k -> new HashSet<>()).add(page);
-            });
-        });
+        Map<String, Double> pageRanks = calculatePageRank(kvs, startKey, endKeyExclusive, totalPages);
 
 
 
-        // 计算 PageRank
-        Map<String, Double> pageRanks = calculatePageRank(webGraph, reversedWebGraph, totalPages);
+
+//        Map<String, Set<String>> reversedWebGraph = new HashMap<>();
+//        webGraph.forEach((page, links) -> {
+//            links.forEach(link -> {
+//                reversedWebGraph.computeIfAbsent(link, k -> new HashSet<>()).add(page);
+//            });
+//        });
+//
+//
+//        // 计算 PageRank
+//        Map<String, Double> pageRanks = calculatePageRank(webGraph, reversedWebGraph, totalPages);
 
         Map<String, Integer> rankDistribution = new HashMap<>();
 
@@ -98,6 +118,117 @@ public class DirectPageRank implements Serializable {
                 System.out.println("Rank: " + roundedRank + ", Count: " + count)
         );
     }
+
+    private static void buildGraphBatch(KVS kvs, Iterator<Row> it) throws IOException {
+        Map<String, Row> graphRows = new HashMap<>();
+
+        while(it != null && it.hasNext()){
+            Row row = it.next();
+            String url = row.get(PropertyLoader.getProperty("table.crawler.url"));
+            String links = row.get(PropertyLoader.getProperty("table.crawler.links"));
+            Set<String> linkSet = efficientParsePageLinks(links);
+
+            if(linkSet.isEmpty()){
+                continue;
+            }
+
+
+            // build graph
+
+            String hashedUrl = Hasher.hash(url);
+
+            Row pageRow = graphRows.getOrDefault(hashedUrl, kvs.getRow(GRAPH_TABLE, hashedUrl));
+            // create new row if not exist
+            if(pageRow == null){
+                pageRow = new Row(hashedUrl);
+                graphRows.put(hashedUrl, pageRow);
+            }
+
+            String pageLinks = pageRow.get(OUTGOING_COLUMN);
+            if(pageLinks == null || pageLinks.isEmpty()){
+                pageLinks = "";
+            }
+            pageLinks += pageLinks + LINE_BREAK_DELIMITER + links;
+            pageRow.put(OUTGOING_COLUMN, pageLinks.getBytes());
+
+
+            // build reversed graph
+            for(String link : linkSet){
+                String hashedLink = Hasher.hash(link);
+                Row linkRow = graphRows.getOrDefault(hashedLink, kvs.getRow(GRAPH_TABLE, hashedLink));
+                // create new row if not exist
+                if(linkRow == null){
+                    linkRow = new Row(hashedLink);
+                    graphRows.put(hashedLink, linkRow);
+                }
+
+                String linkToPages = linkRow.get(INCOMING_COLUMN);
+                if(linkToPages == null || linkToPages.isEmpty()){
+                    linkToPages = "";
+                }
+                linkToPages += url + LINE_BREAK_DELIMITER;
+                linkRow.put(INCOMING_COLUMN, linkToPages.getBytes());
+            }
+
+            //webGraph.put(url, linkSet);
+        }
+
+        for(Map.Entry<String, Row> entry : graphRows.entrySet()) {
+            Row row = entry.getValue();
+            if(row == null){
+                continue;
+            }
+            kvs.putRow(GRAPH_TABLE, row);
+        }
+
+    }
+
+    public static Map<String, Double>calculatePageRankParallel(KVS kvs, Map<String, Double> prevPageRanks, String startRow, String endRowExclusive, int totalPages) throws IOException {
+        Map<String, Double> pageRanks = new HashMap<>();
+        Map<String, Double> sinkPRs = new HashMap<>();
+
+        Iterator<Row> pages = kvs.scan(GRAPH_TABLE, startRow, endRowExclusive);
+
+        while(pages != null && pages.hasNext()){
+            Row page = pages.next();
+            String hashedUrl = page.key();
+
+            if(ENABLE_ONLY_BIDIRECTIONAL && !prevPageRanks.containsKey(hashedUrl)){
+                continue;
+            }
+
+            double rankSum = 0.0;
+            double sinkPR = 0.0;
+
+            var linkToPages = page.get(INCOMING_COLUMN);
+            if(linkToPages == null){
+
+                sinkPR += prevPageRanks.get(hashedUrl);
+            } else{
+                Set<String> links = efficientParsePageLinks(linkToPages);
+
+
+                for(String link : links){
+                    String hashedLink = Hasher.hash(link);
+                    if(ENABLE_ONLY_BIDIRECTIONAL && !prevPageRanks.containsKey(hashedLink)){
+                        continue;
+                    }
+                    double linkPR = prevPageRanks.get(hashedLink);
+                    rankSum += linkPR / links.size();
+                }
+
+
+            }
+
+            double sinkContribution = DECAY_RATE * sinkPR / totalPages;
+            double randomJump = (1 - DECAY_RATE);
+            pageRanks.put(hashedUrl, randomJump + DECAY_RATE * rankSum + sinkContribution);
+        }
+
+        return pageRanks;
+    }
+
+
 
     private static Map<String, Double> calculatePageRankParallel(Map<String, Set<String>> webGraph, Map<String, Set<String>> reversedWebGraph, Map<String, Double> prevPageRanks){
         Map<String, Double> pageRanks = webGraph.keySet().parallelStream().collect(
@@ -152,6 +283,39 @@ public class DirectPageRank implements Serializable {
             double randomJump = (1 - DECAY_RATE);
             pageRanks.put(page, randomJump + DECAY_RATE * rankSum + sinkContribution);
         }
+        return pageRanks;
+    }
+
+    public static Map<String, Double> calculatePageRank(KVS kvs, String startKey, String endKeyExclusive, int totalPages) throws IOException {
+        Map<String, Double> pageRanks = new HashMap<>();
+        Map<String, Double> prevPageRanks;
+
+        Iterator<Row> pages = kvs.scan(GRAPH_TABLE, startKey, endKeyExclusive);
+        while(pages != null && pages.hasNext()){
+            Row page = pages.next();
+            Set<String> columns = page.columns();
+            if(ENABLE_ONLY_BIDIRECTIONAL && columns.contains(INCOMING_COLUMN) && columns.contains(OUTGOING_COLUMN)){
+                pageRanks.put(page.key(), 1.0);
+            }
+        }
+
+        int iteration = 0;
+        boolean converged;
+
+        Set<String> convergedPages = new HashSet<>();
+
+        do {
+            prevPageRanks = pageRanks;
+            pageRanks = calculatePageRankParallel(kvs, prevPageRanks, startKey, endKeyExclusive, totalPages);
+
+            converged = checkConvergence(pageRanks, prevPageRanks, CONVERGENCE_THRESHOLD, convergedPages);
+            iteration++;
+            System.out.println("Iteration: " + iteration);
+
+        } while (!converged && iteration < MAX_ITERATIONS);
+
+        System.out.println("Iterations: " + iteration);
+
         return pageRanks;
     }
 
