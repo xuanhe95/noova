@@ -5,18 +5,21 @@ import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
 import org.noova.tools.PropertyLoader;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+
 
 public class DirectIndexer {
 
-
     private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
-
     private static class WordStats {
         int frequency = 0;
         int firstLocation = Integer.MAX_VALUE;
@@ -47,7 +50,14 @@ public class DirectIndexer {
             System.out.println("Error: " + e.getMessage());
         }
 
-        generateInvertedIndexBatch(kvs, pages);
+        Iterator<Row> indexes = null;
+        try {
+            indexes = kvs.scan(PropertyLoader.getProperty("table.index"), null, null);
+        } catch (IOException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+
+        generateInvertedIndexBatch(kvs, pages, indexes);
 
         long end = System.currentTimeMillis();
 
@@ -55,26 +65,30 @@ public class DirectIndexer {
 
     }
 
-    private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages) throws InterruptedException {
+    private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) throws InterruptedException {
         Map<String, Map<String, WordStats>> wordMap = new ConcurrentHashMap<>();
         Map<String, StringBuilder> imageMap = new ConcurrentHashMap<>();
-        Map<String, StringBuilder> ipMap = new ConcurrentHashMap<>();
+
+        int pageCount = 0;
+        List<String> pageDetails = new ArrayList<>();
 
         while(pages != null && pages.hasNext()) {
             Row page = pages.next();
+            pageCount++;
+            pageDetails.add(page.key()+"\n");
+
             String url = page.get(PropertyLoader.getProperty("table.crawler.url"));
             String text = page.get(PropertyLoader.getProperty("table.crawler.text"));
-            String ip = page.get(PropertyLoader.getProperty("table.crawler.ip"));
+            //String ip = page.get(PropertyLoader.getProperty("table.crawler.ip"));
             String images = page.get(PropertyLoader.getProperty("table.crawler.images"));
 
             String[] words = normalizeWord(text);
 
-            for(int i = 0; i < words.length; i++) {
+            for(int i = 0; i < words.length; i++){
                 String word = words[i];
                 if(word == null || word.isEmpty() || url == null || url.isEmpty()){
                     continue;
                 }
-
                 wordMap.putIfAbsent(word, new ConcurrentHashMap<>());
                 Map<String, WordStats> urlStatsMap = wordMap.get(word);
 
@@ -91,7 +105,6 @@ public class DirectIndexer {
             }
 
             Map<String, Set<String>> wordImageMap = parseImages(images);
-
             for(Map.Entry<String, Set<String>> entry : wordImageMap.entrySet()){
                 String word = entry.getKey();
                 Set<String> imageSet = entry.getValue();
@@ -104,10 +117,24 @@ public class DirectIndexer {
             }
         }
 
+        try (BufferedWriter pageWriter = new BufferedWriter(new FileWriter("pages_processed.txt", true))) {
+            for (String detail : pageDetails) {
+                pageWriter.write(detail);
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing pages to file: " + e.getMessage());
+        }
+
+        System.out.println("Total pages processed: " + pageCount);
+
         Set<String> mergedWords = new HashSet<>(wordMap.keySet());
         mergedWords.addAll(imageMap.keySet());
 
-        for(String word : mergedWords){
+        var count = 1;
+        long lastTime = System.nanoTime();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        for(String word : mergedWords) {
             Map<String, WordStats> urlStatsMap = wordMap.get(word);
             String images = imageMap.get(word) == null ? "" : imageMap.get(word).toString();
 
@@ -117,9 +144,14 @@ public class DirectIndexer {
             } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
             }
-            if(row == null){
+            if (row == null) {
                 row = new Row(word);
             }
+            if (row.key().isEmpty()) {
+                System.out.println("row key " + row.key());
+            }
+
+            String imgs = row.get(PropertyLoader.getProperty("table.index.images"));
 
             if (urlStatsMap != null) {
                 StringBuilder linksBuilder = new StringBuilder();
@@ -140,21 +172,31 @@ public class DirectIndexer {
                 row.put(PropertyLoader.getProperty("table.index.links"), linksBuilder.toString());
             }
 
-            String imgs = row.get(PropertyLoader.getProperty("table.index.images"));
-            if(imgs == null){
+            if (imgs == null) {
                 imgs = images;
-            } else{
+            } else {
                 imgs = imgs + DELIMITER + images;
             }
             row.put(PropertyLoader.getProperty("table.index.images"), imgs);
-            //Thread.sleep(10);
+
             try {
+
+                count++;
+                if (count % 500 == 0) {
+                    int remainder = count % 1000;
+                    long currentTime = System.nanoTime();
+                    double deltaTime = (currentTime - lastTime) / 1_000_000.0;
+                    String formattedTime = LocalDateTime.now().format(formatter);
+                    System.out.printf("Count: %d, %% 1000: %d, Time: %s, Delta Time: %.6f ms%n",
+                            count, remainder, formattedTime, deltaTime);
+                    lastTime = currentTime;
+                }
                 kvs.putRow(PropertyLoader.getProperty("table.index"), row);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
+
             }
         }
-
     }
 
     public static String[] normalizeWord(String word) {
