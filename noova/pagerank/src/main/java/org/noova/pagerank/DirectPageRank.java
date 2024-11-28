@@ -29,7 +29,8 @@ public class DirectPageRank implements Serializable {
     private static final String GRAPH_TABLE = PropertyLoader.getProperty("table.graph");
 
     private static final String INCOMING_COLUMN = PropertyLoader.getProperty("table.graph.incoming");
-    private static final boolean ENABLE_ONLY_BIDIRECTIONAL = true;
+    private static final boolean ENABLE_ONLY_BIDIRECTIONAL = false;
+
     static double convergenceRatioInPercentage = 100.0;
 
     private static final Logger log = Logger.getLogger(DirectPageRank.class);
@@ -76,8 +77,7 @@ public class DirectPageRank implements Serializable {
 
         System.out.println("size: " + kvs.count(PropertyLoader.getProperty("table.crawler")));
         System.out.println("Building graph");
-        //buildGraphBatch(kvs, it);
-
+        Map<String, String> hashToUrl = buildGraphBatch(kvs, it);
         Map<String, Double> pageRanks = calculatePageRank(kvs, startKey, endKeyExclusive, totalPages);
 
 
@@ -102,7 +102,10 @@ public class DirectPageRank implements Serializable {
             double roundedRank = Math.floor(rank * 100) / 100.0;
             rankDistribution.merge(String.valueOf(roundedRank), 1, Integer::sum);
             try {
-                kvs.put("pt-pgrk", Hasher.hash(page), "rank", String.valueOf(rank).getBytes());
+                Row row = new Row(page);
+                row.put("rank", String.valueOf(rank).getBytes());
+                row.put("url", hashToUrl.get(page).getBytes());
+                kvs.putRow("pt-pgrk", row);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -119,8 +122,10 @@ public class DirectPageRank implements Serializable {
         );
     }
 
-    private static void buildGraphBatch(KVS kvs, Iterator<Row> it) throws IOException {
+    private static Map<String, String> buildGraphBatch(KVS kvs, Iterator<Row> it) throws IOException {
         Map<String, Row> graphRows = new HashMap<>();
+
+        Map<String, String> hashToUrl = new HashMap<>();
 
         while(it != null && it.hasNext()){
             Row row = it.next();
@@ -136,6 +141,8 @@ public class DirectPageRank implements Serializable {
             // build graph
 
             String hashedUrl = Hasher.hash(url);
+
+            hashToUrl.put(hashedUrl, url);
 
             Row pageRow = graphRows.getOrDefault(hashedUrl, kvs.getRow(GRAPH_TABLE, hashedUrl));
             // create new row if not exist
@@ -155,6 +162,9 @@ public class DirectPageRank implements Serializable {
             // build reversed graph
             for(String link : linkSet){
                 String hashedLink = Hasher.hash(link);
+
+                hashToUrl.put(hashedLink, link);
+
                 Row linkRow = graphRows.getOrDefault(hashedLink, kvs.getRow(GRAPH_TABLE, hashedLink));
                 // create new row if not exist
                 if(linkRow == null){
@@ -181,6 +191,7 @@ public class DirectPageRank implements Serializable {
             kvs.putRow(GRAPH_TABLE, row);
         }
 
+        return hashToUrl;
     }
 
     public static Map<String, Double>calculatePageRankParallel(KVS kvs, Map<String, Double> prevPageRanks, String startRow, String endRowExclusive, int totalPages) throws IOException {
@@ -196,13 +207,16 @@ public class DirectPageRank implements Serializable {
             if(ENABLE_ONLY_BIDIRECTIONAL && !prevPageRanks.containsKey(hashedUrl)){
                 continue;
             }
+            if(!prevPageRanks.containsKey(hashedUrl)){
+                System.out.println("link not found: " + hashedUrl);
+                continue;
+            }
 
             double rankSum = 0.0;
             double sinkPR = 0.0;
 
             var linkToPages = page.get(INCOMING_COLUMN);
             if(linkToPages == null){
-
                 sinkPR += prevPageRanks.get(hashedUrl);
             } else{
                 Set<String> links = efficientParsePageLinks(linkToPages);
@@ -213,6 +227,7 @@ public class DirectPageRank implements Serializable {
                     if(ENABLE_ONLY_BIDIRECTIONAL && !prevPageRanks.containsKey(hashedLink)){
                         continue;
                     }
+
                     double linkPR = prevPageRanks.get(hashedLink);
                     rankSum += linkPR / links.size();
                 }
@@ -295,6 +310,9 @@ public class DirectPageRank implements Serializable {
             Row page = pages.next();
             Set<String> columns = page.columns();
             if(ENABLE_ONLY_BIDIRECTIONAL && columns.contains(INCOMING_COLUMN) && columns.contains(OUTGOING_COLUMN)){
+                pageRanks.put(page.key(), 1.0);
+            }
+            else{
                 pageRanks.put(page.key(), 1.0);
             }
         }
