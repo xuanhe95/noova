@@ -1,19 +1,27 @@
 package org.noova.indexer;
 
+import opennlp.tools.lemmatizer.Lemmatizer;
+import opennlp.tools.lemmatizer.LemmatizerME;
+import opennlp.tools.lemmatizer.LemmatizerModel;
+import opennlp.tools.postag.POSModel;
+import opennlp.tools.postag.POSTagger;
+import opennlp.tools.postag.POSTaggerME;
+import opennlp.tools.tokenize.Tokenizer;
+import opennlp.tools.tokenize.TokenizerME;
+import opennlp.tools.tokenize.TokenizerModel;
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
+import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
 import org.noova.webserver.pool.FixedThreadPool;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDateTime;
@@ -22,6 +30,7 @@ import java.time.LocalDateTime;
 
 public class DirectIndexer {
 
+    private static final Logger log = Logger.getLogger(DirectIndexer.class);
     private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
     private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
     private static final String CRAWL_URL = PropertyLoader.getProperty("table.crawler.url");
@@ -36,7 +45,96 @@ public class DirectIndexer {
 
     private static class WordStats {
         int frequency = 0;
-        int firstLocation = Integer.MAX_VALUE;
+        int firstLocation = 0;
+    }
+
+    private static final TokenizerModel tokenizerModel;
+    private static final POSModel posModel;
+    private static final LemmatizerModel lemmatizerModel;
+    private static final Set<String> stopWords;
+
+    private static final ThreadLocal<Tokenizer> tokenizer = new ThreadLocal<>() {
+        @Override
+        protected Tokenizer initialValue() {
+            return new TokenizerME(tokenizerModel);
+        }
+    };
+
+    private static final ThreadLocal<POSTagger> posTagger = new ThreadLocal<>() {
+        @Override
+        protected POSTagger initialValue() {
+            return new POSTaggerME(posModel);
+        }
+    };
+
+    private static final ThreadLocal<Lemmatizer> lemmatizer = new ThreadLocal<>() {
+        @Override
+        protected Lemmatizer initialValue() {
+            return new LemmatizerME(lemmatizerModel);
+        }
+    };
+
+    private static final Set<String> INVALID_POS = Set.of(
+            "DT",  // determiner (the, a, an)
+            "IN",  // preposition (in, of, at)
+            "CC",  // conjunction (and, or, but)
+            "UH",  // interjection (oh, wow, ah)
+            "FW",  // Foreign Word
+            "SYM", // Symbol
+            "LS",  // List item marker
+            "PRP", // Personal pronouns
+            "WDT", // Wh-determiner
+            "WP",  // Wh-pronoun
+            "WRB"  // Wh-adverb
+    );
+
+    static {
+        try {
+            log.info("Starting to load OpenNLP models...");
+
+            InputStream tokenStream = DirectIndexer.class.getResourceAsStream("/models/en-token.bin");
+            InputStream posStream = DirectIndexer.class.getResourceAsStream("/models/en-pos-maxent.bin");
+            InputStream lemmaStream = DirectIndexer.class.getResourceAsStream("/models/opennlp-en-ud-ewt-lemmas-1.2-2.5.0.bin");
+
+            if (tokenStream == null) {
+                throw new IOException("Tokenizer model not found in resources: /models/en-token.bin");
+            }
+            if (posStream == null) {
+                throw new IOException("POS model not found in resources: /models/en-pos-maxent.bin");
+            }
+            if (lemmaStream == null) {
+                throw new IOException("Lemmatizer model not found in resources: /models/opennlp-en-ud-ewt-lemm");
+            }
+
+            log.info("Loading tokenizer model...");
+            tokenizerModel = new TokenizerModel(tokenStream);
+
+            log.info("Loading POS model...");
+            posModel = new POSModel(posStream);
+
+            log.info("Loading lemmatizer model...");
+            lemmatizerModel = new LemmatizerModel(lemmaStream);
+
+            log.info("Loading stopwords...");
+            stopWords = new HashSet<>();
+            try (InputStream is = DirectIndexer.class.getResourceAsStream("/models/stopwords-en.txt")) {
+                if (is == null) {
+                    log.warn("Warning: stopwords-en.txt not found in resources");
+                } else {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (!line.trim().isEmpty()) {
+                            stopWords.add(line.trim().toLowerCase());
+                        }
+                    }
+                }
+            }
+
+            log.info("All models loaded successfully");
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to initialize OpenNLP models: " + e.getMessage(), e);
+        }
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -77,6 +175,9 @@ public class DirectIndexer {
 
         System.out.println("Time: " + (end - start) + "ms");
 
+        tokenizer.remove();
+        posTagger.remove();
+        lemmatizer.remove();
     }
 
     private static void processPage(Row page, Map<String, Map<String, WordStats>> wordMap, Map<String, StringBuffer> imageMap) throws InterruptedException{
@@ -106,7 +207,6 @@ public class DirectIndexer {
             } else {
                 WordStats stats = urlStatsMap.get(url);
                 stats.frequency++;
-                stats.firstLocation = Math.min(stats.firstLocation, i);
             }
         }
 
@@ -227,12 +327,73 @@ public class DirectIndexer {
         }
     }
 
-    public static String[] normalizeWord(String word) {
-        if (word == null) {
+    public static String[] normalizeWord(String text) {
+        if (text == null) {
             return new String[0];
         }
-        // Use regex to replace all non-alphabet characters with an empty string
-        return word.toLowerCase().replaceAll("[^a-zA-Z]", " ").split(" ");
+        try {
+            String filteredText = filterPage(text);
+            if (filteredText.isEmpty()) {
+                return new String[0];
+            }
+
+            String[] tokens = tokenizer.get().tokenize(filteredText);
+            if (tokens.length == 0) {
+                return new String[0];
+            }
+
+            String[] tags = posTagger.get().tag(tokens);
+            if (tags.length == 0) {
+                return new String[0];
+            }
+
+            String[] lemmas = lemmatizer.get().lemmatize(tokens, tags);
+
+            List<String> validWords = new ArrayList<>();
+            for (int i = 0; i < lemmas.length; i++) {
+                String lemma = lemmas[i].toLowerCase();
+                if (!lemma.isEmpty() && isValidWord(lemma, tags[i]) && !stopWords.contains(lemma)) {
+                    validWords.add(lemma);
+                }
+            }
+
+            return validWords.toArray(new String[0]);
+        } catch (Exception e) {
+            log.error("Error normalizing text: " + text, e);
+            return new String[0];
+        }
+    }
+
+    public static boolean isValidWord(String word, String pos) {
+        if (word.length() <= 2) {
+            return false;
+        }
+
+        if (!word.matches("^[a-zA-Z]+$")) {
+            return false;
+        }
+
+        if (word.matches(".*(.)\\1{2,}.*")) {
+            return false;
+        }
+
+        if (INVALID_POS.contains(pos)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public static String filterPage(String page) {
+        if(page == null) return "";
+        return page.toLowerCase()
+                .strip()
+                .replaceAll("<[^>]*>", " ")
+                .strip()
+                .replaceAll("[.,:;!?''\"()\\-\\r\\n\\t]", " ")
+                .strip()
+                .replaceAll("[^\\p{L}\\s]", " ")
+                .strip();
     }
 
     static Map<String, Set<String>> parseImages(String images) {
