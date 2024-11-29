@@ -12,8 +12,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 
 public class DirectIndexer2 {
@@ -111,20 +114,57 @@ public class DirectIndexer2 {
             }
         }
 
-        private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) throws InterruptedException {
-            Map<String, StringBuilder> wordMap = new ConcurrentHashMap<>();
-            Map<String, StringBuilder> imageMap = new ConcurrentHashMap<>();
-//            int pageCount = 0;
-//            List<String> pageDetails = new ArrayList<>();
+        private static void processIndexRow(Row index, Map<String, LinkImageEntry> indexedMap) throws InterruptedException {
+            String key = index.key();
+            String indexedLinks = index.get("links");
+            String indexedImgs = index.get("images");
+            indexedMap.put(key, new LinkImageEntry(indexedLinks, indexedImgs));
+        }
 
-            pages.forEachRemaining(page -> {
-                // stream parallel processing
+        private static void processBatch(List<Row> batch, Map<String, StringBuilder> wordMap, Map<String, StringBuilder> imageMap) {
+            batch.parallelStream().forEach(page -> {
                 try {
                     processPage(page, wordMap, imageMap);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             });
+        }
+
+        private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) throws InterruptedException {
+            Map<String, StringBuilder> wordMap = new ConcurrentHashMap<>();
+            Map<String, StringBuilder> imageMap = new ConcurrentHashMap<>();
+//            int pageCount = 0;
+//            List<String> pageDetails = new ArrayList<>();
+
+//            if (pages != null) {
+//                // stream parallel process
+//                Stream<Row> pageStream = StreamSupport.stream(
+//                        Spliterators.spliteratorUnknownSize(pages, Spliterator.ORDERED), true);
+//
+//                pageStream.forEach(page -> {
+//                    try {
+//                        processPage(page, wordMap, imageMap);
+//                    } catch (InterruptedException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                });
+//            }
+
+            ForkJoinPool customPool = new ForkJoinPool(4); // customize parallelism
+            customPool.submit(() -> {
+                List<Row> batch = new ArrayList<>();
+                while (pages.hasNext()) {
+                    batch.add(pages.next());
+                    if (batch.size() >= 1000) { // batch put
+                        processBatch(batch, wordMap, imageMap);
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    processBatch(batch, wordMap, imageMap);
+                }
+            }).join();
 
             System.out.println("Total pages processed: " + pageCount);
 
@@ -136,15 +176,30 @@ public class DirectIndexer2 {
             long lastTime = System.nanoTime();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-            Map<String, LinkImageEntry> indexedMap = new HashMap<>();
+            Map<String, LinkImageEntry> indexedMap = new ConcurrentHashMap<>();
 
-            while (indexes != null && indexes.hasNext()) {
-                Row index = indexes.next();
-                String key = index.key();
-                String indexedLinks = index.get("links");
-                String indexedImgs = index.get("images");
-                indexedMap.put(key, new LinkImageEntry(indexedLinks, indexedImgs));
+            if (indexes != null) {
+                // stream parallel process
+                Stream<Row> indexStream = StreamSupport.stream(
+                        Spliterators.spliteratorUnknownSize(indexes, Spliterator.ORDERED), true);
+
+                indexStream.forEach(index -> {
+                    try {
+                        processIndexRow(index, indexedMap);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
             }
+
+
+//            while (indexes != null && indexes.hasNext()) {
+//                Row index = indexes.next();
+//                String key = index.key();
+//                String indexedLinks = index.get("links");
+//                String indexedImgs = index.get("images");
+//                indexedMap.put(key, new LinkImageEntry(indexedLinks, indexedImgs));
+//            }
 
             final int[] tempCount = {0}; // Counter to track the number of entries printed
             indexedMap.forEach((key, entry) -> {

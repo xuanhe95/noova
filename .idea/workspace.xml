@@ -5,9 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/bin/rmTable.sh" beforeDir="false" afterPath="$PROJECT_DIR$/noova/bin/rmTable.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer2.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer2.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/DirectPageRank.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/DirectPageRank.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/webserver/src/main/java/org/noova/webserver/pool/FixedThreadPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/webserver/src/main/java/org/noova/webserver/pool/FixedThreadPool.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -115,7 +118,7 @@
       <recent name="org.noova.flame.operation" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.DirectIndexer2">
+  <component name="RunManager" selected="Application.DirectIndexer">
     <configuration name="DirectIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.indexer.DirectIndexer" />
       <module name="indexer" />

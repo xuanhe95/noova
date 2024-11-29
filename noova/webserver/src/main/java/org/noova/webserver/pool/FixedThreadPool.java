@@ -32,5 +32,12 @@ public class FixedThreadPool implements ThreadPool {
         taskQueue.put(task);
     }
 
+    // Poll periodically to check if all tasks are done
+    public void waitForCompletion() throws InterruptedException {
+        while (count.get() > 0) {
+            Thread.sleep(50);
+        }
+    }
+
 
 }

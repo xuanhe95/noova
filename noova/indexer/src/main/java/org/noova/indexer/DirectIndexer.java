@@ -4,6 +4,7 @@ import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
 import org.noova.tools.PropertyLoader;
+import org.noova.webserver.pool.FixedThreadPool;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -11,15 +12,28 @@ import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.time.LocalDateTime;
+
 
 
 public class DirectIndexer {
 
     private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
+    private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
+    private static final String CRAWL_URL = PropertyLoader.getProperty("table.crawler.url");
+    private static final String CRAWL_TEXT = PropertyLoader.getProperty("table.crawler.text");
+    private static final String CRAWL_IP = PropertyLoader.getProperty("table.crawler.ip");
+    private static final String CRAWL_IMAGES = PropertyLoader.getProperty("table.crawler.images");
+    private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
+    private static final String INDEX_LINKS = PropertyLoader.getProperty("table.index.links");
+    private static final String INDEX_IMAGES = PropertyLoader.getProperty("table.index.images");
+    static int pageCount = 0;
+    static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
+
     private static class WordStats {
         int frequency = 0;
         int firstLocation = Integer.MAX_VALUE;
@@ -45,14 +59,14 @@ public class DirectIndexer {
         System.out.println("Start indexing");
         Iterator<Row> pages = null;
         try {
-            pages = kvs.scan(PropertyLoader.getProperty("table.crawler"), startKey, endKey);
+            pages = kvs.scan(CRAWL_TABLE, startKey, endKey);
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
         }
 
         Iterator<Row> indexes = null;
         try {
-            indexes = kvs.scan(PropertyLoader.getProperty("table.index"), null, null);
+            indexes = kvs.scan(INDEX_TABLE, null, null);
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
         }
@@ -65,57 +79,71 @@ public class DirectIndexer {
 
     }
 
-    private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) throws InterruptedException {
-        Map<String, Map<String, WordStats>> wordMap = new ConcurrentHashMap<>();
-        Map<String, StringBuilder> imageMap = new ConcurrentHashMap<>();
+    private static void processPage(Row page, Map<String, Map<String, WordStats>> wordMap, Map<String, StringBuffer> imageMap) throws InterruptedException{
+        pageCount++;
+        pageDetails.add(page.key()+"\n");
 
-        int pageCount = 0;
-        List<String> pageDetails = new ArrayList<>();
+        String url = page.get(CRAWL_URL);
+        String text = page.get(CRAWL_TEXT);
+        //String ip = page.get(CRAWL_IP);
+        String images = page.get(CRAWL_IMAGES);
 
-        while(pages != null && pages.hasNext()) {
-            Row page = pages.next();
-            pageCount++;
-            pageDetails.add(page.key()+"\n");
+        String[] words = normalizeWord(text);
 
-            String url = page.get(PropertyLoader.getProperty("table.crawler.url"));
-            String text = page.get(PropertyLoader.getProperty("table.crawler.text"));
-            //String ip = page.get(PropertyLoader.getProperty("table.crawler.ip"));
-            String images = page.get(PropertyLoader.getProperty("table.crawler.images"));
-
-            String[] words = normalizeWord(text);
-
-            for(int i = 0; i < words.length; i++){
-                String word = words[i];
-                if(word == null || word.isEmpty() || url == null || url.isEmpty()){
-                    continue;
-                }
-                wordMap.putIfAbsent(word, new ConcurrentHashMap<>());
-                Map<String, WordStats> urlStatsMap = wordMap.get(word);
-
-                if (!urlStatsMap.containsKey(url)) {
-                    WordStats stats = new WordStats();
-                    stats.frequency = 1;
-                    stats.firstLocation = i;
-                    urlStatsMap.put(url, stats);
-                } else {
-                    WordStats stats = urlStatsMap.get(url);
-                    stats.frequency++;
-                    stats.firstLocation = Math.min(stats.firstLocation, i);
-                }
+        for(int i = 0; i < words.length; i++){
+            String word = words[i];
+            if(word == null || word.isEmpty() || url == null || url.isEmpty()){
+                continue;
             }
+            wordMap.putIfAbsent(word, new ConcurrentHashMap<>());
+            Map<String, WordStats> urlStatsMap = wordMap.get(word);
 
-            Map<String, Set<String>> wordImageMap = parseImages(images);
-            for(Map.Entry<String, Set<String>> entry : wordImageMap.entrySet()){
-                String word = entry.getKey();
-                Set<String> imageSet = entry.getValue();
-                StringBuilder builder = imageMap.computeIfAbsent(word, k -> new StringBuilder());
-                for(String image : imageSet){
-                    if (!builder.toString().contains(image)) {
-                        builder.append(image).append(DELIMITER);
-                    }
+            if (!urlStatsMap.containsKey(url)) {
+                WordStats stats = new WordStats();
+                stats.frequency = 1;
+                stats.firstLocation = i;
+                urlStatsMap.put(url, stats);
+            } else {
+                WordStats stats = urlStatsMap.get(url);
+                stats.frequency++;
+                stats.firstLocation = Math.min(stats.firstLocation, i);
+            }
+        }
+
+        Map<String, Set<String>> wordImageMap = parseImages(images);
+        for(Map.Entry<String, Set<String>> entry : wordImageMap.entrySet()){
+            String word = entry.getKey();
+            Set<String> imageSet = entry.getValue();
+            StringBuffer buffer = imageMap.computeIfAbsent(word, k -> new StringBuffer());
+            for(String image : imageSet){
+                if (!buffer.toString().contains(image)) {
+                    buffer.append(image).append(DELIMITER);
                 }
             }
         }
+    }
+
+
+    private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) throws InterruptedException {
+        Map<String, Map<String, WordStats>> wordMap = new ConcurrentHashMap<>();
+        Map<String, StringBuffer> imageMap = new ConcurrentHashMap<>();
+        FixedThreadPool threadPool = new FixedThreadPool(100);
+
+//        int pageCount = 0;
+//        List<String> pageDetails = new ArrayList<>();
+
+        // use threadpool
+        while(pages != null && pages.hasNext()) {
+            Row page = pages.next();
+            threadPool.execute(() -> {
+                try {
+                    processPage(page, wordMap, imageMap);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+        threadPool.waitForCompletion();
 
         try (BufferedWriter pageWriter = new BufferedWriter(new FileWriter("pages_processed.txt", true))) {
             for (String detail : pageDetails) {
@@ -151,7 +179,7 @@ public class DirectIndexer {
                 System.out.println("row key " + row.key());
             }
 
-            String imgs = row.get(PropertyLoader.getProperty("table.index.images"));
+            String imgs = row.get(INDEX_IMAGES);
 
             if (urlStatsMap != null) {
                 StringBuilder linksBuilder = new StringBuilder();
@@ -164,12 +192,12 @@ public class DirectIndexer {
                     linksBuilder.append(url).append(":").append(stats.frequency).append(",").append(stats.firstLocation);
                 }
 
-                String existingLinks = row.get(PropertyLoader.getProperty("table.index.links"));
+                String existingLinks = row.get(INDEX_LINKS);
                 if (existingLinks != null && !existingLinks.isEmpty()) {
                     linksBuilder.insert(0, existingLinks + DELIMITER);
                 }
 
-                row.put(PropertyLoader.getProperty("table.index.links"), linksBuilder.toString());
+                row.put(INDEX_LINKS, linksBuilder.toString());
             }
 
             if (imgs == null) {
@@ -177,7 +205,7 @@ public class DirectIndexer {
             } else {
                 imgs = imgs + DELIMITER + images;
             }
-            row.put(PropertyLoader.getProperty("table.index.images"), imgs);
+            row.put(INDEX_IMAGES, imgs);
 
             try {
 
@@ -191,7 +219,7 @@ public class DirectIndexer {
                             count, remainder, formattedTime, deltaTime);
                     lastTime = currentTime;
                 }
-                kvs.putRow(PropertyLoader.getProperty("table.index"), row);
+                kvs.putRow(INDEX_TABLE, row);
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
 
