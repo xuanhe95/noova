@@ -5,12 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_opennlp_opennlp_tools_2_3_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/indexer/src/main/resources/models/en-ner-location.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/indexer/src/main/resources/models/en-ner-person.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/bin/rmTable.sh" beforeDir="false" afterPath="$PROJECT_DIR$/noova/bin/rmTable.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer2.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer2.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/webserver/src/main/java/org/noova/webserver/pool/FixedThreadPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/webserver/src/main/java/org/noova/webserver/pool/FixedThreadPool.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -108,11 +108,11 @@
       <recent name="$PROJECT_DIR$/noova/sample" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/noova/indexer/src/main/resources/models" />
       <recent name="$PROJECT_DIR$/noova/bin" />
       <recent name="$PROJECT_DIR$/noova/sample/ver2" />
       <recent name="$PROJECT_DIR$/noova/sample/ver1" />
       <recent name="$PROJECT_DIR$/noova" />
-      <recent name="$PROJECT_DIR$" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
       <recent name="org.noova.flame.operation" />
@@ -122,7 +122,7 @@
     <configuration name="DirectIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.indexer.DirectIndexer" />
       <module name="indexer" />
-      <option name="PROGRAM_PARAMETERS" value="a m" />
+      <option name="PROGRAM_PARAMETERS" value="a b" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
       <extension name="coverage">
         <pattern>
@@ -221,6 +221,20 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="URLDict" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.URLDict" />
+      <module name="indexer" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.indexer.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration default="true" type="JetRunConfigurationType">
       <module name="24fa-cis5550-Noova" />
       <method v="2">
@@ -238,10 +252,12 @@
       <item itemvalue="Application.KVSWorker2" />
       <item itemvalue="Application.KVSCoordinator" />
       <item itemvalue="Application.GatewayServer" />
+      <item itemvalue="Application.URLDict" />
       <item itemvalue="Application.DirectPageRank" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.URLDict" />
         <item itemvalue="Application.DirectPageRank" />
       </list>
     </recent_temporary>
