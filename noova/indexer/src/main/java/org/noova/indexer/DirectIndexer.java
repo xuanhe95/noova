@@ -1,10 +1,8 @@
 package org.noova.indexer;
 
+import opennlp.tools.lemmatizer.DictionaryLemmatizer;
 import opennlp.tools.lemmatizer.Lemmatizer;
-import opennlp.tools.lemmatizer.LemmatizerME;
-import opennlp.tools.lemmatizer.LemmatizerModel;
 import opennlp.tools.namefind.NameFinderME;
-import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTagger;
 import opennlp.tools.postag.POSTaggerME;
@@ -59,31 +57,12 @@ public class DirectIndexer {
 
     private static final TokenizerModel tokenizerModel;
     private static final POSModel posModel;
-    private static final LemmatizerModel lemmatizerModel;
+    private static final Tokenizer tokenizer;
+    private static final POSTagger posTagger;
+    private static final Lemmatizer lemmatizer;
     private static final Set<String> stopWords;
     private static NameFinderME personNameFinder;
     private static NameFinderME locationNameFinder;
-
-    private static final ThreadLocal<Tokenizer> tokenizer = new ThreadLocal<>() {
-        @Override
-        protected Tokenizer initialValue() {
-            return new TokenizerME(tokenizerModel);
-        }
-    };
-
-    private static final ThreadLocal<POSTagger> posTagger = new ThreadLocal<>() {
-        @Override
-        protected POSTagger initialValue() {
-            return new POSTaggerME(posModel);
-        }
-    };
-
-    private static final ThreadLocal<Lemmatizer> lemmatizer = new ThreadLocal<>() {
-        @Override
-        protected Lemmatizer initialValue() {
-            return new LemmatizerME(lemmatizerModel);
-        }
-    };
 
     private static final Set<String> INVALID_POS = Set.of(
             "DT",  // determiner (the, a, an)
@@ -105,8 +84,7 @@ public class DirectIndexer {
 
             InputStream tokenStream = DirectIndexer.class.getResourceAsStream("/models/en-token.bin");
             InputStream posStream = DirectIndexer.class.getResourceAsStream("/models/en-pos-maxent.bin");
-            InputStream lemmaStream = DirectIndexer.class.getResourceAsStream("/models/opennlp-en-ud-ewt-lemmas-1.2-2.5.0.bin");
-
+            InputStream dictStream = DirectIndexer.class.getResourceAsStream("/models/en-lemmatizer.dict.txt");
 
             if (tokenStream == null) {
                 throw new IOException("Tokenizer model not found in resources: /models/en-token.bin");
@@ -114,31 +92,9 @@ public class DirectIndexer {
             if (posStream == null) {
                 throw new IOException("POS model not found in resources: /models/en-pos-maxent.bin");
             }
-            if (lemmaStream == null) {
-                throw new IOException("Lemmatizer model not found in resources: /models/opennlp-en-ud-ewt-lemm");
+            if (dictStream == null) {
+                throw new IOException("can not find：/models/dictionary.txt");
             }
-
-            if (ENABLE_PARSE_ENTITY) {
-                log.info("Loading NER models...");
-                InputStream personModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-person.bin");
-                InputStream locationModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-location.bin");
-
-                if (personModelStream == null || locationModelStream == null) {
-                    throw new IOException("NER models not found in resources.");
-                }
-
-                TokenNameFinderModel personModel = new TokenNameFinderModel(personModelStream);
-                TokenNameFinderModel locationModel = new TokenNameFinderModel(locationModelStream);
-
-                personNameFinder = new NameFinderME(personModel);
-                locationNameFinder = new NameFinderME(locationModel);
-
-                personModelStream.close();
-                locationModelStream.close();
-            } else {
-                log.info("NER models not enabled (ENABLE_PARSE_ENTITY = false)");
-            }
-
 
             log.info("Loading tokenizer model...");
             tokenizerModel = new TokenizerModel(tokenStream);
@@ -146,8 +102,9 @@ public class DirectIndexer {
             log.info("Loading POS model...");
             posModel = new POSModel(posStream);
 
-            log.info("Loading lemmatizer model...");
-            lemmatizerModel = new LemmatizerModel(lemmaStream);
+            tokenizer = new TokenizerME(tokenizerModel);
+            posTagger = new POSTaggerME(posModel);
+            lemmatizer = new DictionaryLemmatizer(dictStream);
 
             log.info("Loading stopwords...");
             stopWords = new HashSet<>();
@@ -214,9 +171,6 @@ public class DirectIndexer {
 
         System.out.println("Time: " + (end - start) + "ms");
 
-        tokenizer.remove();
-        posTagger.remove();
-        lemmatizer.remove();
     }
 
     private static void processPage(Row page,
@@ -304,7 +258,7 @@ public class DirectIndexer {
             throw new IllegalStateException("NER models not initialized. Ensure ENABLE_PARSE_ENTITY is true and models are loaded.");
         }
 
-        String[] tokens = tokenizer.get().tokenize(text);
+        String[] tokens = tokenizer.tokenize(text);
 
         // parse person entities
         Span[] personSpans = personNameFinder.find(tokens);
@@ -588,17 +542,17 @@ public class DirectIndexer {
                 return new String[0];
             }
 
-            String[] tokens = tokenizer.get().tokenize(filteredText);
+            String[] tokens = tokenizer.tokenize(filteredText);
             if (tokens.length == 0) {
                 return new String[0];
             }
 
-            String[] tags = posTagger.get().tag(tokens);
+            String[] tags = posTagger.tag(tokens);
             if (tags.length == 0) {
                 return new String[0];
             }
 
-            String[] lemmas = lemmatizer.get().lemmatize(tokens, tags);
+            String[] lemmas = lemmatizer.lemmatize(tokens, tags);
 
             List<String> validWords = new ArrayList<>();
             for (int i = 0; i < lemmas.length; i++) {
@@ -688,6 +642,4 @@ public class DirectIndexer {
         }
         return "";
     }
-
-
 }
