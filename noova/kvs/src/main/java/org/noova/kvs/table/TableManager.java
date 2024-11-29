@@ -4,6 +4,7 @@ import org.noova.kvs.Row;
 import org.noova.kvs.Worker;
 import org.noova.kvs.version.Version;
 import org.noova.tools.Logger;
+import org.noova.tools.Parser;
 import org.noova.tools.PropertyLoader;
 
 import java.io.File;
@@ -25,7 +26,9 @@ public class TableManager implements ITableManager {
     private static final boolean ENABLE_PAGE_VIEW = false;
     private static final boolean ENABLE_VIEW_FOLD = true;
 
-    private static final int VIEW_FOLD_LENGTH = 255;
+    private static final boolean ENABLE_IMAGE_PARSE = true;
+
+    private static final int VIEW_FOLD_LENGTH = 1024;
 
     private static String storageDir;
     private TableManager(){
@@ -176,7 +179,18 @@ public class TableManager implements ITableManager {
                 } else {
                     log.info("[view] get value: " + new String(value));
                     String textValue = new String(value);
-                    if(columnName.toLowerCase().strip().equals(icon) || columnName.toLowerCase().strip().equals(images)){
+                    if(tableKey.equals(PropertyLoader.getProperty("table.index"))){
+                        if(columnName.toLowerCase().strip().equals(PropertyLoader.getProperty("table.crawler.images"))){
+                            String[] imageContents = Parser.imagesToHtml(textValue);
+                            StringBuilder imgBuilder = new StringBuilder();
+                            for(String img : imageContents){
+                                imgBuilder.append(img);
+                            }
+                            textValue = imgBuilder.toString();
+                        }
+                    }
+
+                    else if(columnName.toLowerCase().strip().equals(icon) || columnName.toLowerCase().strip().equals(images)){
                         String[] imgs = textValue.split("\n");
                         int count = 0;
                         StringBuilder imgBuilder = new StringBuilder();

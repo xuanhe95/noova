@@ -18,7 +18,6 @@ import org.noova.kvs.Row;
 import org.noova.tools.Hasher;
 import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
-import org.noova.webserver.pool.FixedThreadPool;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -26,9 +25,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDateTime;
@@ -37,7 +33,7 @@ import java.time.LocalDateTime;
 public class DirectIndexer {
 
     private static final Logger log = Logger.getLogger(DirectIndexer.class);
-    private static final boolean ENABLE_ENTITY = false;
+    private static final boolean ENABLE_PARSE_ENTITY = false;
     private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
     private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
     private static final String CRAWL_URL = PropertyLoader.getProperty("table.crawler.url");
@@ -47,11 +43,14 @@ public class DirectIndexer {
     private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
     private static final String INDEX_LINKS = PropertyLoader.getProperty("table.index.links");
     private static final String INDEX_IMAGES = PropertyLoader.getProperty("table.index.images");
-    private static final String URL_ID_TABLE = "pt-urltoid";
+    private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url");
+    private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url.id");
     private static final String GLOBAL_COUNTER_TABLE = "pt-count";
     private static final String GLOBAL_COUNTER_KEY = "global_counter";
+
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
+    static final Map<String, String> URL_ID_CACHE = new HashMap<>();
 
     private static class WordStats {
         int frequency = 0;
@@ -119,7 +118,7 @@ public class DirectIndexer {
                 throw new IOException("Lemmatizer model not found in resources: /models/opennlp-en-ud-ewt-lemm");
             }
 
-            if (ENABLE_ENTITY) {
+            if (ENABLE_PARSE_ENTITY) {
                 log.info("Loading NER models...");
                 InputStream personModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-person.bin");
                 InputStream locationModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-location.bin");
@@ -137,7 +136,7 @@ public class DirectIndexer {
                 personModelStream.close();
                 locationModelStream.close();
             } else {
-                log.info("NER models not enabled (ENABLE_ENTITY = false)");
+                log.info("NER models not enabled (ENABLE_PARSE_ENTITY = false)");
             }
 
 
@@ -195,6 +194,7 @@ public class DirectIndexer {
             pages = kvs.scan(CRAWL_TABLE, startKey, endKey);
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
+            return;
         }
 
         Iterator<Row> indexes = null;
@@ -204,6 +204,10 @@ public class DirectIndexer {
             System.out.println("Error: " + e.getMessage());
         }
 
+        // load url id to the cache
+        System.out.println("Loading URL ID...");
+        loadUrlId(kvs);
+        System.out.println("URL ID loaded");
         generateInvertedIndexBatch(kvs, pages, indexes);
 
         long end = System.currentTimeMillis();
@@ -244,7 +248,11 @@ public class DirectIndexer {
         }
 
         // normalize words (lemmatize + stop word rm) and populate wordMap
+        long startTime = System.currentTimeMillis();
         String[] words = normalizeWord(text);
+        long endTime = System.currentTimeMillis();
+        long duration = (endTime - startTime);
+        System.out.println("Time to normalize words: " + duration + "ms");
         for(int i = 0; i < words.length; i++){
             String word = words[i];
             if(word == null || word.isEmpty()){
@@ -252,6 +260,8 @@ public class DirectIndexer {
             }
             wordMap.putIfAbsent(word, new ConcurrentHashMap<>());
             Map<String, WordStats> urlStatsMap = wordMap.get(word);
+
+            //System.out.println("Word: " + word + " URL: " + urlId);
 
             if (!urlStatsMap.containsKey(urlId)) {
                 WordStats stats = new WordStats();
@@ -265,7 +275,7 @@ public class DirectIndexer {
         }
 
         // parse named entities
-        if(ENABLE_ENTITY){
+        if(ENABLE_PARSE_ENTITY){
             extractNamedEntities(text, urlId, namedEntityMap);
         }
 
@@ -286,12 +296,12 @@ public class DirectIndexer {
     private static void extractNamedEntities(String text, String urlId, Map<String, Map<String, WordStats>> namedEntityMap) {
         // helper to extract entity in a page
 
-        if (!ENABLE_ENTITY|| text == null || text.trim().isEmpty()) {
+        if (!ENABLE_PARSE_ENTITY || text == null || text.trim().isEmpty()) {
             return; // skip ner processing
         }
 
         if (personNameFinder == null || locationNameFinder == null) {
-            throw new IllegalStateException("NER models not initialized. Ensure ENABLE_ENTITY is true and models are loaded.");
+            throw new IllegalStateException("NER models not initialized. Ensure ENABLE_PARSE_ENTITY is true and models are loaded.");
         }
 
         String[] tokens = tokenizer.get().tokenize(text);
@@ -416,7 +426,7 @@ public class DirectIndexer {
             if (urlStatsMap != null) {
                 StringBuilder linksBuilder = new StringBuilder();
                 for (Map.Entry<String, WordStats> entry : urlStatsMap.entrySet()) {
-                    if (linksBuilder.length() > 0) {
+                    if (!linksBuilder.isEmpty()) {
                         linksBuilder.append(DELIMITER);
                     }
                     String urlId = entry.getKey(); // use urlID instead of full url
@@ -482,7 +492,7 @@ public class DirectIndexer {
             if (urlStatsMap != null) {
                 StringBuilder linksBuilder = new StringBuilder();
                 for (Map.Entry<String, WordStats> entry : urlStatsMap.entrySet()) {
-                    if (linksBuilder.length() > 0) {
+                    if (!linksBuilder.isEmpty()) {
                         linksBuilder.append(DELIMITER);
                     }
                     String urlId = entry.getKey(); // use urlID instead of full url
@@ -518,31 +528,51 @@ public class DirectIndexer {
         }
     }
 
+    private static void loadUrlId(KVS kvs) throws IOException {
+        var ids = kvs.scan(URL_ID_TABLE, null, null);
+        ids.forEachRemaining(row -> {
+            String id = row.get(URL_ID_VALUE);
+            if(id == null){
+                return;
+            }
+            URL_ID_CACHE.put(row.key(), id);
+        });
+    }
+
 
     private static String getUrlId(KVS kvs, String url) throws IOException {
+
+        if(URL_ID_CACHE.containsKey(url)){
+            System.out.println("URL_ID_CACHE contains url: " + url);
+            return URL_ID_CACHE.get(url);
+        }
+
         // use URL_ID_TABLE to find an url's corresponding urlID
         Row row = kvs.getRow(URL_ID_TABLE, Hasher.hash(url));
         if (row != null) {
-            return row.get("value");
+            String id = row.get(URL_ID_VALUE);
+            URL_ID_CACHE.put(url, id);
+            return id;
         }
 
         // generate new id if url DNE
         synchronized (GLOBAL_COUNTER_KEY) {
             Row counterRow = kvs.getRow(GLOBAL_COUNTER_TABLE, GLOBAL_COUNTER_KEY);
-            int globalCounter = (counterRow != null) ? Integer.parseInt(counterRow.get("value")) : 0;
+            int globalCounter = (counterRow != null) ? Integer.parseInt(counterRow.get(URL_ID_VALUE)) : 0;
 
             // update global counter
             globalCounter++;
             if (counterRow == null) {
                 counterRow = new Row(GLOBAL_COUNTER_KEY);
             }
-            counterRow.put("value", String.valueOf(globalCounter));
+            counterRow.put(URL_ID_VALUE, String.valueOf(globalCounter));
             kvs.putRow(GLOBAL_COUNTER_TABLE, counterRow);
 
             // store url and global counter to URL_ID_TABLE
             Row urlRow = new Row(Hasher.hash(url));
-            urlRow.put("value", String.valueOf(globalCounter));
+            urlRow.put(URL_ID_VALUE, String.valueOf(globalCounter));
             kvs.putRow(URL_ID_TABLE, urlRow);
+            URL_ID_CACHE.put(url, String.valueOf(globalCounter));
 
             return String.valueOf(globalCounter);
         }
@@ -624,8 +654,10 @@ public class DirectIndexer {
         Map<String, Set<String>> wordImageMap = new HashMap<>();
         String[] rawImages = images.split("\n");
         for(String rawImage : rawImages){
-            String alt = extractImageAlt(rawImage);
-            if(alt == null || alt.isEmpty()){
+            String alt = extractImage(rawImage, "alt");
+            // only save the src of the image
+            String src = extractImage(rawImage, "src");
+            if(alt == null || alt.isEmpty() || src == null || src.isEmpty()){
                 continue;
             }
 
@@ -636,17 +668,17 @@ public class DirectIndexer {
                     continue;
                 }
                 Set<String> imageSet = wordImageMap.computeIfAbsent(word, k -> new HashSet<>());
-                imageSet.add(rawImage);
+                imageSet.add(src);
             }
         }
         return wordImageMap;
     }
 
-    static String extractImageAlt(String html) {
+    static String extractImage(String html, String tag) {
         if(html == null || html.isEmpty()){
             return "";
         }
-        String regex = "alt\\s*=\\s*\"([^\"]*)\"";
+        String regex = tag + "\\s*=\\s*\"([^\"]*)\"";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(html);
 
@@ -656,4 +688,6 @@ public class DirectIndexer {
         }
         return "";
     }
+
+
 }
