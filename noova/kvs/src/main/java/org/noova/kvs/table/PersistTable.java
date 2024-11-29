@@ -12,8 +12,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
 /**
  * @author Xuanhe Zhang
@@ -53,6 +52,10 @@ public class PersistTable implements Table {
 
     @Override
     public List<Row> getRows(String startKey, String endKeyExclusive) {
+       return getRows(startKey, endKeyExclusive, Integer.MAX_VALUE);
+    }
+
+    public List<Row> getRows(String startKey, String endKeyExclusive, int limit) {
         if(startKey == null){
             log.info("[persist table] start key is null, get all rows until " + endKeyExclusive);
             startKey = "";
@@ -60,14 +63,15 @@ public class PersistTable implements Table {
 
 
         List<Row> rows = new Vector<>();
-        List<File> files = getAllFiles();
+        List<File> files = getPartialFiles(startKey, endKeyExclusive, limit);
         log.info("[persist table] all file size: " + files.size());
         for(File f : files){
             String filename = f.getName();
             log.info("[persist table] filename: " + filename);
-            if(filename.compareTo(startKey) >= 0
-                    && (endKeyExclusive == null || filename.compareTo(endKeyExclusive) < 0)
-                    && !f.isHidden()){
+//            if(filename.compareTo(startKey) >= 0
+//                    && (endKeyExclusive == null || filename.compareTo(endKeyExclusive) < 0)
+//                    && !f.isHidden()){
+            if(!f.isHidden()){
                 log.info("[persist table] read from rootFile: " + f.getAbsolutePath());
                 try (IOStrategy io = new FileIOStrategy(f)){
                     Row row = Row.readFrom(io.in());
@@ -303,6 +307,35 @@ public class PersistTable implements Table {
 //        return keys;
 //    }
 
+    private List<File> getPartialFiles(String startKey, String endKeyExclusive, int limit){
+        List<File> files = new Vector<>();
+        getAllFilesRecursively(files, this.rootFile, startKey, null);
+        files.sort(Comparator.comparing(File::getName));
+        List<File> result = new ArrayList<>();
+        for(int i = 0; i < Math.min(files.size(), limit); i++){
+            result.add(files.get(i));
+        }
+        return result;
+    }
+
+    private void getAllFilesRecursively(List<File> list, File rootFile, String startKey, String endKeyExclusive){
+        File[] files = rootFile.listFiles();
+        if(files == null) {
+            return;
+        }
+
+        for(File f : files){
+            if(f.isDirectory()){
+                getAllFilesRecursively(list, f, startKey, endKeyExclusive);
+            } else if(f.getName().compareTo(startKey) >= 0 && (endKeyExclusive == null || f.getName().compareTo(endKeyExclusive) < 0)){
+                list.add(f);
+            }
+//            else {
+//                list.add(f);
+//            }
+        }
+    }
+
     private List<File> getAllFiles(){
         List<File> files = new Vector<>();
         getAllFilesRecursively(files, this.rootFile);
@@ -311,37 +344,7 @@ public class PersistTable implements Table {
 
     @Override
     public Vector<Row> getSortedRows(String startKey, int limit){
-//        List<File> files = getAllFiles();
-//        Vector<Row> rows = new Vector<>();
-//        files.sort((a, b) -> a.getName().compareTo(b.getName()));
-//
-//        if(startKey == null){
-//            log.info("[persist table] start key is null, set to empty string");
-//            startKey = "";
-//        }
-//
-//        log.info("[persist table] rows size: " + files.size());
-//        log.info("[persist table] start key: " + startKey);
-//
-//        for(File f : files){
-//            String filename = f.getName();
-//            if(filename.compareTo(startKey) >= 0 && !f.isHidden()){
-//                try {
-//                    IOStrategy io = new FileIOStrategy(f);
-//                    Row row = Row.readFrom(io.in());
-//                    log.info("[persist table] read from rootFile: " + f.getAbsolutePath());
-//                    rows.add(row);
-//                    if(rows.size() >= limit){
-//                        break;
-//                    }
-//                } catch (Exception e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//        }
-//
-
-        List<Row> rows = getRows(startKey, null);
+        List<Row> rows = getRows(startKey, null, limit + 1);
         log.info("[persist table] rows size: " + rows.size());
         rows.sort((a, b) -> a.key().compareTo(b.key()));
         Vector<Row> vector = new Vector<>();
