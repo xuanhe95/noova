@@ -116,11 +116,11 @@ public class URLDict {
                     //System.out.println("add new key: " + rowKey+" value: "+counter);
                     Row row = new Row(rowKey);
                     row.put("value", String.valueOf(counter));
-                    row.put("url",url);
+                    //row.put("url",url);
                     kvs.putRow(URL_ID_TABLE,row);
                     row = new Row(String.valueOf(counter));
                     row.put("value", rowKey);
-                    row.put("url", url);
+                    //row.put("url", url);
                     kvs.putRow(ID_URL_TABLE,row);
                     counter++;
                 }
