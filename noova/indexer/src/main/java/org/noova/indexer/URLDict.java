@@ -95,7 +95,7 @@ public class URLDict {
             Row mappingRow = mapping.next();
             String key = mappingRow.key();
             String value = mappingRow.get("value");
-            System.out.println("Processing key: " + key + " value: " + value);
+            //System.out.println("Processing key: " + key + " value: " + value);
             map_table.put(key, value);
             counter++;
         }
