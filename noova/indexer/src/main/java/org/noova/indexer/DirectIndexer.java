@@ -33,7 +33,7 @@ import java.time.LocalDateTime;
 public class DirectIndexer {
 
     private static final Logger log = Logger.getLogger(DirectIndexer.class);
-    private static final boolean ENABLE_PARSE_ENTITY = false;
+    private static final boolean ENABLE_PARSE_ENTITY = true;
     private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
     private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
     private static final String CRAWL_URL = PropertyLoader.getProperty("table.crawler.url");
@@ -62,6 +62,7 @@ public class DirectIndexer {
     private static final Set<String> stopWords;
     private static NameFinderME personNameFinder;
     private static NameFinderME locationNameFinder;
+    private static NameFinderME organizationNameFinder;
 
     private static final Set<String> INVALID_POS = Set.of(
             "DT",  // determiner (the, a, an)
@@ -125,19 +126,23 @@ public class DirectIndexer {
                 log.info("Loading NER models...");
                 InputStream personModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-person.bin");
                 InputStream locationModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-location.bin");
+                InputStream organizationModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-organization.bin");
 
-                if (personModelStream == null || locationModelStream == null) {
+                if (personModelStream == null || locationModelStream == null|| organizationModelStream == null) {
                     throw new IOException("NER models not found in resources.");
                 }
 
                 TokenNameFinderModel personModel = new TokenNameFinderModel(personModelStream);
                 TokenNameFinderModel locationModel = new TokenNameFinderModel(locationModelStream);
+                TokenNameFinderModel organizationModel = new TokenNameFinderModel(organizationModelStream);
 
                 personNameFinder = new NameFinderME(personModel);
                 locationNameFinder = new NameFinderME(locationModel);
+                organizationNameFinder = new NameFinderME(organizationModel);
 
                 personModelStream.close();
                 locationModelStream.close();
+                organizationModelStream.close();
             } else {
                 log.info("NER models not enabled (ENABLE_ENTITY = false)");
             }
@@ -228,17 +233,9 @@ public class DirectIndexer {
             return;
         }
 
-        // tokenize text
-        String[] tokens = tokenizeText(text);
-
-        // parse named entities
-        if(ENABLE_PARSE_ENTITY){
-            extractEntities(tokens, urlId, entityMap);
-        }
-
         // parse single normalized words (lemmatize + stop word rm) and populate wordMap
         long startTime = System.currentTimeMillis();
-        String[] words = normalizeWord(tokens);
+        String[] words = normalizeWord(text, "Single");
         long endTime = System.currentTimeMillis();
         long duration = (endTime - startTime);
         System.out.println("Time to normalize words: " + duration + "ms");
@@ -275,14 +272,45 @@ public class DirectIndexer {
                 }
             }
         }
+
+        // parse named entities
+        if(ENABLE_PARSE_ENTITY){
+//            extractEntities(String.join(" ", words), urlId, entityMap); // clean text but no entity match..
+            extractEntities(text, urlId, entityMap); // raw text
+        }
     }
 
-    private static void extractEntities(String [] tokens, String urlId, Map<String, Map<String, WordStats>> entityMap) {
+    private static void extractEntities(String text, String urlId, Map<String, Map<String, WordStats>> entityMap) {
         // helper to extract entity in a page
 
-        if (!ENABLE_PARSE_ENTITY ) {
+        if (!ENABLE_PARSE_ENTITY || text==null || text.trim().isEmpty()) {
             return; // skip ner processing
         }
+
+        String[] tokens = tokenizer.tokenize(text);
+//        for (String token : tokens)  System.out.println("Token: " + token);
+
+//        String [] entities = normalizeWord(text, "Entity");
+//        for(int i = 0; i < entities.length; i++){
+//            String entity = entities[i];
+//            if(entity == null || entity.isEmpty()){
+//                continue;
+//            }
+//            entityMap.putIfAbsent(entity, new ConcurrentHashMap<>());
+//            Map<String, WordStats> urlStatsMap = entityMap.get(entity);
+//
+//            //System.out.println("Word: " + word + " URL: " + urlId);
+//
+//            if (!urlStatsMap.containsKey(urlId)) {
+//                WordStats stats = new WordStats();
+//                stats.frequency = 1;
+//                stats.firstLocation = i;
+//                urlStatsMap.put(urlId, stats);
+//            } else {
+//                WordStats stats = urlStatsMap.get(urlId);
+//                stats.frequency++;
+//            }
+//        }
 
 
         // parse person entities
@@ -295,6 +323,12 @@ public class DirectIndexer {
         if (locationNameFinder != null) {
             Span[] locationSpans = locationNameFinder.find(tokens);
             updateEntityMap(locationSpans, tokens, urlId, entityMap);
+        }
+
+        // parse organization entities
+        if (organizationNameFinder != null) {
+            Span[] organizationSpans = organizationNameFinder.find(tokens);
+            updateEntityMap(organizationSpans, tokens, urlId, entityMap);
         }
 
     }
@@ -333,23 +367,6 @@ public class DirectIndexer {
         Map<String, StringBuffer> imageMap = new ConcurrentHashMap<>();
         Map<String, Map<String, WordStats>> entityMap= new ConcurrentHashMap<>();
 
-//        // option 1. use threadpool
-//        FixedThreadPool threadPool = new FixedThreadPool(100);
-//
-//
-//        while(pages != null && pages.hasNext()) {
-//            Row page = pages.next();
-//            threadPool.execute(() -> {
-//                try {
-//                    processPage(page, wordMap, imageMap, entityMap, kvs);
-//                } catch (InterruptedException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            });
-//        }
-//        threadPool.waitForCompletion();
-
-//         option 2. dynamically sized pool
         ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 
         forkJoinPool.submit(() -> pages.forEachRemaining(page -> {
@@ -360,14 +377,6 @@ public class DirectIndexer {
             }
         })).join();
 
-//        // option 3. sequential
-//        pages.forEachRemaining(page -> {
-//            try {
-//                processPage(page , wordMap , imageMap , entityMap, kvs);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//        });
 
         try (BufferedWriter pageWriter = new BufferedWriter(new FileWriter("pages_processed.txt", true))) {
             for (String detail : pageDetails) {
@@ -387,7 +396,7 @@ public class DirectIndexer {
             saveEntityIndexToTable(kvs, entityMap);
     }
 
-    private static void saveEntityIndexToTable(KVS kvs, Map<String, Map<String, WordStats>> entityMap) throws IOException {
+    private static void saveEntityIndexToTable(KVS kvs, Map<String, Map<String, WordStats>> entityMap) {
         // helper to save entity to pt-index
         Set<String> mergedEntity = new HashSet<>(entityMap.keySet());
 
@@ -398,15 +407,17 @@ public class DirectIndexer {
         for(String entity : mergedEntity) {
 //        mergedWords.parallelStream().forEach(word->{
             Map<String, WordStats> urlStatsMap = entityMap.get(entity);
+            String rowKey = entity.trim().replaceAll("\\s+", "-").toLowerCase();
+            System.out.println("generated row key: "+rowKey);
 
             Row row = null;
             try {
-                row = kvs.getRow(INDEX_TABLE , entity);
+                row = kvs.getRow("pt-entity-index" , rowKey);
             } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
             }
             if (row == null) {
-                row = new Row(entity);
+                row = new Row(rowKey);
             }
             if (row.key().isEmpty()) {
                 System.out.println("row key " + row.key());
@@ -444,7 +455,7 @@ public class DirectIndexer {
                             count , remainder , formattedTime , deltaTime);
                     lastTime=currentTime;
                 }
-                kvs.putRow(INDEX_TABLE , row);
+                kvs.putRow("pt-entity-index"  , row);
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
 
@@ -578,11 +589,16 @@ public class DirectIndexer {
         return tokens;
     }
 
-    public static String[] normalizeWord( String [] tokens) {
-        if (tokens == null || tokens.length==0) {
+    public static String[] normalizeWord( String text, String type) {
+        if (text == null || text.isEmpty()) {
             return new String[0];
         }
         try {
+
+            String[] tokens = tokenizer.tokenize(text);
+            if (tokens.length == 0) {
+                return new String[0];
+            }
 
             // tag part of speech
             String[] tags = posTagger.tag(tokens);
@@ -592,15 +608,43 @@ public class DirectIndexer {
 
             // lemmatize token
             String[] lemmas = lemmatizer.lemmatize(tokens, tags);
-
-            // filter stop words
             List<String> validWords = new ArrayList<>();
-            for (int i = 0; i < lemmas.length; i++) {
-                String lemma = lemmas[i].toLowerCase();
-                if (!lemma.isEmpty() && isValidWord(lemma, tags[i]) && !stopWords.contains(lemma)) {
-                    validWords.add(lemma);
+
+//            // phrase preprocess - build a phrase until a stop word
+//            if (type.equals("Entity")){
+//                StringBuilder entityBuilder = new StringBuilder();
+//                for (int i = 0; i < lemmas.length; i++) {
+//                    String token = tokens[i].toLowerCase();
+//                    // build a phrase until stop word
+//                    if (!stopWords.contains(token)) {
+//                        if (entityBuilder.length() > 0) {
+//                            entityBuilder.append(" ");
+//                        }
+//                        entityBuilder.append(token);
+//                    } else {
+//                        if (entityBuilder.length() > 0) {
+//                            validWords.add(entityBuilder.toString());
+//                            entityBuilder.setLength(0); // clear builder
+//                        }
+//                    }
+//                }
+//                if (entityBuilder.length() > 0) {
+//                    validWords.add(entityBuilder.toString());
+//                }
+//                validWords.removeIf(entity -> entity.split("\\s+").length < 2);
+//                System.out.println("validwords size: "+validWords.size()+"; word: "+ validWords.get(0)+"||"+validWords.get(1));
+//            }
+//
+//            // single word preprocess
+//            else {
+                for (int i = 0; i < lemmas.length; i++) {
+                    String lemma = lemmas[i].toLowerCase();
+                    if (!lemma.isEmpty() && isValidWord(lemma, tags[i]) && !stopWords.contains(lemma)) {
+                        validWords.add(lemma);
+                    }
                 }
-            }
+//            }
+
 
             return validWords.toArray(new String[0]);
         } catch (Exception e) {
@@ -655,8 +699,7 @@ public class DirectIndexer {
                 continue;
             }
 
-            String [] tokens = tokenizeText(alt);
-            String[] words = normalizeWord(tokens);
+            String[] words = normalizeWord(alt, "Image");
 
             for(String word : words){
                 if(word == null || word.isBlank()){
