@@ -47,6 +47,7 @@ public class DirectIndexer {
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
     static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
+    private static final Map<String, String> wordCache = new ConcurrentHashMap<>();
 
     private static class WordStats {
         int frequency = 0;
@@ -92,7 +93,7 @@ public class DirectIndexer {
                 throw new IOException("POS model not found in resources: /models/en-pos-maxent.bin");
             }
             if (dictStream == null) {
-                throw new IOException("can not find：/models/dictionary.txt");
+                throw new IOException("can not find：/models/en-lemmatizer.dict.txt");
             }
 
             log.info("Loading tokenizer model...");
@@ -540,34 +541,54 @@ public class DirectIndexer {
         return tokens;
     }
 
-    public static String[] normalizeWord( String [] tokens) {
-        if (tokens == null) {
-            return new String[0];
-        }
-        try {
+    public static String[] normalizeWord(String[] tokens) {
+        if (tokens == null || tokens.length == 0) return new String[0];
 
-            // tag part of speech
-            String[] tags = posTagger.tag(tokens);
-            if (tags.length == 0) {
-                return new String[0];
-            }
+        List<String> allValidWords = new ArrayList<>(tokens.length);
 
-            // lemmatize token
-            String[] lemmas = lemmatizer.lemmatize(tokens, tags);
-            List<String> validWords = new ArrayList<>();
-            for (int i = 0; i < lemmas.length; i++) {
-                String lemma = lemmas[i].toLowerCase();
-                if (!lemma.isEmpty() && isValidWord(lemma, tags[i]) && !stopWords.contains(lemma)) {
-                    validWords.add(lemma);
+        String[] batchTokens = new String[Math.min(1000, tokens.length)];
+        int batchSize = 0;
+
+        for (String token : tokens) {
+            String cached = wordCache.get(token);
+            if (cached != null) {
+                if (!cached.isEmpty()) {
+                    allValidWords.add(cached);
                 }
+                continue;
             }
 
+            batchTokens[batchSize++] = token;
 
+            if (batchSize == batchTokens.length) {
+                processTokenBatch(batchTokens, batchSize, allValidWords);
+                batchSize = 0;
+            }
+        }
 
-            return validWords.toArray(new String[0]);
-        } catch (Exception e) {
-            log.error("Error normalizing tokens: " + e);
-            return new String[0];
+        if (batchSize > 0) {
+            processTokenBatch(batchTokens, batchSize, allValidWords);
+        }
+
+        return allValidWords.toArray(new String[0]);
+    }
+
+    private static void processTokenBatch(String[] batchTokens, int batchSize, List<String> allValidWords) {
+        String[] actualBatch = Arrays.copyOf(batchTokens, batchSize);
+
+        String[] tags = posTagger.tag(actualBatch);
+        String[] lemmas = lemmatizer.lemmatize(actualBatch, tags);
+
+        for (int i = 0; i < batchSize; i++) {
+            String originalToken = actualBatch[i];
+            String lemma = lemmas[i].toLowerCase();
+
+            if (!lemma.isEmpty() && isValidWord(lemma, tags[i]) && !stopWords.contains(lemma)) {
+                allValidWords.add(lemma);
+                wordCache.put(originalToken, lemma);
+            } else {
+                wordCache.put(originalToken, "");
+            }
         }
     }
 
@@ -591,18 +612,6 @@ public class DirectIndexer {
         return true;
     }
 
-    public static String filterPage(String page) {
-        if(page == null) return "";
-        return page.toLowerCase()
-                .strip()
-                .replaceAll("<[^>]*>", " ")
-                .strip()
-                .replaceAll("[.,:;!?''\"()\\-\\r\\n\\t]", " ")
-                .strip()
-                .replaceAll("[^\\p{L}\\s]", " ")
-                .strip();
-    }
-
     static Map<String, Set<String>> parseImages(String images) {
         if(images == null || images.isEmpty()){
             return new HashMap<>();
@@ -616,7 +625,6 @@ public class DirectIndexer {
             if(alt == null || alt.isEmpty() || src == null || src.isEmpty()){
                 continue;
             }
-
 
             String[] words = normalizeWord(tokenizeText(alt));
 
