@@ -11,11 +11,11 @@ import java.util.*;
 
 public class URLDict {
     private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
-    private static final String URL_ID_TABLE = "pt-urltoid"; // New table for URL sets
-    private static final String ID_URL_TABLE = "pt-idtourl"; // New table for key mappings
-    private static final String GLOBAL_COUNTER_TABLE = "pt-count"; // Table for global counter
-    private static final String SITE_COUNT_TABLE  = "pt-sitecounts";
-    private static final String GLOBAL_COUNTER_KEY = "global_counter"; // Key for global counter
+    private static final String SITE_COUNT_TABLE  = PropertyLoader.getProperty("table.site-counter"); // Table for site counts
+    private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id"); // New table for URL sets
+    private static final String ID_URL_TABLE = PropertyLoader.getProperty("table.id-url"); // New table for key mappings
+    private static final String GLOBAL_COUNTER_TABLE = PropertyLoader.getProperty("table.counter"); // Table for global counter
+    private static final String GLOBAL_COUNTER_KEY = PropertyLoader.getProperty("table.counter.global"); // Key for global counter
     private static final String KVS_HOST = PropertyLoader.getProperty("kvs.host");
     private static final String KVS_PORT = PropertyLoader.getProperty("kvs.port");
 

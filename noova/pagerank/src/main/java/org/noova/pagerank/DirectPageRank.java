@@ -10,9 +10,6 @@ import org.noova.tools.PropertyLoader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class DirectPageRank implements Serializable {
@@ -132,10 +129,11 @@ public class DirectPageRank implements Serializable {
 
     public static Map<String, Double>calculatePageRankParallel(KVS kvs, Map<String, Double> prevPageRanks, String startRow, String endRowExclusive, int totalPages) throws IOException {
         Map<String, Double> pageRanks = new HashMap<>();
-        Map<String, Double> sinkPRs = new HashMap<>();
 
         Iterator<Row> pages = kvs.scan(GRAPH_TABLE, startRow, endRowExclusive);
 
+
+        // traverse all pages
         while(pages != null && pages.hasNext()){
             Row page = pages.next();
             String hashedUrl = page.key();
@@ -151,26 +149,28 @@ public class DirectPageRank implements Serializable {
             double rankSum = 0.0;
             double sinkPR = 0.0;
 
+            // all pages link to this page
             var linkToPages = page.get(INCOMING_COLUMN);
-            if(linkToPages == null){
-                sinkPR += prevPageRanks.get(hashedUrl);
-            } else{
-                Set<String> links = efficientParsePageLinks(linkToPages);
 
+            Set<String> links = efficientParsePageLinks(linkToPages);
 
-                for(String link : links){
-                    String hashedLink = Hasher.hash(link);
-                    if(ENABLE_ONLY_BIDIRECTIONAL && !prevPageRanks.containsKey(hashedLink)){
-                        continue;
-                    }
-
-                    double linkPR = prevPageRanks.get(hashedLink);
-                    rankSum += linkPR / links.size();
+            // each link i contributes to the page PR(i)/L(i)
+            for(String link : links){
+                String hashedLink = Hasher.hash(link);
+                if(ENABLE_ONLY_BIDIRECTIONAL && !prevPageRanks.containsKey(hashedLink)){
+                    continue;
                 }
-
-
+                Row linkRow = kvs.getRow(GRAPH_TABLE, hashedLink);
+                Set<String> linkToOthers = efficientParsePageLinks(linkRow.get(OUTGOING_COLUMN));
+                if(linkToOthers.isEmpty()){
+                    // apply sink node
+                    sinkPR += prevPageRanks.get(hashedLink);
+                } else{
+                    // each link i contributes to the page PR(i)/L(i)
+                    rankSum += prevPageRanks.get(hashedLink) / linkToOthers.size();
+                }
             }
-
+            // count sink node contribution to this page
             double sinkContribution = DECAY_RATE * sinkPR / totalPages;
             double randomJump = (1 - DECAY_RATE);
             pageRanks.put(hashedUrl, randomJump + DECAY_RATE * rankSum + sinkContribution);

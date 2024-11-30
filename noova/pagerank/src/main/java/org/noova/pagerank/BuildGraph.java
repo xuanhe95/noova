@@ -37,6 +37,8 @@ public class BuildGraph {
             System.out.println("No key range specified, scan all tables");
         }
 
+
+
         System.out.println("Key range: " + startKey + " - " + endKeyExclusive);
 
         long start = System.currentTimeMillis();
@@ -59,7 +61,7 @@ public class BuildGraph {
             String links = row.get(PropertyLoader.getProperty("table.crawler.links"));
             Set<String> linkSet = DirectPageRank.efficientParsePageLinks(links);
 
-            if(linkSet.isEmpty()){
+            if(linkSet.isEmpty()) {
                 continue;
             }
 

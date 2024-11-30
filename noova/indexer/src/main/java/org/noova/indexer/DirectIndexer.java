@@ -45,7 +45,6 @@ public class DirectIndexer {
     private static final String INDEX_IMAGES = PropertyLoader.getProperty("table.index.images");
     private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url");
     private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url.id");
-
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
     static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
