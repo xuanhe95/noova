@@ -309,7 +309,7 @@ public class PersistTable implements Table {
 
     private List<File> getPartialFiles(String startKey, String endKeyExclusive, int limit){
         List<File> files = new Vector<>();
-        getAllFilesRecursively(files, this.rootFile, startKey, null);
+        getAllFilesRecursively(files, this.rootFile, startKey, endKeyExclusive);
         files.sort(Comparator.comparing(File::getName));
         List<File> result = new ArrayList<>();
         for(int i = 0; i < Math.min(files.size(), limit); i++){
