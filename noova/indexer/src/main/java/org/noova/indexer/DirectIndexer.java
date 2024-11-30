@@ -17,7 +17,6 @@ import org.noova.kvs.Row;
 import org.noova.tools.Hasher;
 import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
-import org.noova.webserver.pool.FixedThreadPool;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -237,7 +236,7 @@ public class DirectIndexer {
 
         // parse single normalized words (lemmatize + stop word rm) and populate wordMap
         long startTime = System.currentTimeMillis();
-        String[] words = normalizeWord(tokens, "Single");
+        String[] words = normalizeWord(tokens);
         long endTime = System.currentTimeMillis();
         long duration = (endTime - startTime);
         System.out.println("Time to normalize words: " + duration + "ms");
@@ -384,10 +383,6 @@ public class DirectIndexer {
         // helper to save entity to pt-entity-index [schema: Row Name:entity-name; links: urlID:freq,1st]
         Set<String> mergedEntity = new HashSet<>(entityMap.keySet());
 
-//        var count = 1;
-//        long lastTime = System.nanoTime();
-//        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
 //        for(String entity : mergedEntity) {
         mergedEntity.parallelStream().forEach(entity->{
             Map<String, WordStats> urlStatsMap = entityMap.get(entity);
@@ -404,37 +399,9 @@ public class DirectIndexer {
             }
 
 
-            if (urlStatsMap != null) {
-                StringBuilder linksBuilder = new StringBuilder();
-                for (Map.Entry<String, WordStats> entry : urlStatsMap.entrySet()) {
-                    if (!linksBuilder.isEmpty()) {
-                        linksBuilder.append(DELIMITER);
-                    }
-                    String urlId = entry.getKey(); // use urlID instead of full url
-                    WordStats stats = entry.getValue();
-                    linksBuilder.append(urlId).append(":").append(stats.frequency).append(",").append(stats.firstLocation);
-                }
-
-                String existingLinks = row.get(INDEX_LINKS);
-                if (existingLinks != null && !existingLinks.isEmpty()) {
-                    linksBuilder.insert(0 , existingLinks + DELIMITER);
-                }
-
-                row.put(INDEX_LINKS , linksBuilder.toString());
-            }
+            buildLinkColumn(urlStatsMap , row);
 
             try {
-//
-//                count++;
-//                if (count % 500 == 0) {
-//                    int remainder = count % 1000;
-//                    long currentTime = System.nanoTime();
-//                    double deltaTime = (currentTime - lastTime) / 1_000_000.0;
-//                    String formattedTime = LocalDateTime.now().format(formatter);
-//                    System.out.printf("Count: %d, %% 1000: %d, Time: %s, Delta Time: %.6f ms%n" ,
-//                            count , remainder , formattedTime , deltaTime);
-//                    lastTime=currentTime;
-//                }
                 kvs.putRow(INDEX_ENTITY_TABLE , row);
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
@@ -442,6 +409,27 @@ public class DirectIndexer {
             }
         });
 //        }
+    }
+
+    private static void buildLinkColumn(Map<String, WordStats> urlStatsMap , Row row) {
+        if (urlStatsMap != null) {
+            StringBuilder linksBuilder = new StringBuilder();
+            for (Map.Entry<String, WordStats> entry : urlStatsMap.entrySet()) {
+                if (!linksBuilder.isEmpty()) {
+                    linksBuilder.append(DELIMITER);
+                }
+                String urlId = entry.getKey(); // use urlID instead of full url
+                WordStats stats = entry.getValue();
+                linksBuilder.append(urlId).append(":").append(stats.frequency).append(",").append(stats.firstLocation);
+            }
+
+            String existingLinks = row.get(INDEX_LINKS);
+            if (existingLinks != null && !existingLinks.isEmpty()) {
+                linksBuilder.insert(0 , existingLinks + DELIMITER);
+            }
+
+            row.put(INDEX_LINKS , linksBuilder.toString());
+        }
     }
 
 
@@ -475,24 +463,7 @@ public class DirectIndexer {
 
             String imgs = row.get(INDEX_IMAGES);
 
-            if (urlStatsMap != null) {
-                StringBuilder linksBuilder = new StringBuilder();
-                for (Map.Entry<String, WordStats> entry : urlStatsMap.entrySet()) {
-                    if (!linksBuilder.isEmpty()) {
-                        linksBuilder.append(DELIMITER);
-                    }
-                    String urlId = entry.getKey(); // use urlID instead of full url
-                    WordStats stats = entry.getValue();
-                    linksBuilder.append(urlId).append(":").append(stats.frequency).append(",").append(stats.firstLocation);
-                }
-
-                String existingLinks = row.get(INDEX_LINKS);
-                if (existingLinks != null && !existingLinks.isEmpty()) {
-                    linksBuilder.insert(0 , existingLinks + DELIMITER);
-                }
-
-                row.put(INDEX_LINKS , linksBuilder.toString());
-            }
+            buildLinkColumn(urlStatsMap , row);
 
             if (imgs == null) {
                 imgs = images;
@@ -569,7 +540,7 @@ public class DirectIndexer {
         return tokens;
     }
 
-    public static String[] normalizeWord( String [] tokens, String type) {
+    public static String[] normalizeWord( String [] tokens) {
         if (tokens == null) {
             return new String[0];
         }
@@ -647,7 +618,7 @@ public class DirectIndexer {
             }
 
 
-            String[] words = normalizeWord(tokenizeText(alt), "Image");
+            String[] words = normalizeWord(tokenizeText(alt));
 
             for(String word : words){
                 if(word == null || word.isBlank()){

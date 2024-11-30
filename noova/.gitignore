@@ -41,3 +41,4 @@ build/
 sample/
 /worker*/
 /all-jars/
+!all-jars/config.properties
