@@ -3,6 +3,7 @@ package org.noova.indexer;
 import opennlp.tools.lemmatizer.DictionaryLemmatizer;
 import opennlp.tools.lemmatizer.Lemmatizer;
 import opennlp.tools.namefind.NameFinderME;
+import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTagger;
 import opennlp.tools.postag.POSTaggerME;
@@ -23,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.LocalDateTime;
@@ -43,12 +45,10 @@ public class DirectIndexer {
     private static final String INDEX_IMAGES = PropertyLoader.getProperty("table.index.images");
     private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url");
     private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url.id");
-    private static final String GLOBAL_COUNTER_TABLE = "pt-count";
-    private static final String GLOBAL_COUNTER_KEY = "global_counter";
 
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
-    static final Map<String, String> URL_ID_CACHE = new HashMap<>();
+    static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
 
     private static class WordStats {
         int frequency = 0;
@@ -122,6 +122,27 @@ public class DirectIndexer {
                 }
             }
 
+            if (ENABLE_PARSE_ENTITY) {
+                log.info("Loading NER models...");
+                InputStream personModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-person.bin");
+                InputStream locationModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-location.bin");
+
+                if (personModelStream == null || locationModelStream == null) {
+                    throw new IOException("NER models not found in resources.");
+                }
+
+                TokenNameFinderModel personModel = new TokenNameFinderModel(personModelStream);
+                TokenNameFinderModel locationModel = new TokenNameFinderModel(locationModelStream);
+
+                personNameFinder = new NameFinderME(personModel);
+                locationNameFinder = new NameFinderME(locationModel);
+
+                personModelStream.close();
+                locationModelStream.close();
+            } else {
+                log.info("NER models not enabled (ENABLE_ENTITY = false)");
+            }
+
             log.info("All models loaded successfully");
         } catch (IOException e) {
             throw new RuntimeException("Failed to initialize OpenNLP models: " + e.getMessage(), e);
@@ -148,7 +169,7 @@ public class DirectIndexer {
         System.out.println("Start indexing");
         Iterator<Row> pages = null;
         try {
-            pages = kvs.scan(CRAWL_TABLE, startKey, endKey);
+            pages = kvs.scan(CRAWL_TABLE, startKey, endKey); // oom issue w/ new persistTable
         } catch (IOException e) {
             System.out.println("Error: " + e.getMessage());
             return;
@@ -176,10 +197,11 @@ public class DirectIndexer {
     private static void processPage(Row page,
                                     Map<String, Map<String, WordStats>> wordMap,
                                     Map<String, StringBuffer> imageMap,
-                                    Map<String, Map<String, WordStats>> namedEntityMap,
+                                    Map<String, Map<String, WordStats>> entityMap,
                                     KVS kvs) throws InterruptedException{
         pageCount++;
         pageDetails.add(page.key()+"\n");
+//        System.out.println("processing: " + page.key());
 
         String url = page.get(CRAWL_URL);
         String text = page.get(CRAWL_TEXT);
@@ -192,7 +214,7 @@ public class DirectIndexer {
             return;
         }
 
-        // store urlId instead of url
+        // get urlId base on url
         String urlId;
         try {
             urlId = getUrlId(kvs, url);
@@ -201,9 +223,23 @@ public class DirectIndexer {
             return;
         }
 
-        // normalize words (lemmatize + stop word rm) and populate wordMap
+        // URL_ID map does not have url mapped
+        if (urlId==null) {
+            System.out.println("Skipping row with no url id mapped: " + page.key());
+            return;
+        }
+
+        // tokenize text
+        String[] tokens = tokenizeText(text);
+
+        // parse named entities
+        if(ENABLE_PARSE_ENTITY){
+            extractEntities(tokens, urlId, entityMap);
+        }
+
+        // parse single normalized words (lemmatize + stop word rm) and populate wordMap
         long startTime = System.currentTimeMillis();
-        String[] words = normalizeWord(text);
+        String[] words = normalizeWord(tokens);
         long endTime = System.currentTimeMillis();
         long duration = (endTime - startTime);
         System.out.println("Time to normalize words: " + duration + "ms");
@@ -228,11 +264,6 @@ public class DirectIndexer {
             }
         }
 
-        // parse named entities
-        if(ENABLE_PARSE_ENTITY){
-            extractNamedEntities(text, urlId, namedEntityMap);
-        }
-
         // parse images and populate imageMap
         Map<String, Set<String>> wordImageMap = parseImages(images);
         for(Map.Entry<String, Set<String>> entry : wordImageMap.entrySet()){
@@ -247,40 +278,48 @@ public class DirectIndexer {
         }
     }
 
-    private static void extractNamedEntities(String text, String urlId, Map<String, Map<String, WordStats>> namedEntityMap) {
+    private static void extractEntities(String [] tokens, String urlId, Map<String, Map<String, WordStats>> entityMap) {
         // helper to extract entity in a page
 
-        if (!ENABLE_PARSE_ENTITY || text == null || text.trim().isEmpty()) {
+        if (!ENABLE_PARSE_ENTITY ) {
             return; // skip ner processing
         }
 
-        if (personNameFinder == null || locationNameFinder == null) {
-            throw new IllegalStateException("NER models not initialized. Ensure ENABLE_PARSE_ENTITY is true and models are loaded.");
-        }
-
-        String[] tokens = tokenizer.tokenize(text);
 
         // parse person entities
-        Span[] personSpans = personNameFinder.find(tokens);
-        processNamedEntitySpans(personSpans, tokens, urlId, namedEntityMap);
+        if (personNameFinder != null) {
+            Span[] personSpans = personNameFinder.find(tokens);
+            updateEntityMap(personSpans, tokens, urlId, entityMap);
+        }
 
         // parse location entities
-        Span[] locationSpans = locationNameFinder.find(tokens);
-        processNamedEntitySpans(locationSpans, tokens, urlId, namedEntityMap);
+        if (locationNameFinder != null) {
+            Span[] locationSpans = locationNameFinder.find(tokens);
+            updateEntityMap(locationSpans, tokens, urlId, entityMap);
+        }
+
     }
 
-    private static void processNamedEntitySpans(Span[] spans, String[] tokens, String urlId, Map<String, Map<String, WordStats>> namedEntityMap) {
+    private static void updateEntityMap(Span[] spans, String[] tokens, String urlId, Map<String, Map<String, WordStats>> entityMap) {
         // helper to populate entity stats
-        for (int i = 0; i<spans.length; i++) {
-            Span span = spans[i];
-            String namedEntity = String.join(" ", Arrays.copyOfRange(tokens, span.getStart(), span.getEnd())).toLowerCase();
-            namedEntityMap.putIfAbsent(namedEntity, new ConcurrentHashMap<>());
-            Map<String, WordStats> urlStatsMap = namedEntityMap.get(namedEntity);
+
+        for (Span span : spans) {
+            // multi-token entities -> phrases
+            String entity = String.join(" ", Arrays.copyOfRange(tokens, span.getStart(), span.getEnd())).toLowerCase();
+
+            // filter single-worded entity
+            if (span.length() < 2) {
+                continue;
+            }
+
+            // update entity index map
+            entityMap.putIfAbsent(entity, new ConcurrentHashMap<>());
+            Map<String, WordStats> urlStatsMap = entityMap.get(entity);
 
             if (!urlStatsMap.containsKey(urlId)) {
                 WordStats stats = new WordStats();
                 stats.frequency = 1;
-                stats.firstLocation = i;
+                stats.firstLocation = span.getStart();
                 urlStatsMap.put(urlId, stats);
             } else {
                 WordStats stats = urlStatsMap.get(urlId);
@@ -293,7 +332,7 @@ public class DirectIndexer {
     private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) throws InterruptedException, IOException {
         Map<String, Map<String, WordStats>> wordMap = new ConcurrentHashMap<>();
         Map<String, StringBuffer> imageMap = new ConcurrentHashMap<>();
-        Map<String, Map<String, WordStats>> namedEntityMap= new ConcurrentHashMap<>();
+        Map<String, Map<String, WordStats>> entityMap= new ConcurrentHashMap<>();
 
 //        // option 1. use threadpool
 //        FixedThreadPool threadPool = new FixedThreadPool(100);
@@ -303,7 +342,7 @@ public class DirectIndexer {
 //            Row page = pages.next();
 //            threadPool.execute(() -> {
 //                try {
-//                    processPage(page, wordMap, imageMap, namedEntityMap, kvs);
+//                    processPage(page, wordMap, imageMap, entityMap, kvs);
 //                } catch (InterruptedException e) {
 //                    throw new RuntimeException(e);
 //                }
@@ -311,25 +350,25 @@ public class DirectIndexer {
 //        }
 //        threadPool.waitForCompletion();
 
-        // option 2. dynamically sized pool
-//        ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
-//
-//        forkJoinPool.submit(() -> pages.forEachRemaining(page -> {
-//            try {
-//                processPage(page, wordMap, imageMap, namedEntityMap, kvs);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//        })).join();
+//         option 2. dynamically sized pool
+        ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
 
-        // option 3. sequential
-        pages.forEachRemaining(page -> {
+        forkJoinPool.submit(() -> pages.forEachRemaining(page -> {
             try {
-                processPage(page , wordMap , imageMap , namedEntityMap, kvs);
+                processPage(page, wordMap, imageMap, entityMap, kvs);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-        });
+        })).join();
+
+//        // option 3. sequential
+//        pages.forEachRemaining(page -> {
+//            try {
+//                processPage(page , wordMap , imageMap , entityMap, kvs);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//        });
 
         try (BufferedWriter pageWriter = new BufferedWriter(new FileWriter("pages_processed.txt", true))) {
             for (String detail : pageDetails) {
@@ -340,21 +379,90 @@ public class DirectIndexer {
         }
 
         System.out.println("Total pages processed: " + pageCount);
+        System.out.println("size of entityMap: " + entityMap.size());
+        for(String entity: entityMap.keySet()) System.out.println("entity: " + entity);
 
-        saveIndexToTable(kvs, wordMap, imageMap, namedEntityMap);
+
+        saveIndexToTable(kvs, wordMap, imageMap);
+        if (ENABLE_PARSE_ENTITY)
+            saveEntityIndexToTable(kvs, entityMap);
     }
+
+    private static void saveEntityIndexToTable(KVS kvs, Map<String, Map<String, WordStats>> entityMap) throws IOException {
+        // helper to save entity to pt-index
+        Set<String> mergedEntity = new HashSet<>(entityMap.keySet());
+
+        var count = 1;
+        long lastTime = System.nanoTime();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        for(String entity : mergedEntity) {
+//        mergedWords.parallelStream().forEach(word->{
+            Map<String, WordStats> urlStatsMap = entityMap.get(entity);
+
+            Row row = null;
+            try {
+                row = kvs.getRow(INDEX_TABLE , entity);
+            } catch (IOException e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+            if (row == null) {
+                row = new Row(entity);
+            }
+            if (row.key().isEmpty()) {
+                System.out.println("row key " + row.key());
+            }
+
+
+            if (urlStatsMap != null) {
+                StringBuilder linksBuilder = new StringBuilder();
+                for (Map.Entry<String, WordStats> entry : urlStatsMap.entrySet()) {
+                    if (!linksBuilder.isEmpty()) {
+                        linksBuilder.append(DELIMITER);
+                    }
+                    String urlId = entry.getKey(); // use urlID instead of full url
+                    WordStats stats = entry.getValue();
+                    linksBuilder.append(urlId).append(":").append(stats.frequency).append(",").append(stats.firstLocation);
+                }
+
+                String existingLinks = row.get(INDEX_LINKS);
+                if (existingLinks != null && !existingLinks.isEmpty()) {
+                    linksBuilder.insert(0 , existingLinks + DELIMITER);
+                }
+
+                row.put(INDEX_LINKS , linksBuilder.toString());
+            }
+
+            try {
+
+                count++;
+                if (count % 500 == 0) {
+                    int remainder = count % 1000;
+                    long currentTime = System.nanoTime();
+                    double deltaTime = (currentTime - lastTime) / 1_000_000.0;
+                    String formattedTime = LocalDateTime.now().format(formatter);
+                    System.out.printf("Count: %d, %% 1000: %d, Time: %s, Delta Time: %.6f ms%n" ,
+                            count , remainder , formattedTime , deltaTime);
+                    lastTime=currentTime;
+                }
+                kvs.putRow(INDEX_TABLE , row);
+            } catch (Exception e) {
+                System.out.println("Error: " + e.getMessage());
+
+            }
+//        });
+        }
+    }
+
 
     private static void saveIndexToTable (KVS kvs, 
                                           Map<String, Map<String, WordStats>> wordMap, 
-                                          Map<String, StringBuffer> imageMap,
-                                          Map<String, Map<String, WordStats>> namedEntityMap) throws IOException {
+                                          Map<String, StringBuffer> imageMap){
         Set<String> mergedWords = new HashSet<>(wordMap.keySet());
         mergedWords.addAll(imageMap.keySet());
 
         var count = 1;
         long lastTime = System.nanoTime();
-//        AtomicInteger count = new AtomicInteger(1);
-//        AtomicLong lastTime = new AtomicLong(System.nanoTime());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         for(String word : mergedWords) {
@@ -422,64 +530,6 @@ public class DirectIndexer {
             }
 //        });
         }
-
-
-        var countEntity =1;
-        long lastTimeEntity = System.nanoTime();
-        for(String entity : namedEntityMap.keySet()) {
-            Map<String, WordStats> urlStatsMap = namedEntityMap.get(entity);
-
-            Row row = null;
-            try {
-                row = kvs.getRow(INDEX_TABLE , entity);
-            } catch (IOException e) {
-                System.out.println("Error: " + e.getMessage());
-            }
-            if (row == null) {
-                row = new Row(entity);
-            }
-            if (row.key().isEmpty()) {
-                System.out.println("row key " + row.key());
-            }
-            
-
-            if (urlStatsMap != null) {
-                StringBuilder linksBuilder = new StringBuilder();
-                for (Map.Entry<String, WordStats> entry : urlStatsMap.entrySet()) {
-                    if (!linksBuilder.isEmpty()) {
-                        linksBuilder.append(DELIMITER);
-                    }
-                    String urlId = entry.getKey(); // use urlID instead of full url
-                    WordStats stats = entry.getValue();
-                    linksBuilder.append(urlId).append(":").append(stats.frequency).append(",").append(stats.firstLocation);
-                }
-
-                String existingLinks = row.get(INDEX_LINKS);
-                if (existingLinks != null && !existingLinks.isEmpty()) {
-                    linksBuilder.insert(0 , existingLinks + DELIMITER);
-                }
-
-                row.put(INDEX_LINKS , linksBuilder.toString());
-            }
-
-            try {
-
-                countEntity++;
-                if (countEntity % 500 == 0) {
-                    int remainder = countEntity % 1000;
-                    long currentTime = System.nanoTime();
-                    double deltaTime = (currentTime - lastTimeEntity) / 1_000_000.0;
-                    String formattedTime = LocalDateTime.now().format(formatter);
-                    System.out.printf("Count: %d, %% 1000: %d, Time: %s, Delta Time: %.6f ms%n" ,
-                            countEntity , remainder , formattedTime , deltaTime);
-                    lastTimeEntity=currentTime;
-                }
-                kvs.putRow(INDEX_TABLE , row);
-            } catch (Exception e) {
-                System.out.println("Error: " + e.getMessage());
-
-            }
-        }
     }
 
     private static void loadUrlId(KVS kvs) throws IOException {
@@ -495,13 +545,15 @@ public class DirectIndexer {
 
 
     private static String getUrlId(KVS kvs, String url) throws IOException {
+        // helper to find an url's corresponding urlID
 
+        // use cache
         if(URL_ID_CACHE.containsKey(url)){
             System.out.println("URL_ID_CACHE contains url: " + url);
             return URL_ID_CACHE.get(url);
         }
 
-        // use URL_ID_TABLE to find an url's corresponding urlID
+        // use pt-urltoid
         Row row = kvs.getRow(URL_ID_TABLE, Hasher.hash(url));
         if (row != null) {
             String id = row.get(URL_ID_VALUE);
@@ -509,51 +561,40 @@ public class DirectIndexer {
             return id;
         }
 
-        // generate new id if url DNE
-        synchronized (GLOBAL_COUNTER_KEY) {
-            Row counterRow = kvs.getRow(GLOBAL_COUNTER_TABLE, GLOBAL_COUNTER_KEY);
-            int globalCounter = (counterRow != null) ? Integer.parseInt(counterRow.get(URL_ID_VALUE)) : 0;
+        // didn't find url id in map
+        return null;
 
-            // update global counter
-            globalCounter++;
-            if (counterRow == null) {
-                counterRow = new Row(GLOBAL_COUNTER_KEY);
-            }
-            counterRow.put(URL_ID_VALUE, String.valueOf(globalCounter));
-            kvs.putRow(GLOBAL_COUNTER_TABLE, counterRow);
-
-            // store url and global counter to URL_ID_TABLE
-            Row urlRow = new Row(Hasher.hash(url));
-            urlRow.put(URL_ID_VALUE, String.valueOf(globalCounter));
-            kvs.putRow(URL_ID_TABLE, urlRow);
-            URL_ID_CACHE.put(url, String.valueOf(globalCounter));
-
-            return String.valueOf(globalCounter);
-        }
     }
 
-    public static String[] normalizeWord(String text) {
-        if (text == null) {
+    private static String[] tokenizeText (String text){
+        // helper to tokenize text for both entity and single word
+        if (text == null || text.isEmpty()) {
+            return new String[0];
+        }
+        String[] tokens = tokenizer.tokenize(text);
+        if (tokens.length == 0) {
+            return new String[0];
+        }
+
+        return tokens;
+    }
+
+    public static String[] normalizeWord( String [] tokens) {
+        if (tokens == null || tokens.length==0) {
             return new String[0];
         }
         try {
-            String filteredText = filterPage(text);
-            if (filteredText.isEmpty()) {
-                return new String[0];
-            }
 
-            String[] tokens = tokenizer.tokenize(filteredText);
-            if (tokens.length == 0) {
-                return new String[0];
-            }
-
+            // tag part of speech
             String[] tags = posTagger.tag(tokens);
             if (tags.length == 0) {
                 return new String[0];
             }
 
+            // lemmatize token
             String[] lemmas = lemmatizer.lemmatize(tokens, tags);
 
+            // filter stop words
             List<String> validWords = new ArrayList<>();
             for (int i = 0; i < lemmas.length; i++) {
                 String lemma = lemmas[i].toLowerCase();
@@ -564,7 +605,7 @@ public class DirectIndexer {
 
             return validWords.toArray(new String[0]);
         } catch (Exception e) {
-            log.error("Error normalizing text: " + text, e);
+            log.error("Error normalizing tokens: " + e);
             return new String[0];
         }
     }
@@ -615,7 +656,8 @@ public class DirectIndexer {
                 continue;
             }
 
-            String[] words = normalizeWord(alt);
+            String [] tokens = tokenizeText(alt);
+            String[] words = normalizeWord(tokens);
 
             for(String word : words){
                 if(word == null || word.isBlank()){

@@ -52,7 +52,7 @@ public class PersistTable implements Table {
 
     @Override
     public List<Row> getRows(String startKey, String endKeyExclusive) {
-       return getRows(startKey, endKeyExclusive, Integer.MAX_VALUE);
+        return getRows(startKey, endKeyExclusive, Integer.MAX_VALUE);
     }
 
     public List<Row> getRows(String startKey, String endKeyExclusive, int limit) {
@@ -173,7 +173,7 @@ public class PersistTable implements Table {
         log.info("get rootFile: " + tableFile.getAbsolutePath());
 
         if(!tableFile.exists()){
-           return null;
+            return null;
         }
 
         try {
