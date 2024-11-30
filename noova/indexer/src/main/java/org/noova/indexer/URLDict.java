@@ -37,7 +37,7 @@ public class URLDict {
             }
             test_run_round++;
             if (test_run_round<27){
-                continue;
+                //continue;
             }
             System.out.println("Processing range: " + startKey + " to " + endKey);
 
