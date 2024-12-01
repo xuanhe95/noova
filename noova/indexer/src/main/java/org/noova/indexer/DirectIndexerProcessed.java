@@ -159,45 +159,50 @@ public class DirectIndexerProcessed {
     public static void main(String[] args) throws InterruptedException, IOException {
         KVS kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
 
-        String startKey = null;
-        String endKey = null;
-        if(args.length == 1){
-            startKey = args[0];
-        } else if(args.length > 1){
-            startKey = args[0];
-            endKey = args[1];
-        } else{
-            System.out.println("No key range specified, scan all tables");
+        int test_run_round = 1;
+
+        for (char c1 = 'b'; c1 <= 'z'; c1++) {
+            char c2 = (char) (c1 + 1); // Next character for endKey
+            String startKey = String.valueOf(c1);
+            String endKey = String.valueOf(c2);
+            if (c1 == 'z') {
+                endKey = null;
+            }
+            test_run_round++;
+            if (test_run_round < 27) {
+                //continue;
+            }
+            System.out.println("Processing range: " + startKey + " to " + endKey);
+
+            long start = System.currentTimeMillis();
+            System.out.println("Start indexing");
+            Iterator<Row> pages = null;
+            try {
+                pages = kvs.scan(PROCESSED_TABLE, startKey, endKey);
+            } catch (IOException e) {
+                System.out.println("Error: " + e.getMessage());
+                return;
+            }
+
+            Iterator<Row> indexes = null;
+            try {
+                indexes = kvs.scan(INDEX_TABLE, null, null);
+            } catch (IOException e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+
+            // load url id to the cache
+            System.out.println("Loading URL ID...");
+            loadUrlId(kvs);
+            System.out.println("URL ID loaded");
+            generateInvertedIndexBatch(kvs, pages, indexes);
+
+            long end = System.currentTimeMillis();
+
+            System.out.println("Time: " + (end - start) + "ms");
         }
 
-        System.out.println("Key range: " + startKey + " - " + endKey);
 
-        long start = System.currentTimeMillis();
-        System.out.println("Start indexing");
-        Iterator<Row> pages = null;
-        try {
-            pages = kvs.scan(PROCESSED_TABLE, startKey, endKey);
-        } catch (IOException e) {
-            System.out.println("Error: " + e.getMessage());
-            return;
-        }
-
-        Iterator<Row> indexes = null;
-        try {
-            indexes = kvs.scan(INDEX_TABLE, null, null);
-        } catch (IOException e) {
-            System.out.println("Error: " + e.getMessage());
-        }
-
-        // load url id to the cache
-        System.out.println("Loading URL ID...");
-        loadUrlId(kvs);
-        System.out.println("URL ID loaded");
-        generateInvertedIndexBatch(kvs, pages, indexes);
-
-        long end = System.currentTimeMillis();
-
-        System.out.println("Time: " + (end - start) + "ms");
     }
 
     private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) {
