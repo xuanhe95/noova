@@ -65,7 +65,7 @@ public class Crawler implements Serializable {
 
     private static final double ALL_DROP_RATE = 0.2;
 
-    private static final long ITERATION_TIMEOUT = 50000;
+    private static final long ITERATION_TIMEOUT = 45 * 60 * 1000; // 45 minutes
 
     private static final boolean ENABLE_URL_CACHE = true;
 

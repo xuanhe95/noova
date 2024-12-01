@@ -2,6 +2,11 @@ package org.noova.crawler;
 
 import org.noova.tools.URLParser;
 
+import java.io.IOException;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class ParseLinks {
     static String normalizeURL(String rawUrl, String baseUrl){
         if(rawUrl.contains("#")){
@@ -58,5 +63,42 @@ public class ParseLinks {
             return null;
         }
 
+    }
+
+    static Set<String> parsePageLinks(String page, String normalizedUrl) throws IOException {
+
+        Set<String> links = new HashSet<>();
+
+//        String hashedUrl = Hasher.hash(normalizedUrl);
+//        if(ctx.getKVS().existsRow(ACCESSED_LINK_TABLE, hashedUrl)){
+//            log.info("[crawler] URL " + normalizedUrl + " has been processed before. Ignore this URL.");
+//            return links;
+//        }
+//        ctx.getKVS().put(ACCESSED_LINK_TABLE, hashedUrl, "url", normalizedUrl);
+
+
+        Map<String, StringBuilder> anchorMap = new HashMap<>();
+
+        String regex = "<a\\s+[^>]*href\\s*=\\s*['\"]?([^'\"\\s>]+)['\"\\s>][^>]*>([\\s\\S]*?)</a>";
+        Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(page);
+
+        while (matcher.find()) {
+            String href = matcher.group(1).strip();
+            String text = matcher.group(2).strip(); // for EC
+
+            if (href.matches(".*[<>\"'{}|^\\[\\]]+.*")) { // skip href with invalid char
+                continue;
+            }
+            System.out.println("href"+ href);
+            String normalizedLink = normalizeURL(href, normalizedUrl);
+            if (normalizedLink == null) {
+                continue;
+            }
+
+            System.out.println("normalizedLink"+normalizedLink);
+            links.add(normalizedLink);
+        }
+        return links;
     }
 }

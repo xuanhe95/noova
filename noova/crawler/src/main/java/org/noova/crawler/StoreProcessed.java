@@ -9,6 +9,7 @@ import opennlp.tools.tokenize.TokenizerModel;
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
+import org.noova.tools.Hasher;
 import org.noova.tools.PropertyLoader;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -35,6 +36,12 @@ public class StoreProcessed {
     private static final POSTaggerME posTagger;
     private static final Lemmatizer lemmatizer;
     private static final Set<String> stopWords = new HashSet<>();
+
+    private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id");
+
+    private static final String UNPARSED_LINKS_TABLE = PropertyLoader.getProperty("table.unparsed");
+
+    private static final Map<String, Row> UNPARSED_LINKS_MAP = new HashMap<>();
 
     static {
         try {
@@ -104,6 +111,18 @@ public class StoreProcessed {
             int count = processSlice(kvs, pages, processedPages);
             System.out.println("Rows converted from pt-crawl to pt-processed: "+count);
         }
+
+        try {
+            putUnparsedLinksBatch(kvs);
+        } catch (IOException e) {
+            System.err.println("Error storing unparsed links: " + e.getMessage());
+        }
+    }
+
+    private static void putUnparsedLinksBatch(KVS kvs) throws IOException {
+        for (Map.Entry<String, Row> entry : UNPARSED_LINKS_MAP.entrySet()) {
+            kvs.putRow(UNPARSED_LINKS_TABLE, entry.getValue());
+        }
     }
 
 
@@ -164,7 +183,29 @@ public class StoreProcessed {
                 if(page.get("description")!=null) processedRow.put("description", page.get("description"));
                 if(page.get("addresses")!=null) processedRow.put("addresses", page.get("addresses"));
                 if(page.get("icon")!=null) processedRow.put("icon", page.get("icon"));
-                if(page.get("links")!=null) processedRow.put("links", page.get("links")); //! lots of null - need to fix crawler link extraction logic
+                //if(page.get("links")!=null) processedRow.put("links", page.get("links")); //! lots of null - need to fix crawler link extraction logic
+
+                // retrieve links from rawPageContent
+                String baseUrl = page.get("url");
+                if(baseUrl != null){
+                    Set<String> links = ParseLinks.parsePageLinks(rawPageContent, baseUrl);
+                    if(!links.isEmpty()){
+                        processedRow.put("links", String.join("\n", links));
+                        // check weather link is already in the table
+                        for(String link : links) {
+                            String hashedLink = Hasher.hash(link);
+                            boolean exist = kvs.existsRow(URL_ID_TABLE, hashedLink);
+                            if (!exist) {
+                                // store new link
+                                Row row = new Row(hashedLink);
+                                row.put(PropertyLoader.getProperty("table.default.value"), link);
+                                UNPARSED_LINKS_MAP.put(link, row);
+                            }
+                        }
+
+                    }
+                }
+
                 kvs.putRow(PROCESSED_TABLE, processedRow);
                 System.out.println("Processed row: " + rowKey);
 

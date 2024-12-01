@@ -4,7 +4,7 @@
     <module name="kvs" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="org.noova.kvs.*" />
+        <option name="PATTERN" value="org.noova.crawler.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>
