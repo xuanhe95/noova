@@ -1,6 +1,5 @@
 package org.noova.crawler;
 
-import org.jsoup.nodes.Element;
 import org.noova.flame.FlameContext;
 import org.noova.flame.FlameRDD;
 import org.noova.flame.FlameRDDImpl;
@@ -9,6 +8,13 @@ import org.noova.tools.Hasher;
 import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
 import org.noova.tools.URLParser;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
+import org.apache.tika.language.detect.LanguageDetector;
+import org.apache.tika.language.detect.LanguageResult;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -24,11 +30,6 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
-import org.apache.tika.language.detect.LanguageDetector;
-import org.apache.tika.language.detect.LanguageResult;
 
 public class Crawler implements Serializable {
 

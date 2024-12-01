@@ -5,9 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/ParseLinks.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/ParseText.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/StoreProcessed.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/resources/models/en-lemmatizer.dict.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/resources/models/en-ner-location.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/resources/models/en-ner-organization.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/resources/models/en-ner-person.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/resources/models/en-pos-maxent.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/resources/models/en-token.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/resources/models/opennlp-en-ud-ewt-lemmas-1.2-2.5.0.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/crawler/src/main/resources/models/stopwords-en.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/noova/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/config.properties" beforeDir="false" afterPath="$PROJECT_DIR$/noova/config.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,38 +92,38 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.FlameCoordinator.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;openjdk-19&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/ritazhang/Library/Application Support/JetBrains/IntelliJIdea2022.3/scratches&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.build.tools.auto.reload&quot;: &quot;ALL&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;File.Encoding&quot;,
-    &quot;settings.editor.splitter.proportion&quot;: &quot;0.2711519&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.FlameCoordinator.executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "main",
+    "jdk.selected.JAVA_MODULE": "openjdk-19",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/ritazhang/Desktop/upenn-mcit/555/Noova/noova/crawler/src/main",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "settings.build.tools.auto.reload": "ALL",
+    "settings.editor.selected.configurable": "File.Encoding",
+    "settings.editor.splitter.proportion": "0.2711519",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/noova/crawler/src/main" />
       <recent name="$APPLICATION_CONFIG_DIR$/scratches" />
       <recent name="$PROJECT_DIR$/noova/sample/ver3/worker3" />
       <recent name="$PROJECT_DIR$/noova/sample2/worker2" />
       <recent name="$PROJECT_DIR$/noova/sample2/worker1" />
-      <recent name="$PROJECT_DIR$/noova/sample" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/noova/indexer/src/main/resources/models" />
@@ -225,6 +239,21 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="StoreProcessed" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.StoreProcessed" />
+      <module name="crawler" />
+      <option name="PROGRAM_PARAMETERS" value="a b" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.crawler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="URLDict" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.indexer.URLDict" />
       <module name="indexer" />
@@ -246,6 +275,7 @@
       </method>
     </configuration>
     <list>
+      <item itemvalue="Application.StoreProcessed" />
       <item itemvalue="Application.DirectIndexer2" />
       <item itemvalue="Application.DirectIndexer" />
       <item itemvalue="Application.FlameCoordinator" />
