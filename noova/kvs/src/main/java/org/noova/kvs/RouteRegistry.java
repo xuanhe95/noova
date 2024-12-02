@@ -397,7 +397,7 @@ public class RouteRegistry {
                     try{
                         Table table=tableManager.getTable(tableKey);
                         if (table == null){
-                            log.error("[regCount]Table not found");
+                            log.error("[regCount]Table not found: " + tableKey);
                             res.status(HttpStatus.NOT_FOUND.getCode(), HttpStatus.NOT_FOUND.getMessage());
                             return null;
                         }

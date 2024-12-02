@@ -65,7 +65,7 @@ public class Crawler implements Serializable {
 
     private static final double ALL_DROP_RATE = 0.2;
 
-    private static final long ITERATION_TIMEOUT = 45 * 60 * 1000; // 45 minutes
+    private static final long ITERATION_TIMEOUT = 1 * 60 * 1000; // 45 minutes
 
     private static final boolean ENABLE_URL_CACHE = true;
 
@@ -148,7 +148,7 @@ public class Crawler implements Serializable {
             // load checkpoint or start w/ seed
             FlameRDD urlQueue;
             Iterator<Row> checkpointIterator = ctx.getKVS().scan("pt-checkpoint");
-            if (checkpointIterator.hasNext()) {
+            if (checkpointIterator == null || checkpointIterator.hasNext()) {
                 log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
 
                 List<String> checkpointUrls = new ArrayList<>();
@@ -313,8 +313,6 @@ public class Crawler implements Serializable {
             log.warn("[crawler] URL " + rawUrl + " is not a valid URL. Skipping.");
             return new ArrayList<>();
         }
-
-
 
 
 

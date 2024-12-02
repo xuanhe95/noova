@@ -31,6 +31,7 @@ public class BuildGraph {
     private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id");
     static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
     private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url-id.id");
+    private static final boolean ENABLE_ONLY_CRAWLED_PAGES = true;
 
 
     public static void main(String[] args) throws IOException {
@@ -151,7 +152,7 @@ public class BuildGraph {
         for(String link : linkSet){
             String hashedLink = Hasher.hash(link);
 
-            if (!checkUrlId(hashedLink)){
+            if (ENABLE_ONLY_CRAWLED_PAGES && !checkUrlId(hashedLink)){
                 continue;
             }
             hashToUrl.put(hashedLink, link);

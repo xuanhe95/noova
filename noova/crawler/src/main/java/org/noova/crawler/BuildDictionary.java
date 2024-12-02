@@ -1,4 +1,4 @@
-package org.noova.indexer;
+package org.noova.crawler;
 
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.*;
 
 
-public class URLDict {
+public class BuildDictionary {
     private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
     private static final String SITE_COUNT_TABLE  = PropertyLoader.getProperty("table.site-counter"); // Table for site counts
     private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id"); // New table for URL sets

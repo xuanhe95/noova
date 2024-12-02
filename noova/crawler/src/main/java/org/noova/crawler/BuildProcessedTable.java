@@ -26,9 +26,8 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
-public class StoreProcessed {
+public class BuildProcessedTable {
     /*
     Use pt-crawl to populate pt-processed,
     For NER: use parseVisibleText to convert table.crawler.page to table.processed.rawText
@@ -74,9 +73,9 @@ public class StoreProcessed {
     static {
         try {
 
-            InputStream tokenStream = StoreProcessed.class.getResourceAsStream("/models/en-token.bin");
-            InputStream posStream = StoreProcessed.class.getResourceAsStream("/models/en-pos-maxent.bin");
-            InputStream dictStream = StoreProcessed.class.getResourceAsStream("/models/en-lemmatizer.dict.txt");
+            InputStream tokenStream = BuildProcessedTable.class.getResourceAsStream("/models/en-token.bin");
+            InputStream posStream = BuildProcessedTable.class.getResourceAsStream("/models/en-pos-maxent.bin");
+            InputStream dictStream = BuildProcessedTable.class.getResourceAsStream("/models/en-lemmatizer.dict.txt");
 
             if (tokenStream == null) {
                 throw new IOException("Tokenizer model not found in resources: /models/en-token.bin");
@@ -95,7 +94,7 @@ public class StoreProcessed {
 
 
             stopWords = new HashSet<>();
-            try (InputStream is = StoreProcessed.class.getResourceAsStream("/models/stopwords-en.txt")) {
+            try (InputStream is = BuildProcessedTable.class.getResourceAsStream("/models/stopwords-en.txt")) {
                 if (is == null) {
                 } else {
                     BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
