@@ -468,7 +468,7 @@ public class DirectIndexer {
 
         for(String word : mergedWords) {
 //        mergedWords.parallelStream().forEach(word->{
-            if(word.isEmpty()) continue;
+            if(word.isBlank()) continue;
             Map<String, WordStats> urlStatsMap = wordMap.get(word);
             String images = imageMap.get(word) == null ? "" : imageMap.get(word).toString();
             String imageToPage = imageToPageMap.getOrDefault(word, new StringBuffer()).toString();
