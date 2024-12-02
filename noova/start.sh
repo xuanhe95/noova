@@ -28,13 +28,13 @@ cleanup() {
 
   # Attempt to gracefully terminate all processes
   kill "${pids[@]}" 2>/dev/null
-  sleep 0.5  # Wait for processes to release resources
+  sleep 0.2  # Wait for processes to release resources
 
   # Forcefully terminate any processes that did not exit gracefully
   kill -9 "${pids[@]}" 2>/dev/null
   echo "All processes have been terminated"
 
-  sleep 0.5
+  sleep 0.2
   # Check and release all ports
   check_and_release_port 8000  # Base port for KVSCoordinator
   check_and_release_port 9000  # Base port for FlameCoordinator
@@ -73,7 +73,7 @@ eval "$command1" &
 pid=$!
 pids+=("$pid")  # Save the PID of the KVSCoordinator
 echo "KVSCoordinator process PID: $pid"
-sleep 1
+sleep 0.2
 
 # Start the FlameCoordinator process
 command2="java -cp \"kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar\" org.noova.flame.Coordinator 9000 localhost:8000"
@@ -82,7 +82,7 @@ eval "$command2" &
 pid=$!
 pids+=("$pid")  # Save the PID of the FlameCoordinator
 echo "FlameCoordinator process PID: $pid"
-sleep 1
+sleep 0.2
 
 # Start the specified number of KVSWorker processes
 for ((i=1; i<=KVS_WORKER_COUNT; i++)); do
@@ -93,7 +93,7 @@ for ((i=1; i<=KVS_WORKER_COUNT; i++)); do
   pid=$!
   pids+=("$pid")  # Save the PID of each KVSWorker
   echo "KVSWorker $i process PID: $pid"
-  sleep 0.5  # Sleep for 0.5 seconds
+  sleep 0.2  # Sleep for 0.5 seconds
 done
 
 # Start the specified number of FlameWorker processes
@@ -105,7 +105,7 @@ for ((i=1; i<=FLAME_WORKER_COUNT; i++)); do
   pid=$!
   pids+=("$pid")  # Save the PID of each FlameWorker
   echo "FlameWorker $i process PID: $pid"
-  sleep 0.5  # Sleep for 0.5 seconds
+  sleep 0.2  # Sleep for 0.5 seconds
 done
 
 command_web="java -cp \"tools-1.0-SNAPSHOT.jar\" -jar gateway-1.0-SNAPSHOT.jar"
@@ -114,7 +114,7 @@ eval "$command_web" &
 pid=$!
 pids+=("$pid")  # Save the PID of the WebServer
 echo "WebServer process PID: $pid"
-sleep 1
+sleep 0.2
 
 # Wait for all processes to complete
 for pid in "${pids[@]}"; do
