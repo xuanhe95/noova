@@ -41,6 +41,7 @@ public class DirectIndexer {
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
     static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
+    static final String VALID_WORD = "^[a-zA-Z-]+$";
 //    private static final Map<String, String> wordCache = new ConcurrentHashMap<>();
 //    private static final Map<String, String[]> tokenCache = new ConcurrentHashMap<>();
 
@@ -156,23 +157,18 @@ public class DirectIndexer {
         loadUrlId(kvs);
         System.out.println("URL ID loaded");
 
-        int test_run_round = 1;
 
         // load url id to the cache
         System.out.println("Loading URL ID...");
         loadUrlId(kvs);
         System.out.println("URL ID loaded");
 
-        for (char c1 = 'b'; c1 <= 'z'; c1++) {
+        for (char c1 = 'a'; c1 <= 'z'; c1++) {
             char c2 = (char) (c1 + 1); // Next character for endKey
             String startKey = String.valueOf(c1);
             String endKey = String.valueOf(c2);
             if (c1 == 'z') {
                 endKey = null;
-            }
-            test_run_round++;
-            if (test_run_round < 27) {
-                //continue;
             }
             System.out.println("Processing range: " + startKey + " to " + endKey);
 
@@ -186,14 +182,14 @@ public class DirectIndexer {
                 return;
             }
 
-            Iterator<Row> indexes = null;
-            try {
-                indexes = kvs.scan(INDEX_TABLE, null, null);
-            } catch (IOException e) {
-                System.out.println("Error: " + e.getMessage());
-            }
+//            Iterator<Row> indexes = null;
+//            try {
+//                indexes = kvs.scan(INDEX_TABLE, null, null);
+//            } catch (IOException e) {
+//                System.out.println("Error: " + e.getMessage());
+//            }
 
-            generateInvertedIndexBatch(kvs, pages, indexes);
+            generateInvertedIndexBatch(kvs, pages);
 
             long end = System.currentTimeMillis();
 
@@ -201,7 +197,7 @@ public class DirectIndexer {
         }
     }
 
-    private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) {
+    private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages) {
         Map<String, Map<String, WordStats>> wordMap = new ConcurrentHashMap<>();
         Map<String, StringBuffer> imageMap = new ConcurrentHashMap<>();
         Map<String, StringBuffer> imageToPageMap = new ConcurrentHashMap<>();
@@ -228,7 +224,7 @@ public class DirectIndexer {
 
         System.out.println("Total pages processed: " + pageCount);
         System.out.println("size of entityMap: " + entityMap.size());
-        for(String entity: entityMap.keySet()) System.out.println("entity: " + entity);
+//        for(String entity: entityMap.keySet()) System.out.println("entity: " + entity);
 
 
         if(imageToPageMap.size() != imageMap.size()){
@@ -251,13 +247,10 @@ public class DirectIndexer {
         pageDetails.add(page.key()+"\n");
 //        System.out.println("processing: " + page.key());
 
+        String images = page.get(PROCESSED_IMAGES);
         String url = page.get(PROCESSED_URL);
         String rawText = page.get("rawText");  // rawText for entity parsing
         String cleanText = page.get("cleanText"); // cleanText for single-word parsing
-
-//        String text = page.get(CRAWL_TEXT);
-        //String ip = page.get(CRAWL_IP);
-        String images = page.get(PROCESSED_IMAGES);
 
         // skip op-heavy nlp tasks if url DNE
         if (url == null || url.isEmpty()) {
@@ -317,28 +310,28 @@ public class DirectIndexer {
 
         // parse images and populate imageMap
 
+        if (images != null && !images.isEmpty()) {
+            Map<String, Set<String>> wordImageMap = parseImages(images);
+            for(Map.Entry<String, Set<String>> entry : wordImageMap.entrySet()){
+                String word = entry.getKey();
+                Set<String> imageSet = entry.getValue();
 
-        Map<String, Set<String>> wordImageMap = parseImages(images);
-        for(Map.Entry<String, Set<String>> entry : wordImageMap.entrySet()){
-            String word = entry.getKey();
-            Set<String> imageSet = entry.getValue();
+                    StringBuffer imageBuffer = imageMap.computeIfAbsent(word, k -> new StringBuffer());
+                    StringBuffer imageToPageBuffer = imageToPageMap.computeIfAbsent(word, k -> new StringBuffer());
+                    for (String image : imageSet) {
+    //                if (!buffer.contains(image)) {
 
-                StringBuffer imageBuffer = imageMap.computeIfAbsent(word, k -> new StringBuffer());
-                StringBuffer imageToPageBuffer = imageToPageMap.computeIfAbsent(word, k -> new StringBuffer());
-                for (String image : imageSet) {
-//                if (!buffer.contains(image)) {
+                        if(image.isBlank()){
+                            System.out.println("Image is blank or empty for word: " + word);
+                            continue;
+                        }
 
-                    if(image.isBlank()){
-                        System.out.println("Image is blank or empty for word: " + word);
-                        continue;
+                        imageBuffer.append(image).append(DELIMITER);
+                        imageToPageBuffer.append(urlId).append(DELIMITER);
+
                     }
-
-                    imageBuffer.append(image).append(DELIMITER);
-                    imageToPageBuffer.append(urlId).append(DELIMITER);
-
-//                }
-                }
             }
+        }
 
 //        System.out.println(rawText);
 
@@ -450,6 +443,8 @@ public class DirectIndexer {
                 linksBuilder.insert(0 , existingLinks + DELIMITER);
             }
 
+//            System.out.println("links: "+ linksBuilder.toString());
+
             row.put(INDEX_LINKS , linksBuilder.toString());
         }
     }
@@ -464,12 +459,16 @@ public class DirectIndexer {
 
         mergedWords = Collections.synchronizedSet(mergedWords);
 
+
         var count = 1;
         long lastTime = System.nanoTime();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+//        for(String word:mergedWords) System.out.println(word+" ");
+
         for(String word : mergedWords) {
 //        mergedWords.parallelStream().forEach(word->{
+            if(word.isEmpty()) continue;
             Map<String, WordStats> urlStatsMap = wordMap.get(word);
             String images = imageMap.get(word) == null ? "" : imageMap.get(word).toString();
             String imageToPage = imageToPageMap.getOrDefault(word, new StringBuffer()).toString();
@@ -478,17 +477,23 @@ public class DirectIndexer {
 //                continue;
 //            }
 
+//            System.out.println("word: "+word);
+
             Row row = null;
             try {
                 row = kvs.getRow(INDEX_TABLE , word);
             } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
             }
+
+//            System.out.println("row: "+row);
+
             if (row == null) {
                 row = new Row(word);
             }
             if (row.key().isEmpty()) {
                 System.out.println("row key " + row.key());
+                continue;
             }
 
             String imgs = row.get(INDEX_IMAGES) == null ? "" : row.get(INDEX_IMAGES);
@@ -505,7 +510,7 @@ public class DirectIndexer {
                 imgToPage = imgToPage + DELIMITER + imageToPage;
             }
             synchronized (DirectIndexer.class) {
-                row.put(INDEX_IMAGES, imgs);
+                if(!imgs.isBlank()) row.put(INDEX_IMAGES, imgs.trim());
                 row.put(INDEX_IMAGES_TO_PAGE, imgToPage);
             }
             try {
@@ -520,6 +525,8 @@ public class DirectIndexer {
                             count , remainder , formattedTime , deltaTime);
                     lastTime=currentTime;
                 }
+
+//                System.out.println("putting row: "+row);
                 kvs.putRow(INDEX_TABLE , row);
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
@@ -669,8 +676,18 @@ public class DirectIndexer {
                 if(word == null || word.isBlank()){
                     continue;
                 }
-                Set<String> imageSet = wordImageMap.computeIfAbsent(word, k -> ConcurrentHashMap.newKeySet());
-                imageSet.add(src);
+                if (word.contains(".")) {
+                    String[] parts = word.split("\\.");
+                    if (parts.length > 0) {
+                        word = parts[0];
+                    } else {
+                        continue;
+                    }
+                }
+                if (word.matches(VALID_WORD)) {
+                    Set<String> imageSet = wordImageMap.computeIfAbsent(word, k -> ConcurrentHashMap.newKeySet());
+                    imageSet.add(src);
+                }
             }
         }
         return wordImageMap;
