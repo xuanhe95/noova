@@ -19,11 +19,14 @@ public class Parser {
     public static String processWord (String rawText){
         // [Process Helper] remove non-eng word + normalize space
 
-        if(rawText==null && rawText.isEmpty()) return rawText;
-//        return rawText.replaceAll("[^a-zA-Z0-9\\s]", " ")
-//                .replaceAll("\\s+", " ").trim();
+        if(rawText==null || rawText.isEmpty()) return rawText;
 
-        // Remove unwanted characters and normalize space
+        // preserve unicode
+//        return rawText.replaceAll("[^\\p{Print}]", " ") // non printable rm
+//                .replaceAll("\\s+", " ")             // Normalize spaces
+//                .trim();
+
+        // preserve ascii
         return rawText.replaceAll("[^\\p{ASCII}]", " ") // non ascii remove
                 .replaceAll("\\s+", " ")             // Normalize spaces
                 .trim();
