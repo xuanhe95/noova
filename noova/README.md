@@ -57,6 +57,39 @@ TBD
    SEAS Login: xuanhe@seas.upenn.edu  
    Github User ID: xuanhe95
 
+## Setup
+### Noova-1
+52.90.237.189
+
+### login:
+ssh ec2-user@52.90.237.189 -i Noova-1.pem
+
+### install:
+sudo dnf install -y java augeas-libs
+sudo python3 -m venv /opt/certbot/
+sudo /opt/certbot/bin/pip install --upgrade pip
+sudo /opt/certbot/bin/pip install certbot
+
+
+### certification:
+sudo /opt/certbot/bin/certbot certonly --standalone -d xxx.cis5550.net
+
+### Noova-2
+54.243.7.31
+ssh ec2-user@54.243.7.31 -i Noova-2.pem
+id: ripaa
+
+### Noova-3
+34.203.202.31
+id: irhaa
+
+### Noova-4 
+44.222.204.225
+id: aaaaa
+
+### worker:
+java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar" org.noova.kvs.Worker 8001 worker1 52.90.237.189:8000
+
 ## Crawler URL start point
 https://www.wikipedia.org
 https://www.cnn.com
