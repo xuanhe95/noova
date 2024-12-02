@@ -1,0 +1,28 @@
+<component name="libraryTable">
+  <library name="project">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/project/job-14.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/crawler.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-11.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-8.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-6.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/indexer.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/__worker9001-current.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-10.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-12.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/pagerank.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/__worker9002-current.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-7.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests.zip!/" />
+      <root url="jar://$PROJECT_DIR$/project/job-9.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

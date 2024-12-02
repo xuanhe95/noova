@@ -1,0 +1,24 @@
+<component name="libraryTable">
+  <library name="tests">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-collect.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-flatmap.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-output.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-sample.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-cogroup.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-maptopair.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-intersection.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-cogroup2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-wordcount.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-foldbykey.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-groupBy.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/hw7testjob.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/hw7testjob2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-flatmap2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-filter.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/tests/flame-map-partitions.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

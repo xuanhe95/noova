@@ -41,6 +41,27 @@ public class URLDict {
             }
             System.out.println("Processing range: " + startKey + " to " + endKey);
 
+            Map<Integer,String> intStringMapping = new HashMap<>();
+            List<Character> alphabet = createAlphabetList();
+            int key = 0;
+            outer:
+            for (char v1 : alphabet) {
+                for (char v2 : alphabet) {
+                    for (char v3 : alphabet) {
+                        for (char v4 : alphabet) {
+                            for (char v5 : alphabet) {
+                                String combination = "" + v5 + v4 + v3 + v2 + v1;
+//                                System.out.println((key++) + " " + combination);
+                                intStringMapping.put(key++, combination);
+                                if (key > 200000) {
+                                    break outer;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             Iterator<Row> pages = null;
             try {
                 pages = kvs.scan(CRAWL_TABLE, startKey, endKey);
@@ -66,11 +87,19 @@ public class URLDict {
             }
 
             // Process each slice and populate the new tables
-            globalCounter = processSlice(kvs, pages, mapping, site_count);
+            globalCounter = processSlice(kvs, pages, mapping, site_count, intStringMapping);
             updateGlobalCounter(kvs,globalCounter);
         }
 
         System.out.println("Processing complete. Final counter value: " + globalCounter);
+    }
+
+    public static List<Character> createAlphabetList() {
+        List<Character> alphabet = new ArrayList<>();
+        for (char c = 'a'; c <= 'z'; c++) {
+            alphabet.add(c);
+        }
+        return alphabet;
     }
 
     private static int initializeGlobalCounter(KVS kvs) throws IOException {
@@ -99,7 +128,7 @@ public class URLDict {
         System.out.println("[updateGlobalCounter] Global counter updated");
     }
 
-    private static int processSlice(KVS kvs, Iterator<Row> pages, Iterator<Row> mapping,Iterator<Row> site_count) {
+    private static int processSlice(KVS kvs, Iterator<Row> pages, Iterator<Row> mapping,Iterator<Row> site_count,Map<Integer,String> intStringMapping) {
         System.out.println("[processSlice] Processing rows...");
         Map<String, String> map_table = new HashMap<>();
         int counter = 0;
@@ -144,10 +173,10 @@ public class URLDict {
                 if (!map_table.containsKey(rowKey)){
                     //System.out.println("add new key: " + rowKey+" value: "+counter);
                     Row row = new Row(rowKey);
-                    row.put("value", String.valueOf(counter));
+                    row.put("value", intStringMapping.get(counter));
                     //row.put("url",url);
                     kvs.putRow(URL_ID_TABLE,row);
-                    row = new Row(String.valueOf(counter));
+                    row = new Row(intStringMapping.get(counter));
                     row.put("value", rowKey);
                     //row.put("url", url);
                     kvs.putRow(ID_URL_TABLE,row);
@@ -159,7 +188,7 @@ public class URLDict {
             }
         }
 
-        updateKvsFromMap(kvs,hc_map_table);
+        //updateKvsFromMap(kvs,hc_map_table);
 
         System.out.println("[processSlice] Finished processing rows: " + counter);
         return counter;
