@@ -8,10 +8,7 @@ import org.noova.tools.PropertyLoader;
 
 import java.io.IOException;
 import java.lang.ref.SoftReference;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class BuildGraph {
 
@@ -31,7 +28,13 @@ public class BuildGraph {
 
     private static final Map<String, StringBuilder> INCOMING_GRAPH_CACHE = new HashMap<>();
 
+    private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id");
+    static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
+    private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url-id.id");
+
+
     public static void main(String[] args) throws IOException {
+
         String startKey = null;
         String endKeyExclusive = null;
 
@@ -45,7 +48,6 @@ public class BuildGraph {
         }
 
 
-
         System.out.println("Key range: " + startKey + " - " + endKeyExclusive);
 
         long start = System.currentTimeMillis();
@@ -53,9 +55,37 @@ public class BuildGraph {
 
         Iterator<Row> it = KVS.scan(PROCESSED_TABLE, startKey, endKeyExclusive);
 
+        System.out.println("Loading URL ID...");
+        loadUrlId(KVS);
+        System.out.println("URL ID loaded");
+
         buildGraphBatch(KVS, it);
     }
 
+    private static void loadUrlId(KVS kvs) throws IOException {
+        var ids = kvs.scan(URL_ID_TABLE, null, null);
+        ids.forEachRemaining(row -> {
+            String id = row.get(URL_ID_VALUE);
+            if(id == null){
+                return;
+            }
+            URL_ID_CACHE.put(row.key(), id);
+        });
+    }
+
+    private static Boolean checkUrlId(String url) throws IOException {
+        // helper to find an url's corresponding urlID
+
+        // use cache
+        if(URL_ID_CACHE.containsKey(url)){
+            System.out.println("URL_ID_CACHE contains url: " + url);
+            return true;
+        }
+
+        // didn't find url id in map
+        return false;
+
+    }
 
     private static Map<String, String> buildGraphBatch(KVS kvs, Iterator<Row> it) throws IOException {
         Map<String, Row> graphRows = new HashMap<>();
@@ -83,7 +113,6 @@ public class BuildGraph {
             hashToUrl.put(hashedUrl, url);
 
             processOutgoingBatch(row, graphRows, hashedUrl, links);
-
 
             processIncomingBatch(row, graphRows, url, hashedUrl, linkSet, hashToUrl);
 
@@ -122,6 +151,9 @@ public class BuildGraph {
         for(String link : linkSet){
             String hashedLink = Hasher.hash(link);
 
+            if (!checkUrlId(hashedLink)){
+                continue;
+            }
             hashToUrl.put(hashedLink, link);
 
             Row linkRow = graphRows.getOrDefault(hashedLink, KVS.getRow(GRAPH_TABLE, hashedLink));
@@ -132,7 +164,7 @@ public class BuildGraph {
             }
 
             // try to hit cache first, if not found, get from KVS
-            StringBuilder linkToPages = INCOMING_GRAPH_CACHE.getOrDefault(linkRow.key(), new StringBuilder(linkRow.get(INCOMING_COLUMN)));
+            StringBuilder linkToPages = INCOMING_GRAPH_CACHE.getOrDefault(linkRow.key(), new StringBuilder(linkRow.get(INCOMING_COLUMN) == null ? "" : linkRow.get(INCOMING_COLUMN)));
             if(linkToPages == null){
                 linkToPages = new StringBuilder();
             }
