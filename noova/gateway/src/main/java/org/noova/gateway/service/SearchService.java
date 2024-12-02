@@ -329,7 +329,6 @@ public class SearchService implements IService {
     }
 
 
-
     public String getSnapshot(String url) throws IOException {
         String hashedUrl = Hasher.hash(url);
         Row row = KVS.getRow(PropertyLoader.getProperty("table.crawler"), hashedUrl);
@@ -341,4 +340,15 @@ public class SearchService implements IService {
         return row.get(PropertyLoader.getProperty("table.crawler.page"));
     }
 
+    public List<String> getImages(String keyword) throws IOException {
+        Row row = KVS.getRow(PropertyLoader.getProperty("table.index"), keyword);
+
+        if (row == null || row.get("images") == null || row.get("images").isEmpty()) {
+            log.warn("[search] No images found for keyword: " + keyword);
+            return Collections.emptyList();
+        }
+
+        String imagesColumn = row.get("images");
+        return Arrays.asList(imagesColumn.split(","));
+    }
 }

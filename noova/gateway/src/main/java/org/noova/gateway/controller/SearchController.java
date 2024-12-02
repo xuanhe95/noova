@@ -4,12 +4,17 @@ package org.noova.gateway.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.noova.gateway.service.SearchService;
 import org.noova.gateway.service.Service;
+import org.noova.kvs.Row;
 import org.noova.tools.Logger;
+import org.noova.tools.PropertyLoader;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
+import org.noova.kvs.KVS;
 
 import java.io.IOException;
 import java.util.*;
+
+
 
 /**
  * @author Xuanhe Zhang
@@ -94,61 +99,28 @@ public class SearchController implements IController {
         res.body(page);
     }
 
-    @Route(path = "/search", method = "GET")
-    private void searchByKeywords(Request req, Response res) throws IOException {
-        log.info("[search] Searching by query");
-        String query = req.queryParams("query");
-        log.info("[search] Searching by query: " + query);
+    @Route(path = "/search/image", method = "GET")
+    private void searchImage(Request req, Response res) throws IOException {
+        String keyword = req.queryParams("keyword");
+        log.info("[search] Searching images for keyword: " + keyword);
 
-        Map<String, Double> queryTfidf = SearchService.getInstance().calculateQueryTFIDF(query);
-        queryTfidf.forEach((word,score)->{
-            log.info("[search] queryTfidf in query: " + word + " score: " + score);
-        });
-
-        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeywords(query);
-        urlsWithPositions.forEach((url,positions)->{
-            log.info("[search] URL: " + url + " | Positions: " + positions);
-        });
-
-        List<Map<String, Object>> results = new ArrayList<>();
-        for (Map.Entry<String, Set<Integer>> entry : urlsWithPositions.entrySet()) {
-            String url = entry.getKey();
-            Set<Integer> positions = entry.getValue();
-
-            // Calculate TF-IDF vector
-            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTFIDF(url, entry.getValue());
-
-            // Calculate cosine similarity between query and document TF-IDF vectors
-            double tfidfSimilarity = SearchService.getInstance().cosineSimilarity(queryTfidf, docTfidf);
-
-            // Get the PageRank score
-            double pageRank = SearchService.getInstance().getPagerank(url);
-
-            // Combine scores with weighting (alpha for TF-IDF similarity, (1 - alpha) for PageRank)
-            double combinedScore = alpha * tfidfSimilarity + (1-alpha) * pageRank;
-
-            String pageContent = SearchService.getInstance().getPageContent(url);
-            log.info("[search] page content: " + pageContent);
-
-            String contextSnippet = SearchService.getInstance().ExtractContextSnippet(pageContent, positions, 60); // TBD, hardcoded
-            log.info("[search] page contextSnippet: " + contextSnippet);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("title", "TBD");
-            result.put("url", url);
-            result.put("combinedScore", combinedScore);
-            result.put("context", contextSnippet);
-
-            results.add(result);
-
-            log.info("[search] URL: " + url + ", TF-IDF Similarity: " + tfidfSimilarity + ", PageRank: " + pageRank + ", Combined Score: " + combinedScore);
+        if (keyword == null || keyword.isEmpty()) {
+            res.status(400, "Keyword cannot be empty");
+            return;
         }
 
-        results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
-        String json = OBJECT_MAPPER.writeValueAsString(results);
+        List<String> imageUrls = SEARCH_SERVICE.getImages(keyword);
+
+        if (imageUrls.isEmpty()) {
+            log.warn("[search] No images found for keyword: " + keyword);
+            res.status(404, "No images found for the given keyword");
+            return;
+        }
+
+        String json = OBJECT_MAPPER.writeValueAsString(imageUrls);
         res.body(json);
         res.type("application/json");
+        log.info("[search] Returning " + imageUrls.size() + " images for keyword: " + keyword);
     }
-
 
 }
