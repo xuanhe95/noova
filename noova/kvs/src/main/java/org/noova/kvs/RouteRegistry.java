@@ -439,6 +439,8 @@ public class RouteRegistry {
 
                     String view = tableManager.view(tableKey, fromRow, limit);
 
+                    // Ensure UTF-8 encoding
+                    res.type("text/html; charset=utf-8");
                     res.status(HttpStatus.OK.getCode(), HttpStatus.OK.getMessage());
                     return view;
                 });

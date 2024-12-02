@@ -48,71 +48,71 @@ public class BuildProcessedTable {
 //    private static final Pattern CLEAN_TEXT_PATTERN = Pattern.compile("[^a-zA-Z]+");
 
     private static final boolean ENABLE_UNPARSED_LINKS = false;
-    private static TokenizerModel tokenizerModel;
-    private static POSModel posModel;
-    private static DictionaryLemmatizer lemmatizer;
-    private static final Set<String> stopWords;
-
-    private static final ThreadLocal<POSTaggerME> posTaggerThreadLocal = ThreadLocal.withInitial(() -> new POSTaggerME(posModel));
-    private static final ThreadLocal<TokenizerME> tokenizerThreadLocal = ThreadLocal.withInitial(() -> new TokenizerME(tokenizerModel));
-    private static final ThreadLocal<DictionaryLemmatizer> lemmatizerThreadLocal = ThreadLocal.withInitial(() -> lemmatizer);
-
-    private static final Set<String> INVALID_POS = Set.of(
-            "DT",  // determiner (the, a, an)
-            "IN",  // preposition (in, of, at)
-            "CC",  // conjunction (and, or, but)
-            "UH",  // interjection (oh, wow, ah)
-            "FW",  // Foreign Word
-            "SYM", // Symbol
-            "LS",  // List item marker
-            "PRP", // Personal pronouns
-            "WDT", // Wh-determiner
-            "WP",  // Wh-pronoun
-            "WRB"  // Wh-adverb
-    );
-
-    static {
-        try {
-
-            InputStream tokenStream = BuildProcessedTable.class.getResourceAsStream("/models/en-token.bin");
-            InputStream posStream = BuildProcessedTable.class.getResourceAsStream("/models/en-pos-maxent.bin");
-            InputStream dictStream = BuildProcessedTable.class.getResourceAsStream("/models/en-lemmatizer.dict.txt");
-
-            if (tokenStream == null) {
-                throw new IOException("Tokenizer model not found in resources: /models/en-token.bin");
-            }
-            if (posStream == null) {
-                throw new IOException("POS model not found in resources: /models/en-pos-maxent.bin");
-            }
-            if (dictStream == null) {
-                throw new IOException("can not find：/models/en-lemmatizer.dict.txt");
-            }
-
-
-            tokenizerModel = new TokenizerModel(tokenStream);
-            posModel = new POSModel(posStream);
-            lemmatizer = new DictionaryLemmatizer(dictStream);
-
-
-            stopWords = new HashSet<>();
-            try (InputStream is = BuildProcessedTable.class.getResourceAsStream("/models/stopwords-en.txt")) {
-                if (is == null) {
-                } else {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (!line.trim().isEmpty()) {
-                            stopWords.add(line.trim().toLowerCase());
-                        }
-                    }
-                }
-            }
-
-
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to initialize OpenNLP models: " + e.getMessage(), e);
-        }
-    }
+//    private static TokenizerModel tokenizerModel;
+//    private static POSModel posModel;
+//    private static DictionaryLemmatizer lemmatizer;
+//    private static final Set<String> stopWords;
+//
+//    private static final ThreadLocal<POSTaggerME> posTaggerThreadLocal = ThreadLocal.withInitial(() -> new POSTaggerME(posModel));
+//    private static final ThreadLocal<TokenizerME> tokenizerThreadLocal = ThreadLocal.withInitial(() -> new TokenizerME(tokenizerModel));
+//    private static final ThreadLocal<DictionaryLemmatizer> lemmatizerThreadLocal = ThreadLocal.withInitial(() -> lemmatizer);
+//
+//    private static final Set<String> INVALID_POS = Set.of(
+//            "DT",  // determiner (the, a, an)
+//            "IN",  // preposition (in, of, at)
+//            "CC",  // conjunction (and, or, but)
+//            "UH",  // interjection (oh, wow, ah)
+//            "FW",  // Foreign Word
+//            "SYM", // Symbol
+//            "LS",  // List item marker
+//            "PRP", // Personal pronouns
+//            "WDT", // Wh-determiner
+//            "WP",  // Wh-pronoun
+//            "WRB"  // Wh-adverb
+//    );
+//
+//    static {
+//        try {
+//
+//            InputStream tokenStream = BuildProcessedTable.class.getResourceAsStream("/models/en-token.bin");
+//            InputStream posStream = BuildProcessedTable.class.getResourceAsStream("/models/en-pos-maxent.bin");
+//            InputStream dictStream = BuildProcessedTable.class.getResourceAsStream("/models/en-lemmatizer.dict.txt");
+//
+//            if (tokenStream == null) {
+//                throw new IOException("Tokenizer model not found in resources: /models/en-token.bin");
+//            }
+//            if (posStream == null) {
+//                throw new IOException("POS model not found in resources: /models/en-pos-maxent.bin");
+//            }
+//            if (dictStream == null) {
+//                throw new IOException("can not find：/models/en-lemmatizer.dict.txt");
+//            }
+//
+//
+//            tokenizerModel = new TokenizerModel(tokenStream);
+//            posModel = new POSModel(posStream);
+//            lemmatizer = new DictionaryLemmatizer(dictStream);
+//
+//
+//            stopWords = new HashSet<>();
+//            try (InputStream is = BuildProcessedTable.class.getResourceAsStream("/models/stopwords-en.txt")) {
+//                if (is == null) {
+//                } else {
+//                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+//                    String line;
+//                    while ((line = reader.readLine()) != null) {
+//                        if (!line.trim().isEmpty()) {
+//                            stopWords.add(line.trim().toLowerCase());
+//                        }
+//                    }
+//                }
+//            }
+//
+//
+//        } catch (IOException e) {
+//            throw new RuntimeException("Failed to initialize OpenNLP models: " + e.getMessage(), e);
+//        }
+//    }
 
 
     public static void main(String[] args) throws InterruptedException, IOException {
@@ -322,43 +322,43 @@ public class BuildProcessedTable {
 //        return CLEAN_TEXT_PATTERN.matcher(text).replaceAll(" ").trim();
     }
 
-    private static String generateCleanText(String rawText) {
-        if (rawText == null || rawText.isEmpty()) return "";
-        Tokenizer tokenizer = tokenizerThreadLocal.get();
-        POSTaggerME posTagger = posTaggerThreadLocal.get();
-        DictionaryLemmatizer lemmatizer = lemmatizerThreadLocal.get();
-
-        String[] tokens = tokenizer.tokenize(rawText);
-        String[] posTags = posTagger.tag(tokens);
-        String[] lemmas = lemmatizer.lemmatize(tokens, posTags);
-
-        StringBuilder cleanTextBuilder = new StringBuilder();
-        for (int i = 0; i < lemmas.length; i++) {
-            String lemma = lemmas[i].toLowerCase();
-            if (!stopWords.contains(lemma) && isValidWord(lemma, posTags[i])) {
-                cleanTextBuilder.append(lemma).append(" "); // cleaned single word separated by space
-            }
-        }
-        return cleanTextBuilder.toString().trim();
-    }
-
-    public static boolean isValidWord(String word, String pos) {
-        if (word.length() <= 2) {
-            return false;
-        }
-
-        if (!word.matches("^[a-zA-Z]+$")) {
-            return false;
-        }
-
-        if (word.matches(".*(.)\\1{2,}.*")) {
-            return false;
-        }
-
-        if (INVALID_POS.contains(pos)) {
-            return false;
-        }
-
-        return true;
-    }
+//    private static String generateCleanText(String rawText) {
+//        if (rawText == null || rawText.isEmpty()) return "";
+//        Tokenizer tokenizer = tokenizerThreadLocal.get();
+//        POSTaggerME posTagger = posTaggerThreadLocal.get();
+//        DictionaryLemmatizer lemmatizer = lemmatizerThreadLocal.get();
+//
+//        String[] tokens = tokenizer.tokenize(rawText);
+//        String[] posTags = posTagger.tag(tokens);
+//        String[] lemmas = lemmatizer.lemmatize(tokens, posTags);
+//
+//        StringBuilder cleanTextBuilder = new StringBuilder();
+//        for (int i = 0; i < lemmas.length; i++) {
+//            String lemma = lemmas[i].toLowerCase();
+//            if (!stopWords.contains(lemma) && isValidWord(lemma, posTags[i])) {
+//                cleanTextBuilder.append(lemma).append(" "); // cleaned single word separated by space
+//            }
+//        }
+//        return cleanTextBuilder.toString().trim();
+//    }
+//
+//    public static boolean isValidWord(String word, String pos) {
+//        if (word.length() <= 2) {
+//            return false;
+//        }
+//
+//        if (!word.matches("^[a-zA-Z]+$")) {
+//            return false;
+//        }
+//
+//        if (word.matches(".*(.)\\1{2,}.*")) {
+//            return false;
+//        }
+//
+//        if (INVALID_POS.contains(pos)) {
+//            return false;
+//        }
+//
+//        return true;
+//    }
 }
