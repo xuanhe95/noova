@@ -18,6 +18,8 @@ public class BuildGraph {
 
     private static final String GRAPH_TABLE = PropertyLoader.getProperty("table.graph");
 
+    private static final String PROCESSED_TABLE = PropertyLoader.getProperty("table.processed");
+
     private static final String INCOMING_COLUMN = PropertyLoader.getProperty("table.graph.incoming");
 
     private static final String LINE_BREAK_DELIMITER = PropertyLoader.getProperty("delimiter.linebreak");
@@ -44,7 +46,7 @@ public class BuildGraph {
         long start = System.currentTimeMillis();
         System.out.println("Start building graph");
 
-        Iterator<Row> it = KVS.scan(GRAPH_TABLE, startKey, endKeyExclusive);
+        Iterator<Row> it = KVS.scan(PROCESSED_TABLE, startKey, endKeyExclusive);
 
         buildGraphBatch(KVS, it);
     }
