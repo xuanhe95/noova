@@ -8,7 +8,7 @@ public class ParseText {
     public static void main(String[] args) {
         try {
             // Fetch the Wikipedia page
-            String url = "https://en.wikipedia.org:443/w/index.php?title=Pyrogallol&action=edit&section=1";
+            String url = "https://en.wikipedia.org/wiki/Syrian_opposition";
             Document doc = Jsoup.connect(url).get();
 
             System.out.println("allContent");
@@ -26,14 +26,16 @@ public class ParseText {
     }
 
     public static String parseVisibleText(Element element) {
+        element.select("script, style").remove(); // Remove unwanted tags upfront
+//        return element.text();
         StringBuilder textBuilder = new StringBuilder();
 
         // Recursively extract text, ignoring script and style tags
         for (Element child : element.children()) {
-            String tagName = child.tagName();
-            if (tagName.equals("script") || tagName.equals("style")) {
-                continue; // Skip non-visible content
-            }
+//            String tagName = child.tagName();
+//            if (tagName.equals("script") || tagName.equals("style")) {
+//                continue; // Skip non-visible content
+//            }
             if (child.children().isEmpty()) {
                 String text = cleanText(child.ownText());
                 if (!text.isEmpty()) {
@@ -43,7 +45,7 @@ public class ParseText {
                 textBuilder.append(parseVisibleText(child)).append(" ");
             }
         }
-
+//
         return textBuilder.toString().trim();
     }
 

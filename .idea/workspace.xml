@@ -5,21 +5,72 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/noova/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid63022.jfr" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid63022.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid63401.jfr" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid63401.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid63543.jfr" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid63543.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid69801.jfr" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid69801.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid86872.jfr" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid86872.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid87305.jfr" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/hs_err_pid87305.log" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_annotations_2_18_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_core_2_18_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_databind_2_18_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_woodstox_woodstox_core_6_2_8.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_code_findbugs_jsr305_3_0_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_code_gson_gson_2_9_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_errorprone_error_prone_annotations_2_11_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_guava_failureaccess_1_0_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_guava_guava_31_1_jre.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_guava_listenablefuture_9999_0_empty_to_avoid_conflict_with_guava.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_j2objc_j2objc_annotations_1_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_intellij_annotations_12_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_optimaize_languagedetector_language_detector_0_6.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_sun_activation_jakarta_activation_1_2_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_sun_istack_istack_commons_runtime_3_0_12.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_sun_xml_messaging_saaj_saaj_impl_1_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__commons_io_commons_io_2_11_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_activation_jakarta_activation_api_1_2_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_annotation_jakarta_annotation_api_1_3_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_jws_jakarta_jws_api_2_1_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_ws_rs_jakarta_ws_rs_api_2_1_6.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_xml_bind_jakarta_xml_bind_api_2_3_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_xml_soap_jakarta_xml_soap_api_1_4_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_xml_ws_jakarta_xml_ws_api_2_3_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__junit_junit_4_13_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__net_arnx_jsonic_1_2_11.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_core_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_rt_frontend_jaxrs_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_rt_rs_client_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_rt_security_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_rt_transports_http_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_geronimo_specs_geronimo_jta_1_1_spec_1_1_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_tika_tika_core_1_28_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_tika_tika_langdetect_1_28_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_ws_xmlschema_xmlschema_core_2_3_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_checkerframework_checker_qual_3_12_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_codehaus_woodstox_stax2_api_4_2_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_glassfish_jaxb_jaxb_runtime_2_3_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_glassfish_jaxb_txw2_2_3_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_hamcrest_hamcrest_core_1_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_json_json_20231013.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_jsoup_jsoup_1_18_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_jvnet_staxex_stax_ex_1_8_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_slf4j_slf4j_api_1_7_36.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_slf4j_slf4j_simple_1_7_36.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/all_jars1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/crawler_1_0_SNAPSHOT2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/flame_1_0_SNAPSHOT2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/generic_1_0_SNAPSHOT1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/indexer_1_0_SNAPSHOT1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/kvs_1_0_SNAPSHOT1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/noova1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/pagerank_1_0_SNAPSHOT1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/target2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/target3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/test1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/tests1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/tools_1_0_SNAPSHOT1.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/ParseText.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/ParseText.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/StoreProcessed.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/StoreProcessed.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/DirectIndexer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/main/java/org/noova/kvs/test.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -72,6 +123,13 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="useMavenConfig" value="true" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
   <component name="ProjectCodeStyleSettingsMigration">
     <option name="version" value="2" />
   </component>
@@ -94,7 +152,7 @@
     "git-widget-placeholder": "main",
     "jdk.selected.JAVA_MODULE": "openjdk-19",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/zhehuang/Desktop/desktop/upenn/5550/24fa-cis5550-Noova",
+    "last_opened_file_path": "/Users/ritazhang/Desktop/upenn-mcit/555/Noova/noova/crawler/src/main",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -104,18 +162,18 @@
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.2",
     "settings.build.tools.auto.reload": "ALL",
-    "settings.editor.selected.configurable": "File.Encoding",
+    "settings.editor.selected.configurable": "reference.settings.project.maven.ignored.files",
     "settings.editor.splitter.proportion": "0.2711519",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/noova/crawler/src/main" />
       <recent name="$APPLICATION_CONFIG_DIR$/scratches" />
       <recent name="$PROJECT_DIR$/noova/sample/ver3/worker3" />
       <recent name="$PROJECT_DIR$/noova/sample2/worker2" />
       <recent name="$PROJECT_DIR$/noova/sample2/worker1" />
-      <recent name="$PROJECT_DIR$/noova/sample" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/noova/indexer/src/main/resources/models" />
@@ -128,7 +186,7 @@
       <recent name="org.noova.flame.operation" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.DirectIndexer">
+  <component name="RunManager" selected="Application.StoreProcessed">
     <configuration name="DirectIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.indexer.DirectIndexer" />
       <module name="indexer" />
@@ -231,6 +289,34 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="ParseText" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.ParseText" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.crawler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="StoreProcessed" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.StoreProcessed" />
+      <module name="crawler" />
+      <option name="PROGRAM_PARAMETERS" value="a b" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.crawler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="URLDict" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.indexer.URLDict" />
       <module name="indexer" />
@@ -245,6 +331,20 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="test" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.kvs.test" />
+      <module name="kvs" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.kvs.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration default="true" type="JetRunConfigurationType">
       <module name="24fa-cis5550-Noova" />
       <method v="2">
@@ -252,6 +352,11 @@
       </method>
     </configuration>
     <list>
+      <item itemvalue="Application.FlameCoordinator" />
+      <item itemvalue="Application.FlameWorker1" />
+      <item itemvalue="Application.FlameWorker2" />
+      <item itemvalue="Application.test" />
+      <item itemvalue="Application.StoreProcessed" />
       <item itemvalue="Application.DirectIndexer2" />
       <item itemvalue="Application.DirectIndexer" />
       <item itemvalue="Application.FlameSubmit" />
@@ -259,11 +364,13 @@
       <item itemvalue="Application.KVSWorker2" />
       <item itemvalue="Application.KVSCoordinator" />
       <item itemvalue="Application.GatewayServer" />
+      <item itemvalue="Application.ParseText" />
       <item itemvalue="Application.URLDict" />
       <item itemvalue="Application.DirectPageRank" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.ParseText" />
         <item itemvalue="Application.URLDict" />
         <item itemvalue="Application.DirectPageRank" />
       </list>
@@ -295,7 +402,8 @@
       <workItem from="1731781630206" duration="29000" />
       <workItem from="1731781701776" duration="70861000" />
       <workItem from="1732321449487" duration="224000" />
-      <workItem from="1733120411449" duration="3403000" />
+      <workItem from="1733103442015" duration="3337000" />
+      <workItem from="1733120896599" duration="1620000" />
     </task>
     <servers />
   </component>
@@ -316,14 +424,10 @@
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <line-breakpoint enabled="true" type="java-method">
-          <url>file://$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java</url>
-          <line>69</line>
-          <properties class="org.noova.gateway.service.SearchService" method="getInstance">
-            <option name="EMULATED" value="true" />
-            <option name="WATCH_EXIT" value="false" />
-          </properties>
-          <option name="timeStamp" value="5" />
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java</url>
+          <line>127</line>
+          <option name="timeStamp" value="4" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
