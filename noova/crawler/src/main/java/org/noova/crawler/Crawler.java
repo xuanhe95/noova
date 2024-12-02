@@ -147,24 +147,29 @@ public class Crawler implements Serializable {
 
             // load checkpoint or start w/ seed
             FlameRDD urlQueue;
-            Iterator<Row> checkpointIterator = ctx.getKVS().scan("pt-checkpoint");
-            if (checkpointIterator == null || checkpointIterator.hasNext()) {
-                log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
+            if(ENABLE_CHECKPOINT){
+                Iterator<Row> checkpointIterator = ctx.getKVS().scan("pt-checkpoint");
+                if (checkpointIterator.hasNext()) {
+                    log.info("[crawler] Resuming from checkpoint: pt-checkpoint");
 
-                List<String> checkpointUrls = new ArrayList<>();
-                checkpointIterator.forEachRemaining(row -> {
-                    String url = row.get("url");
-                    if (url != null && !url.isEmpty()) {
-                        checkpointUrls.add(url);
-                        log.info("[checkpoint] Loaded url: " + url);
-                    }
-                });
+                    List<String> checkpointUrls = new ArrayList<>();
+                    checkpointIterator.forEachRemaining(row -> {
+                        String url = row.get("url");
+                        if (url != null && !url.isEmpty()) {
+                            checkpointUrls.add(url);
+                            log.info("[checkpoint] Loaded url: " + url);
+                        }
+                    });
 
-                urlQueue = checkpointUrls.isEmpty() ? ctx.parallelize(seedUrls) : ctx.parallelize(checkpointUrls);
-            } else { // start with seed URLs if no checkpoint exists
-                log.info("[crawler] No checkpoint found. Starting with seed URLs.");
+                    urlQueue = checkpointUrls.isEmpty() ? ctx.parallelize(seedUrls) : ctx.parallelize(checkpointUrls);
+                } else { // start with seed URLs if no checkpoint exists
+                    log.info("[crawler] No checkpoint found. Starting with seed URLs.");
+                    urlQueue = ctx.parallelize(seedUrls);
+                }
+            } else{
                 urlQueue = ctx.parallelize(seedUrls);
             }
+
 
             log.info("[crawler] Starting crawler with seed URL: " + Arrays.toString(args));
             log.info("[crawler] urlQueue count: " + urlQueue.count());
@@ -340,8 +345,8 @@ public class Crawler implements Serializable {
                 long retryTime = RATE_LIMIT_MAP.get(topLevelDomain);
                 if (System.currentTimeMillis() < retryTime) {
                     log.info("[crawler] Skipping rate-limited domain: " + topLevelDomain);
-//                    return new ArrayList<>();
-                    return List.of(normalizedUrl);
+                    return new ArrayList<>();
+//                    return List.of(normalizedUrl);
                 }
             }
 
@@ -1797,6 +1802,7 @@ public class Crawler implements Serializable {
     }
 
     private static String getTopLevelDomain(String protocol, String host) {
+        if(host.isBlank()) return "";
         String[] parts = host.split("\\.");
         if (parts.length < 2) {
             return host;

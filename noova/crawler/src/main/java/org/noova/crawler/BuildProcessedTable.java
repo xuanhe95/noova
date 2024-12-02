@@ -15,6 +15,7 @@ import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
 import org.noova.tools.Hasher;
 import org.noova.tools.PropertyLoader;
+import org.noova.tools.Parser;
 
 
 import java.io.BufferedReader;
@@ -224,15 +225,16 @@ public class BuildProcessedTable {
             Element body = Jsoup.parse(rawPageContent).body();
             body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
                     ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
-            String rawText = parseVisibleText(body);
+            String rawText = Parser.processWord(parseVisibleText(body));
 
             // use nlp model to generate fully-cleaned text (lemmatize+stop word rm)
-            String cleanText = generateCleanText(rawText);
+//            String cleanText = generateCleanText(rawText);
 
             // store row for pt-processed
             Row processedRow = new Row(rowKey);
-            processedRow.put("rawText", rawText); // for entity index
-            processedRow.put("cleanText", cleanText); // for single word index
+            processedRow.put("text",rawText);
+//            processedRow.put("rawText", rawText); // for entity index
+//            processedRow.put("cleanText", cleanText); // for single word index
             if(page.get("url")!=null) processedRow.put("url", page.get("url"));
             if(page.get("ip")!=null) processedRow.put("ip", page.get("ip"));
             if(page.get("title")!=null) processedRow.put("title", page.get("title"));
