@@ -57,8 +57,8 @@ public class BuildGraph {
 
         while(it != null && it.hasNext()){
             Row row = it.next();
-            String url = row.get(PropertyLoader.getProperty("table.crawler.url"));
-            String links = row.get(PropertyLoader.getProperty("table.crawler.links"));
+            String url = row.get(PropertyLoader.getProperty("table.processed.url"));
+            String links = row.get(PropertyLoader.getProperty("table.processed.links"));
             Set<String> linkSet = DirectPageRank.efficientParsePageLinks(links);
 
             if(linkSet.isEmpty()) {
