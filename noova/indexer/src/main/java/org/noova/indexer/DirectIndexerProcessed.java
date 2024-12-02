@@ -201,8 +201,6 @@ public class DirectIndexerProcessed {
 
             System.out.println("Time: " + (end - start) + "ms");
         }
-
-
     }
 
     private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) {

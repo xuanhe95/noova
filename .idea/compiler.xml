@@ -9,8 +9,8 @@
         <module name="crawler" />
         <module name="kvs" />
         <module name="indexer" />
-        <module name="pagerank" />
         <module name="flame" />
+        <module name="pagerank" />
         <module name="webserver" />
         <module name="tools" />
         <module name="gateway" />

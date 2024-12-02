@@ -33,22 +33,20 @@ public class DirectIndexer {
     private static final Logger log = Logger.getLogger(DirectIndexer.class);
     private static final boolean ENABLE_PARSE_ENTITY = true;
     private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
-    private static final String CRAWL_TABLE = PropertyLoader.getProperty("table.crawler");
-    private static final String CRAWL_URL = PropertyLoader.getProperty("table.crawler.url");
-    private static final String CRAWL_TEXT = PropertyLoader.getProperty("table.crawler.text");
-    private static final String CRAWL_IP = PropertyLoader.getProperty("table.crawler.ip");
-    private static final String CRAWL_IMAGES = PropertyLoader.getProperty("table.crawler.images");
     private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
     private static final String INDEX_ENTITY_TABLE = PropertyLoader.getProperty("table.index.entity");
     private static final String INDEX_LINKS = PropertyLoader.getProperty("table.index.links");
+    private static final String PROCESSED_URL = PropertyLoader.getProperty("table.processed.url");
+    private static final String PROCESSED_IMAGES = PropertyLoader.getProperty("table.processed.images");
+    private static final String PROCESSED_TABLE = PropertyLoader.getProperty("table.processed");
     private static final String INDEX_IMAGES = PropertyLoader.getProperty("table.index.images");
     private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id");
     private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url-id.id");
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
     static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
-    private static final Map<String, String> wordCache = new ConcurrentHashMap<>();
-    private static final Map<String, String[]> tokenCache = new ConcurrentHashMap<>();
+//    private static final Map<String, String> wordCache = new ConcurrentHashMap<>();
+//    private static final Map<String, String[]> tokenCache = new ConcurrentHashMap<>();
 
     private static class WordStats {
         int frequency = 0;
@@ -56,10 +54,10 @@ public class DirectIndexer {
     }
 
     private static final TokenizerModel tokenizerModel;
-    private static final POSModel posModel;
+//    private static final POSModel posModel;
     private static final Tokenizer tokenizer;
-    private static final POSTagger posTagger;
-    private static final Lemmatizer lemmatizer;
+//    private static final POSTagger posTagger;
+//    private static final Lemmatizer lemmatizer;
     private static final Set<String> stopWords;
     private static NameFinderME personNameFinder;
     private static NameFinderME locationNameFinder;
@@ -84,28 +82,28 @@ public class DirectIndexer {
             log.info("Starting to load OpenNLP models...");
 
             InputStream tokenStream = DirectIndexer.class.getResourceAsStream("/models/en-token.bin");
-            InputStream posStream = DirectIndexer.class.getResourceAsStream("/models/en-pos-maxent.bin");
-            InputStream dictStream = DirectIndexer.class.getResourceAsStream("/models/en-lemmatizer.dict.txt");
+//            InputStream posStream = DirectIndexer.class.getResourceAsStream("/models/en-pos-maxent.bin");
+//            InputStream dictStream = DirectIndexer.class.getResourceAsStream("/models/en-lemmatizer.dict.txt");
 
             if (tokenStream == null) {
                 throw new IOException("Tokenizer model not found in resources: /models/en-token.bin");
             }
-            if (posStream == null) {
-                throw new IOException("POS model not found in resources: /models/en-pos-maxent.bin");
-            }
-            if (dictStream == null) {
-                throw new IOException("can not find：/models/en-lemmatizer.dict.txt");
-            }
+//            if (posStream == null) {
+//                throw new IOException("POS model not found in resources: /models/en-pos-maxent.bin");
+//            }
+//            if (dictStream == null) {
+//                throw new IOException("can not find：/models/en-lemmatizer.dict.txt");
+//            }
 
             log.info("Loading tokenizer model...");
             tokenizerModel = new TokenizerModel(tokenStream);
 
-            log.info("Loading POS model...");
-            posModel = new POSModel(posStream);
+//            log.info("Loading POS model...");
+//            posModel = new POSModel(posStream);
 
             tokenizer = new TokenizerME(tokenizerModel);
-            posTagger = new POSTaggerME(posModel);
-            lemmatizer = new DictionaryLemmatizer(dictStream);
+//            posTagger = new POSTaggerME(posModel);
+//            lemmatizer = new DictionaryLemmatizer(dictStream);
 
             log.info("Loading stopwords...");
             stopWords = new HashSet<>();
@@ -157,45 +155,48 @@ public class DirectIndexer {
     public static void main(String[] args) throws InterruptedException, IOException {
         KVS kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
 
-        String startKey = null;
-        String endKey = null;
-        if(args.length == 1){
-            startKey = args[0];
-        } else if(args.length > 1){
-            startKey = args[0];
-            endKey = args[1];
-        } else{
-            System.out.println("No key range specified, scan all tables");
+        int test_run_round = 1;
+
+        for (char c1 = 'b'; c1 <= 'z'; c1++) {
+            char c2 = (char) (c1 + 1); // Next character for endKey
+            String startKey = String.valueOf(c1);
+            String endKey = String.valueOf(c2);
+            if (c1 == 'z') {
+                endKey = null;
+            }
+            test_run_round++;
+            if (test_run_round < 27) {
+                //continue;
+            }
+            System.out.println("Processing range: " + startKey + " to " + endKey);
+
+            long start = System.currentTimeMillis();
+            System.out.println("Start indexing");
+            Iterator<Row> pages = null;
+            try {
+                pages = kvs.scan(PROCESSED_TABLE, startKey, endKey);
+            } catch (IOException e) {
+                System.out.println("Error: " + e.getMessage());
+                return;
+            }
+
+            Iterator<Row> indexes = null;
+            try {
+                indexes = kvs.scan(INDEX_TABLE, null, null);
+            } catch (IOException e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+
+            // load url id to the cache
+            System.out.println("Loading URL ID...");
+            loadUrlId(kvs);
+            System.out.println("URL ID loaded");
+            generateInvertedIndexBatch(kvs, pages, indexes);
+
+            long end = System.currentTimeMillis();
+
+            System.out.println("Time: " + (end - start) + "ms");
         }
-
-        System.out.println("Key range: " + startKey + " - " + endKey);
-
-        long start = System.currentTimeMillis();
-        System.out.println("Start indexing");
-        Iterator<Row> pages = null;
-        try {
-            pages = kvs.scan(CRAWL_TABLE, startKey, endKey);
-        } catch (IOException e) {
-            System.out.println("Error: " + e.getMessage());
-            return;
-        }
-
-        Iterator<Row> indexes = null;
-        try {
-            indexes = kvs.scan(INDEX_TABLE, null, null);
-        } catch (IOException e) {
-            System.out.println("Error: " + e.getMessage());
-        }
-
-        // load url id to the cache
-        System.out.println("Loading URL ID...");
-        loadUrlId(kvs);
-        System.out.println("URL ID loaded");
-        generateInvertedIndexBatch(kvs, pages, indexes);
-
-        long end = System.currentTimeMillis();
-
-        System.out.println("Time: " + (end - start) + "ms");
     }
 
     private static void generateInvertedIndexBatch(KVS kvs, Iterator<Row> pages, Iterator<Row> indexes) {
@@ -241,13 +242,13 @@ public class DirectIndexer {
         pageDetails.add(page.key()+"\n");
 //        System.out.println("processing: " + page.key());
 
-        String url = page.get(CRAWL_URL);
+        String url = page.get(PROCESSED_URL);
         String rawText = page.get("rawText");  // rawText for entity parsing
         String cleanText = page.get("cleanText"); // cleanText for single-word parsing
 
 //        String text = page.get(CRAWL_TEXT);
         //String ip = page.get(CRAWL_IP);
-        String images = page.get(CRAWL_IMAGES);
+        String images = page.get(PROCESSED_IMAGES);
 
         // skip op-heavy nlp tasks if url DNE
         if (url == null || url.isEmpty()) {
@@ -279,7 +280,7 @@ public class DirectIndexer {
 //        long duration = (endTime - startTime);
 //        System.out.println("Time to normalize words: " + duration + "ms");
 
-        // populate wordMap for single index
+        // populate wordMap for single index using cleanText from pt-processed
         if(cleanText!=null && !cleanText.isEmpty()){
             String[] words = cleanText.split("\\s+");
             for(int i = 0; i < words.length; i++){
@@ -318,6 +319,8 @@ public class DirectIndexer {
             }
         }
 
+//        System.out.println(rawText);
+
         // parse named entities
         if(ENABLE_PARSE_ENTITY && rawText != null && !rawText.isEmpty()){
             extractEntities(rawText, urlId, entityMap); // raw text
@@ -330,6 +333,8 @@ public class DirectIndexer {
         if (!ENABLE_PARSE_ENTITY || rawText==null || rawText.isEmpty()) {
             return; // skip ner processing
         }
+
+//        System.out.println(rawText);
 
         // tokenize w/ pos
         Span[] tokenSpans = tokenizer.tokenizePos(rawText);
@@ -354,7 +359,7 @@ public class DirectIndexer {
             String entity = String.join(" ", Arrays.copyOfRange(tokens, span.getStart(), span.getEnd())).toLowerCase();
 
             // filter single-worded/6+ entity
-            if (span.length() < 2 || span.length() > 5) {
+            if (span.length() < 2 || span.length() > 5 || !entity.matches("[a-z ]+")) {
                 continue;
             }
 
@@ -523,89 +528,89 @@ public class DirectIndexer {
 
     }
 
-    private static String[] tokenizeText (String text){
-        // helper to tokenize text for both entity and single word
-        if (text == null || text.isEmpty()) {
-            return null;
-        }
-        String[] tokens = tokenizer.tokenize(text);
-        if (tokens.length == 0) {
-            return null;
-        }
+//    private static String[] tokenizeText (String text){
+//        // helper to tokenize text for both entity and single word
+//        if (text == null || text.isEmpty()) {
+//            return null;
+//        }
+//        String[] tokens = tokenizer.tokenize(text);
+//        if (tokens.length == 0) {
+//            return null;
+//        }
+//
+//        return tokens;
+//    }
 
-        return tokens;
-    }
+//    public static String[] normalizeWord(String[] tokens) {
+//        if (tokens == null || tokens.length == 0) return new String[0];
+//
+//        List<String> allValidWords = new ArrayList<>(tokens.length);
+//
+//        String[] batchTokens = new String[Math.min(1000, tokens.length)];
+//        int batchSize = 0;
+//
+//        for (String token : tokens) {
+//            String cached = wordCache.get(token);
+//            if (cached != null) {
+//                if (!cached.isEmpty()) {
+//                    allValidWords.add(cached);
+//                }
+//                continue;
+//            }
+//
+//            batchTokens[batchSize++] = token;
+//
+//            if (batchSize == batchTokens.length) {
+//                processTokenBatch(batchTokens, batchSize, allValidWords);
+//                batchSize = 0;
+//            }
+//        }
+//
+//        if (batchSize > 0) {
+//            processTokenBatch(batchTokens, batchSize, allValidWords);
+//        }
+//
+//        return allValidWords.toArray(new String[0]);
+//    }
 
-    public static String[] normalizeWord(String[] tokens) {
-        if (tokens == null || tokens.length == 0) return new String[0];
+//    private static void processTokenBatch(String[] batchTokens, int batchSize, List<String> allValidWords) {
+//        String[] actualBatch = Arrays.copyOf(batchTokens, batchSize);
+//
+//        String[] tags = posTagger.tag(actualBatch);
+//        String[] lemmas = lemmatizer.lemmatize(actualBatch, tags);
+//
+//        for (int i = 0; i < batchSize; i++) {
+//            String originalToken = actualBatch[i];
+//            String lemma = lemmas[i].toLowerCase();
+//
+//            if (!lemma.isEmpty() && isValidWord(lemma, tags[i]) && !stopWords.contains(lemma)) {
+//                allValidWords.add(lemma);
+//                wordCache.put(originalToken, lemma);
+//            } else {
+//                wordCache.put(originalToken, "");
+//            }
+//        }
+//    }
 
-        List<String> allValidWords = new ArrayList<>(tokens.length);
-
-        String[] batchTokens = new String[Math.min(1000, tokens.length)];
-        int batchSize = 0;
-
-        for (String token : tokens) {
-            String cached = wordCache.get(token);
-            if (cached != null) {
-                if (!cached.isEmpty()) {
-                    allValidWords.add(cached);
-                }
-                continue;
-            }
-
-            batchTokens[batchSize++] = token;
-
-            if (batchSize == batchTokens.length) {
-                processTokenBatch(batchTokens, batchSize, allValidWords);
-                batchSize = 0;
-            }
-        }
-
-        if (batchSize > 0) {
-            processTokenBatch(batchTokens, batchSize, allValidWords);
-        }
-
-        return allValidWords.toArray(new String[0]);
-    }
-
-    private static void processTokenBatch(String[] batchTokens, int batchSize, List<String> allValidWords) {
-        String[] actualBatch = Arrays.copyOf(batchTokens, batchSize);
-
-        String[] tags = posTagger.tag(actualBatch);
-        String[] lemmas = lemmatizer.lemmatize(actualBatch, tags);
-
-        for (int i = 0; i < batchSize; i++) {
-            String originalToken = actualBatch[i];
-            String lemma = lemmas[i].toLowerCase();
-
-            if (!lemma.isEmpty() && isValidWord(lemma, tags[i]) && !stopWords.contains(lemma)) {
-                allValidWords.add(lemma);
-                wordCache.put(originalToken, lemma);
-            } else {
-                wordCache.put(originalToken, "");
-            }
-        }
-    }
-
-    public static boolean isValidWord(String word, String pos) {
-        if (word.length() <= 2) {
-            return false;
-        }
-
-        if (!word.matches("^[a-zA-Z]+$")) {
-            return false;
-        }
-
-        if (word.matches(".*(.)\\1{2,}.*")) {
-            return false;
-        }
-
-        if (INVALID_POS.contains(pos)) {
-            return false;
-        }
-
-        return true;
-    }
+//    public static boolean isValidWord(String word, String pos) {
+//        if (word.length() <= 2) {
+//            return false;
+//        }
+//
+//        if (!word.matches("^[a-zA-Z]+$")) {
+//            return false;
+//        }
+//
+//        if (word.matches(".*(.)\\1{2,}.*")) {
+//            return false;
+//        }
+//
+//        if (INVALID_POS.contains(pos)) {
+//            return false;
+//        }
+//
+//        return true;
+//    }
 
     static Map<String, Set<String>> parseImages(String images) {
         if(images == null || images.isEmpty()){
@@ -621,7 +626,8 @@ public class DirectIndexer {
                 continue;
             }
 
-            String[] words = normalizeWord(tokenizeText(alt));
+//            String[] words = tokenizeText(alt);
+            String[] words = alt.split("\\s+"); // skip nlp processing for img alt
 
             for(String word : words){
                 if(word == null || word.isBlank()){

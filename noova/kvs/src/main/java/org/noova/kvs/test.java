@@ -16,10 +16,10 @@ public class test {
     public static void main(String[] args) {
         try {
             // Fetch the Wikipedia page
-            String url = "https://en.wikipedia.org:443/w/index.php?title=Pyrogallol&action=edit&section=1";
+            String url = "https://en.wikipedia.org:443/wiki/Gnosticism";
             Document doc = Jsoup.connect(url).get();
 
-            System.out.println("allContent");
+//            System.out.println(doc.body().text());
             // Parse all visible text from the body
             //String allContent = parseAllVisibleText(doc);
             //parsePageLinks(doc.body().toString(),"https://en.wikipedia.org:443");

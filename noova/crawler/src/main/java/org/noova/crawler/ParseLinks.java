@@ -90,13 +90,13 @@ public class ParseLinks {
             if (href.matches(".*[<>\"'{}|^\\[\\]]+.*")) { // skip href with invalid char
                 continue;
             }
-            System.out.println("href"+ href);
+//            System.out.println("href"+ href);
             String normalizedLink = normalizeURL(href, normalizedUrl);
             if (normalizedLink == null) {
                 continue;
             }
 
-            System.out.println("normalizedLink"+normalizedLink);
+//            System.out.println("normalizedLink"+normalizedLink);
             links.add(normalizedLink);
         }
         return links;
