@@ -32,4 +32,32 @@ public class Parser {
                 .trim();
     }
 
+    public static String removeAfterFirstPunctuation(String input) {
+
+        String punctuation = ".";
+
+        int firstPunctuationIndex = -1;
+
+        for (int i = 0; i < input.length(); i++) {
+            if (punctuation.indexOf(input.charAt(i)) != -1) {
+                firstPunctuationIndex = i; // should be more memory friendly vs split
+                break;
+            }
+        }
+
+        if (firstPunctuationIndex == -1) {
+            return input;
+        }
+
+        return input.substring(0, firstPunctuationIndex);
+    }
+
+    public static void main(String[] args) {
+        String testString = "asd123.jpg";
+        String result = removeAfterFirstPunctuation(testString);
+
+        System.out.println("Original: " + testString);
+        System.out.println("Processed: " + result);
+    }
+
 }
