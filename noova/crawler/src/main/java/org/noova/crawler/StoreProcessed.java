@@ -43,6 +43,8 @@ public class StoreProcessed {
 
     private static final Map<String, Row> UNPARSED_LINKS_MAP = new HashMap<>();
 
+    private static final boolean ENABLE_UNPARSED_LINKS = true;
+
     static {
         try {
             // load opennlp models
@@ -192,14 +194,18 @@ public class StoreProcessed {
                     if(!links.isEmpty()){
                         processedRow.put("links", String.join("\n", links));
                         // check weather link is already in the table
-                        for(String link : links) {
-                            String hashedLink = Hasher.hash(link);
-                            boolean exist = kvs.existsRow(URL_ID_TABLE, hashedLink);
-                            if (!exist) {
-                                // store new link
-                                Row row = new Row(hashedLink);
-                                row.put(PropertyLoader.getProperty("table.default.value"), link);
-                                UNPARSED_LINKS_MAP.put(link, row);
+
+                        if(ENABLE_UNPARSED_LINKS) {
+
+                            for (String link : links) {
+                                String hashedLink = Hasher.hash(link);
+                                boolean exist = kvs.existsRow(URL_ID_TABLE, hashedLink);
+                                if (!exist) {
+                                    // store new link
+                                    Row row = new Row(hashedLink);
+                                    row.put(PropertyLoader.getProperty("table.default.value"), link);
+                                    UNPARSED_LINKS_MAP.put(link, row);
+                                }
                             }
                         }
 
