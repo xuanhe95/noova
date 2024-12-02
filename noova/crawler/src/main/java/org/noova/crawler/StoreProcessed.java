@@ -44,9 +44,7 @@ public class StoreProcessed {
 
     private static final Map<String, Row> UNPARSED_LINKS_MAP = new HashMap<>();
 
-<<<<<<< Updated upstream
     private static final boolean ENABLE_UNPARSED_LINKS = true;
-=======
     private static TokenizerModel tokenizerModel;
     private static POSModel posModel;
     private static DictionaryLemmatizer lemmatizer;
@@ -69,8 +67,6 @@ public class StoreProcessed {
             "WP",  // Wh-pronoun
             "WRB"  // Wh-adverb
     );
-
->>>>>>> Stashed changes
 
     static {
         try {

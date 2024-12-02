@@ -1,12 +1,7 @@
 package org.noova.indexer;
 
-import opennlp.tools.lemmatizer.DictionaryLemmatizer;
-import opennlp.tools.lemmatizer.Lemmatizer;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
-import opennlp.tools.postag.POSModel;
-import opennlp.tools.postag.POSTagger;
-import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
@@ -19,7 +14,6 @@ import org.noova.tools.Logger;
 import org.noova.tools.PropertyLoader;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
@@ -58,24 +52,24 @@ public class DirectIndexer {
     private static final Tokenizer tokenizer;
 //    private static final POSTagger posTagger;
 //    private static final Lemmatizer lemmatizer;
-    private static final Set<String> stopWords;
+//    private static final Set<String> stopWords;
     private static NameFinderME personNameFinder;
     private static NameFinderME locationNameFinder;
     private static NameFinderME organizationNameFinder;
 
-    private static final Set<String> INVALID_POS = Set.of(
-            "DT",  // determiner (the, a, an)
-            "IN",  // preposition (in, of, at)
-            "CC",  // conjunction (and, or, but)
-            "UH",  // interjection (oh, wow, ah)
-            "FW",  // Foreign Word
-            "SYM", // Symbol
-            "LS",  // List item marker
-            "PRP", // Personal pronouns
-            "WDT", // Wh-determiner
-            "WP",  // Wh-pronoun
-            "WRB"  // Wh-adverb
-    );
+//    private static final Set<String> INVALID_POS = Set.of(
+//            "DT",  // determiner (the, a, an)
+//            "IN",  // preposition (in, of, at)
+//            "CC",  // conjunction (and, or, but)
+//            "UH",  // interjection (oh, wow, ah)
+//            "FW",  // Foreign Word
+//            "SYM", // Symbol
+//            "LS",  // List item marker
+//            "PRP", // Personal pronouns
+//            "WDT", // Wh-determiner
+//            "WP",  // Wh-pronoun
+//            "WRB"  // Wh-adverb
+//    );
 
     static {
         try {
@@ -105,21 +99,21 @@ public class DirectIndexer {
 //            posTagger = new POSTaggerME(posModel);
 //            lemmatizer = new DictionaryLemmatizer(dictStream);
 
-            log.info("Loading stopwords...");
-            stopWords = new HashSet<>();
-            try (InputStream is = DirectIndexer.class.getResourceAsStream("/models/stopwords-en.txt")) {
-                if (is == null) {
-                    log.warn("Warning: stopwords-en.txt not found in resources");
-                } else {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (!line.trim().isEmpty()) {
-                            stopWords.add(line.trim().toLowerCase());
-                        }
-                    }
-                }
-            }
+//            log.info("Loading stopwords...");
+//            stopWords = new HashSet<>();
+//            try (InputStream is = DirectIndexer.class.getResourceAsStream("/models/stopwords-en.txt")) {
+//                if (is == null) {
+//                    log.warn("Warning: stopwords-en.txt not found in resources");
+//                } else {
+//                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+//                    String line;
+//                    while ((line = reader.readLine()) != null) {
+//                        if (!line.trim().isEmpty()) {
+//                            stopWords.add(line.trim().toLowerCase());
+//                        }
+//                    }
+//                }
+//            }
 
             if (ENABLE_PARSE_ENTITY) {
                 log.info("Loading NER models...");
@@ -152,7 +146,7 @@ public class DirectIndexer {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException, IOException {
+    public static void main(String[] args) throws IOException {
         KVS kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
 
         int test_run_round = 1;
