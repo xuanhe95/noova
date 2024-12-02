@@ -1,0 +1,25 @@
+<component name="libraryTable">
+  <library name="all-jars1">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/tools-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/job-2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/indexer-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/original-gateway-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/flame-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/crawler-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/pagerank-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/kvs-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/__worker9002-current.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/job-1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/gateway-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/original-webserver-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/__worker9003-current.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/original-crawler-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/generic-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/__worker9001-current.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/all-jars/webserver-1.0-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

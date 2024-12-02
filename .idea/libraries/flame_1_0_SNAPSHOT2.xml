@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="flame-1.0-SNAPSHOT2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/noova/flame/target/flame-1.0-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

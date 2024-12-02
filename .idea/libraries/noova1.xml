@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="noova1">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/noova/__worker9001-current.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/job-2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/job-1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/job-3.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
