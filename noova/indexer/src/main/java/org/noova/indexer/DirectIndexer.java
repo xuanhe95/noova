@@ -48,9 +48,9 @@ public class DirectIndexer {
     }
 
     private static final TokenizerModel tokenizerModel;
-//    private static final POSModel posModel;
+    //    private static final POSModel posModel;
     private static final Tokenizer tokenizer;
-//    private static final POSTagger posTagger;
+    //    private static final POSTagger posTagger;
 //    private static final Lemmatizer lemmatizer;
 //    private static final Set<String> stopWords;
     private static NameFinderME personNameFinder;
@@ -151,6 +151,11 @@ public class DirectIndexer {
 
         int test_run_round = 1;
 
+        // load url id to the cache
+        System.out.println("Loading URL ID...");
+        loadUrlId(kvs);
+        System.out.println("URL ID loaded");
+
         for (char c1 = 'b'; c1 <= 'z'; c1++) {
             char c2 = (char) (c1 + 1); // Next character for endKey
             String startKey = String.valueOf(c1);
@@ -181,10 +186,6 @@ public class DirectIndexer {
                 System.out.println("Error: " + e.getMessage());
             }
 
-            // load url id to the cache
-            System.out.println("Loading URL ID...");
-            loadUrlId(kvs);
-            System.out.println("URL ID loaded");
             generateInvertedIndexBatch(kvs, pages, indexes);
 
             long end = System.currentTimeMillis();
@@ -428,8 +429,8 @@ public class DirectIndexer {
     }
 
 
-    private static void saveIndexToTable (KVS kvs, 
-                                          Map<String, Map<String, WordStats>> wordMap, 
+    private static void saveIndexToTable (KVS kvs,
+                                          Map<String, Map<String, WordStats>> wordMap,
                                           Map<String, StringBuffer> imageMap){
         Set<String> mergedWords = new HashSet<>(wordMap.keySet());
         mergedWords.addAll(imageMap.keySet());

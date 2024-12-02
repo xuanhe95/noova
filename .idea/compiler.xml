@@ -9,12 +9,12 @@
         <module name="crawler" />
         <module name="kvs" />
         <module name="indexer" />
-        <module name="flame" />
         <module name="pagerank" />
         <module name="webserver" />
+        <module name="flame" />
         <module name="tools" />
-        <module name="gateway" />
         <module name="generic" />
+        <module name="gateway" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>

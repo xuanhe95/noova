@@ -9,11 +9,8 @@
       <module fileurl="file://$PROJECT_DIR$/noova/generic/generic.iml" filepath="$PROJECT_DIR$/noova/generic/generic.iml" />
       <module fileurl="file://$PROJECT_DIR$/noova/indexer/indexer.iml" filepath="$PROJECT_DIR$/noova/indexer/indexer.iml" />
       <module fileurl="file://$PROJECT_DIR$/noova/kvs/kvs.iml" filepath="$PROJECT_DIR$/noova/kvs/kvs.iml" />
-      <module fileurl="file://$PROJECT_DIR$/noova/kvs/src/main/main.iml" filepath="$PROJECT_DIR$/noova/kvs/src/main/main.iml" />
       <module fileurl="file://$PROJECT_DIR$/noova/noova.iml" filepath="$PROJECT_DIR$/noova/noova.iml" />
       <module fileurl="file://$PROJECT_DIR$/noova/pagerank/pagerank.iml" filepath="$PROJECT_DIR$/noova/pagerank/pagerank.iml" />
-      <module fileurl="file://$PROJECT_DIR$/project/project.iml" filepath="$PROJECT_DIR$/project/project.iml" />
-      <module fileurl="file://$PROJECT_DIR$/noova/kvs/src/test/test.iml" filepath="$PROJECT_DIR$/noova/kvs/src/test/test.iml" />
       <module fileurl="file://$PROJECT_DIR$/noova/tools/tools.iml" filepath="$PROJECT_DIR$/noova/tools/tools.iml" />
       <module fileurl="file://$PROJECT_DIR$/noova/webserver/webserver.iml" filepath="$PROJECT_DIR$/noova/webserver/webserver.iml" />
     </modules>
