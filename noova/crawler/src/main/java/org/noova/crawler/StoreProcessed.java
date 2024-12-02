@@ -26,6 +26,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class StoreProcessed {
     /*
@@ -43,8 +44,10 @@ public class StoreProcessed {
     private static final String UNPARSED_LINKS_TABLE = PropertyLoader.getProperty("table.unparsed");
 
     private static final Map<String, Row> UNPARSED_LINKS_MAP = new HashMap<>();
+    static int counter=0;
+//    private static final Pattern CLEAN_TEXT_PATTERN = Pattern.compile("[^a-zA-Z]+");
 
-    private static final boolean ENABLE_UNPARSED_LINKS = true;
+    private static final boolean ENABLE_UNPARSED_LINKS = false;
     private static TokenizerModel tokenizerModel;
     private static POSModel posModel;
     private static DictionaryLemmatizer lemmatizer;
@@ -112,11 +115,14 @@ public class StoreProcessed {
     }
 
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
         System.out.println("Start processing pt-crawl to pt-processed...");
         KVS kvs = new KVSClient(KVS_HOST + ":" + KVS_PORT);
 
         ExecutorService executor = Executors.newFixedThreadPool(2*Runtime.getRuntime().availableProcessors());
+
+        // dedup
+        Set<String> processedKeys = Collections.synchronizedSet(fetchProcessedKeys(kvs));
 
         long start = System.nanoTime();
         // Loop through key pairs (a b, b c, ..., y z)
@@ -127,7 +133,9 @@ public class StoreProcessed {
 
             System.out.println("Processing range: " + startKey + " to " + endKey);
 
-            executor.submit(() -> processSlice(kvs, kvs.scan(CRAWL_TABLE, startKey, endKey), kvs.scan(PROCESSED_TABLE, null, null)));
+            counter=0; // restart counter for next slice
+
+            executor.submit(() -> processSlice(kvs, kvs.scan(CRAWL_TABLE, startKey, endKey), processedKeys));
 
 //            Iterator<Row> pages = null;
 //            try {
@@ -166,109 +174,130 @@ public class StoreProcessed {
         }
     }
 
-
-    private static int processSlice(KVS kvs, Iterator<Row> pages, Iterator<Row> processedPages) {
-//        System.out.println("[processSlice] Processing rows...");
-        HashSet <String> processed_page_table = new HashSet<>();
-        int counter = 0;
-//        // dedup
-        while (processedPages !=null && processedPages.hasNext()) {
-            Row mappingRow = processedPages.next();
-            String key = mappingRow.key();
-            processed_page_table.add(key);
+    private static Set<String> fetchProcessedKeys(KVS kvs) throws IOException {
+        Set<String> processedKeys = new HashSet<>();
+        Iterator<Row> processedPages = kvs.scan(PROCESSED_TABLE, null, null);
+        while (processedPages != null && processedPages.hasNext()) {
+            processedKeys.add(processedPages.next().key());
         }
+        return processedKeys;
+    }
 
+
+    private static int processSlice(KVS kvs, Iterator<Row> pages, Set<String> processedKeys) throws IOException, InterruptedException {
         // read crawl pages and store to pt-processed
+
+        // batch put
+//        List<Row> buffer = new ArrayList<>();
+//        int batchSize = 50;
+
         while (pages != null && pages.hasNext()) {
             Row page = pages.next();
-            String rowKey = page.key();
-
-            if (processed_page_table.contains(rowKey)) {
-                System.out.println("Skipping already processed row: " + rowKey);
-                continue;
-            }
-
-            String rawPageContent = page.get("page");
-
-            if (rawPageContent == null || rawPageContent.isEmpty()) {
-                System.out.println("Skipping row with no page content: " + rowKey);
-                continue;
-            }
-
-            try {
-//                System.out.println("Processing row: " + rowKey);
-//                System.out.println("Raw data: " + page.toString());
-
-                // use 'page' in pt-crawl to populate 'rawText' in pt-processed
-                Element body = Jsoup.parse(rawPageContent).body();
-                body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
-                        ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
-                String rawText = parseVisibleText(body);
-
-                // use nlp model to generate fully-cleaned text (lemmatize+stop word rm)
-                String cleanText = generateCleanText(rawText);
-
-                // store row for pt-processed
-                Row processedRow = new Row(rowKey);
-                processedRow.put("rawText", rawText); // for entity index
-                processedRow.put("cleanText", cleanText); // for single word index
-                if(page.get("url")!=null) processedRow.put("url", page.get("url"));
-                if(page.get("ip")!=null) processedRow.put("ip", page.get("ip"));
-                if(page.get("title")!=null) processedRow.put("title", page.get("title"));
-                if(page.get("images")!=null) processedRow.put("images", page.get("images"));
-                if(page.get("timestamp")!=null) processedRow.put("timestamp", page.get("timestamp"));
-                if(page.get("description")!=null) processedRow.put("description", page.get("description"));
-                if(page.get("addresses")!=null) processedRow.put("addresses", page.get("addresses"));
-                if(page.get("icon")!=null) processedRow.put("icon", page.get("icon"));
-                //if(page.get("links")!=null) processedRow.put("links", page.get("links")); //! lots of null - need to fix crawler link extraction logic
-
-                // retrieve links from rawPageContent
-                String baseUrl = page.get("url");
-                if(baseUrl != null){
-                    Set<String> links = ParseLinks.parsePageLinks(rawPageContent, baseUrl);
-                    if(!links.isEmpty()){
-                        processedRow.put("links", String.join("\n", links));
-                        // check weather link is already in the table
-
-                        if(ENABLE_UNPARSED_LINKS) {
-
-                            for (String link : links) {
-                                String hashedLink = Hasher.hash(link);
-                                boolean exist = kvs.existsRow(URL_ID_TABLE, hashedLink);
-                                if (!exist) {
-                                    // store new link
-                                    Row row = new Row(hashedLink);
-                                    row.put(PropertyLoader.getProperty("table.default.value"), link);
-                                    UNPARSED_LINKS_MAP.put(link, row);
-                                }
-                            }
-                        }
-
-                    }
-                }
-
-                kvs.putRow(PROCESSED_TABLE, processedRow);
-                counter++;
-                System.out.println("Processed row: " + rowKey);
-
-            } catch (Exception e) {
-                System.err.println("Error processing row " + rowKey + ": " + e.getMessage());
-                e.printStackTrace();
-            }
+            processPage(page, processedKeys, kvs);
         }
+
+//        if (!buffer.isEmpty()) {
+//            batchPutRows(kvs, buffer);
+//        }
 
         System.out.println("[processSlice] Finished processing rows: " + counter);
         return counter;
     }
 
+    private static void processPage(Row page, Set<String> processedKeys, KVS kvs){
+        String rowKey = page.key();
+
+        if (processedKeys.contains(rowKey)) {
+            System.out.println("Skipping already processed row: " + rowKey);
+            return;
+        }
+
+        String rawPageContent = page.get("page");
+
+        if (rawPageContent == null || rawPageContent.isEmpty()) {
+            System.out.println("Skipping row with no page content: " + rowKey);
+            return;
+        }
+
+        try {
+
+            // use 'page' in pt-crawl to populate 'rawText' in pt-processed
+            Element body = Jsoup.parse(rawPageContent).body();
+            body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
+                    ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
+            String rawText = parseVisibleText(body);
+
+            // use nlp model to generate fully-cleaned text (lemmatize+stop word rm)
+            String cleanText = generateCleanText(rawText);
+
+            // store row for pt-processed
+            Row processedRow = new Row(rowKey);
+            processedRow.put("rawText", rawText); // for entity index
+            processedRow.put("cleanText", cleanText); // for single word index
+            if(page.get("url")!=null) processedRow.put("url", page.get("url"));
+            if(page.get("ip")!=null) processedRow.put("ip", page.get("ip"));
+            if(page.get("title")!=null) processedRow.put("title", page.get("title"));
+            if(page.get("images")!=null) processedRow.put("images", page.get("images"));
+            if(page.get("timestamp")!=null) processedRow.put("timestamp", page.get("timestamp"));
+            if(page.get("description")!=null) processedRow.put("description", page.get("description"));
+            if(page.get("addresses")!=null) processedRow.put("addresses", page.get("addresses"));
+            if(page.get("icon")!=null) processedRow.put("icon", page.get("icon"));
+            //if(page.get("links")!=null) processedRow.put("links", page.get("links")); //! lots of null - need to fix crawler link extraction logic
+
+            // retrieve links from rawPageContent
+            String baseUrl = page.get("url");
+            if(baseUrl != null){
+                Set<String> links = ParseLinks.parsePageLinks(rawPageContent, baseUrl);
+                if(!links.isEmpty()){
+                    processedRow.put("links", String.join("\n", links));
+                    // check weather link is already in the table
+
+                    if(ENABLE_UNPARSED_LINKS) {
+
+                        for (String link : links) {
+                            String hashedLink = Hasher.hash(link);
+                            boolean exist = kvs.existsRow(URL_ID_TABLE, hashedLink);
+                            if (!exist) {
+                                // store new link
+                                Row row = new Row(hashedLink);
+                                row.put(PropertyLoader.getProperty("table.default.value"), link);
+                                UNPARSED_LINKS_MAP.put(link, row);
+                            }
+                        }
+                    }
+
+                }
+            }
+
+//            buffer.add(processedRow);
+//            if (buffer.size() >= batchSize) {
+//                batchPutRows(kvs, buffer);
+//                buffer.clear();
+//            }
+
+            processedKeys.add(rowKey);
+            kvs.putRow(PROCESSED_TABLE, processedRow);
+            counter++;
+            System.out.println("Processed row: " + rowKey);
+
+        } catch (Exception e) {
+            System.err.println("Error processing row " + rowKey + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+
+    }
+
+    private static void batchPutRows(KVS kvs, List<Row> rows) throws IOException {
+        for (Row row : rows) {
+            kvs.putRow(PROCESSED_TABLE, row);
+        }
+    }
+
     private static String parseVisibleText(Element element) {
+        element.select("script, style").remove();
         StringBuilder textBuilder = new StringBuilder();
 
         for (Element child : element.children()) {
-            String tagName = child.tagName();
-            if (tagName.equals("script") || tagName.equals("style")) {
-                continue; // Skip non-visible content
-            }
             if (child.children().isEmpty()) {
                 String text = cleanText(child.text()); // use text() for punc; use ownText() for no punc
                 if (!text.isEmpty()) {
@@ -289,6 +318,7 @@ public class StoreProcessed {
             return "";
         }
         return text;
+//        return CLEAN_TEXT_PATTERN.matcher(text).replaceAll(" ").trim();
     }
 
     private static String generateCleanText(String rawText) {

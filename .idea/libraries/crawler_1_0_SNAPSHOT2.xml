@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="crawler-1.0-SNAPSHOT2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/noova/crawler/target/crawler-1.0-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
