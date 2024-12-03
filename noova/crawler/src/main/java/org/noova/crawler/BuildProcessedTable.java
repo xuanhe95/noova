@@ -1,11 +1,11 @@
 package org.noova.crawler;
 
-import opennlp.tools.lemmatizer.DictionaryLemmatizer;
-import opennlp.tools.postag.POSModel;
-import opennlp.tools.postag.POSTaggerME;
-import opennlp.tools.tokenize.Tokenizer;
-import opennlp.tools.tokenize.TokenizerME;
-import opennlp.tools.tokenize.TokenizerModel;
+//import opennlp.tools.lemmatizer.DictionaryLemmatizer;
+//import opennlp.tools.postag.POSModel;
+//import opennlp.tools.postag.POSTaggerME;
+//import opennlp.tools.tokenize.Tokenizer;
+//import opennlp.tools.tokenize.TokenizerME;
+//import opennlp.tools.tokenize.TokenizerModel;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 
@@ -17,12 +17,7 @@ import org.noova.tools.Hasher;
 import org.noova.tools.PropertyLoader;
 import org.noova.tools.Parser;
 
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -222,19 +217,20 @@ public class BuildProcessedTable {
         try {
 
             // use 'page' in pt-crawl to populate 'rawText' in pt-processed
-            Element body = Jsoup.parse(rawPageContent).body();
-            body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
-                    ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
-            String rawText = Parser.processWord(parseVisibleText(body));
+            String text = page.get("text"); // use original crawled text if any
 
-            // use nlp model to generate fully-cleaned text (lemmatize+stop word rm)
-//            String cleanText = generateCleanText(rawText);
+            if(text.isBlank()){ // use new parseVisibleText if pt-crawl 'text' is empty
+                Element body = Jsoup.parse(rawPageContent).body();
+                body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
+                        ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
+                text = parseVisibleText(body);
+            }
+
+            text = Parser.processWord(text); // rm non-ascii + normalize spaces
 
             // store row for pt-processed
             Row processedRow = new Row(rowKey);
-            processedRow.put("text",rawText);
-//            processedRow.put("rawText", rawText); // for entity index
-//            processedRow.put("cleanText", cleanText); // for single word index
+            processedRow.put("text", text);
             if(page.get("url")!=null) processedRow.put("url", page.get("url"));
             if(page.get("ip")!=null) processedRow.put("ip", page.get("ip"));
             if(page.get("title")!=null) processedRow.put("title", page.get("title"));
@@ -288,11 +284,11 @@ public class BuildProcessedTable {
 
     }
 
-    private static void batchPutRows(KVS kvs, List<Row> rows) throws IOException {
-        for (Row row : rows) {
-            kvs.putRow(PROCESSED_TABLE, row);
-        }
-    }
+//    private static void batchPutRows(KVS kvs, List<Row> rows) throws IOException {
+//        for (Row row : rows) {
+//            kvs.putRow(PROCESSED_TABLE, row);
+//        }
+//    }
 
     private static String parseVisibleText(Element element) {
         element.select("script, style").remove();
@@ -313,13 +309,12 @@ public class BuildProcessedTable {
     }
 
     private static String cleanText(String text) {
-        text = text.replaceAll("\\[\\s*\\]", " ");
-        text = text.replaceAll("\\s{2,}", " ").trim();
+        text = text.replaceAll("\\[\\s*\\]", " ")
+                .replaceAll("\\s{2,}", " ").trim();
         if (text.length() < 3) {
             return "";
         }
         return text;
-//        return CLEAN_TEXT_PATTERN.matcher(text).replaceAll(" ").trim();
     }
 
 //    private static String generateCleanText(String rawText) {

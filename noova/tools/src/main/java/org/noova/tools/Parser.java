@@ -1,8 +1,5 @@
 package org.noova.tools;
 
-
-import java.io.UnsupportedEncodingException;
-
 public class Parser {
 
     public static String[] imagesToHtml(String images){
