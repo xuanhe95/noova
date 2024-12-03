@@ -2,7 +2,6 @@ package org.noova.indexer;
 
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
-import opennlp.tools.tokenize.SimpleTokenizer;
 import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
@@ -10,9 +9,7 @@ import opennlp.tools.util.Span;
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
-import org.noova.tools.Hasher;
-import org.noova.tools.Logger;
-import org.noova.tools.PropertyLoader;
+import org.noova.tools.*;
 
 import java.io.*;
 import java.time.format.DateTimeFormatter;
@@ -41,85 +38,31 @@ public class DirectIndexer {
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
     static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
-    static final String VALID_WORD = "^[a-zA-Z-]+$";
-//    private static final Map<String, String> wordCache = new ConcurrentHashMap<>();
-//    private static final Map<String, String[]> tokenCache = new ConcurrentHashMap<>();
+//    static final String VALID_WORD = "^[a-zA-Z-]+$";
 
     private static class WordStats {
         int frequency = 0;
         int firstLocation = 0;
     }
 
-    private static final TokenizerModel tokenizerModel;
-    //    private static final POSModel posModel;
-    private static final Tokenizer tokenizer;
-    //    private static final POSTagger posTagger;
-//    private static final Lemmatizer lemmatizer;
-//    private static final Set<String> stopWords;
+    private static TokenizerModel tokenizerModel;
+    private static Tokenizer tokenizer;
     private static NameFinderME personNameFinder;
     private static NameFinderME locationNameFinder;
     private static NameFinderME organizationNameFinder;
 
-//    private static final Set<String> INVALID_POS = Set.of(
-//            "DT",  // determiner (the, a, an)
-//            "IN",  // preposition (in, of, at)
-//            "CC",  // conjunction (and, or, but)
-//            "UH",  // interjection (oh, wow, ah)
-//            "FW",  // Foreign Word
-//            "SYM", // Symbol
-//            "LS",  // List item marker
-//            "PRP", // Personal pronouns
-//            "WDT", // Wh-determiner
-//            "WP",  // Wh-pronoun
-//            "WRB"  // Wh-adverb
-//    );
-
     static {
         try {
-            log.info("Starting to load OpenNLP models...");
-
-            InputStream tokenStream = DirectIndexer.class.getResourceAsStream("/models/en-token.bin");
-//            InputStream posStream = DirectIndexer.class.getResourceAsStream("/models/en-pos-maxent.bin");
-//            InputStream dictStream = DirectIndexer.class.getResourceAsStream("/models/en-lemmatizer.dict.txt");
-
-            if (tokenStream == null) {
-                throw new IOException("Tokenizer model not found in resources: /models/en-token.bin");
-            }
-//            if (posStream == null) {
-//                throw new IOException("POS model not found in resources: /models/en-pos-maxent.bin");
-//            }
-//            if (dictStream == null) {
-//                throw new IOException("can not find：/models/en-lemmatizer.dict.txt");
-//            }
-
-            log.info("Loading tokenizer model...");
-            tokenizerModel = new TokenizerModel(tokenStream);
-
-//            log.info("Loading POS model...");
-//            posModel = new POSModel(posStream);
-
-            tokenizer = new TokenizerME(tokenizerModel);
-            //tokenizer = SimpleTokenizer.INSTANCE;
-//            posTagger = new POSTaggerME(posModel);
-//            lemmatizer = new DictionaryLemmatizer(dictStream);
-
-//            log.info("Loading stopwords...");
-//            stopWords = new HashSet<>();
-//            try (InputStream is = DirectIndexer.class.getResourceAsStream("/models/stopwords-en.txt")) {
-//                if (is == null) {
-//                    log.warn("Warning: stopwords-en.txt not found in resources");
-//                } else {
-//                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-//                    String line;
-//                    while ((line = reader.readLine()) != null) {
-//                        if (!line.trim().isEmpty()) {
-//                            stopWords.add(line.trim().toLowerCase());
-//                        }
-//                    }
-//                }
-//            }
-
             if (ENABLE_PARSE_ENTITY) {
+                InputStream tokenStream = DirectIndexer.class.getResourceAsStream("/models/en-token.bin");
+                if (tokenStream == null) {
+                    throw new IOException("Tokenizer model not found in resources: /models/en-token.bin");
+                }
+
+                log.info("Loading tokenizer model...");
+                tokenizerModel = new TokenizerModel(tokenStream);
+                tokenizer = new TokenizerME(tokenizerModel);
+
                 log.info("Loading NER models...");
                 InputStream personModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-person.bin");
                 InputStream locationModelStream = DirectIndexer.class.getResourceAsStream("/models/en-ner-location.bin");
@@ -273,27 +216,19 @@ public class DirectIndexer {
             return;
         }
 
-//        String[] tokens = tokenizeText(text);
-
-        // parse single normalized words (lemmatize + stop word rm) and populate wordMap
-//        long startTime = System.currentTimeMillis();
-//        String[] words = normalizeWord(tokens);
-//        long endTime = System.currentTimeMillis();
-//        long duration = (endTime - startTime);
-//        System.out.println("Time to normalize words: " + duration + "ms");
-
         // populate wordMap for single index using cleanText from pt-processed
         if(cleanText!=null && !cleanText.isEmpty()){
             String[] words = cleanText.split("\\s+");
             for(int i = 0; i < words.length; i++){
-                String word = words[i];
-                if(word == null || word.isEmpty()){
+                String word = words[i].replaceAll("[^a-zA-Z]", "").toLowerCase();
+                String lemma = LemmaLoader.getLemma(word);
+                if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
                     continue;
                 }
-                wordMap.putIfAbsent(word, new ConcurrentHashMap<>());
-                Map<String, WordStats> urlStatsMap = wordMap.get(word);
+                wordMap.putIfAbsent(lemma, new ConcurrentHashMap<>());
+                Map<String, WordStats> urlStatsMap = wordMap.get(lemma);
 
-                //System.out.println("Word: " + word + " URL: " + urlId);
+                //System.out.println("Word: " + lemma + " URL: " + urlId);
 
                 if (!urlStatsMap.containsKey(urlId)) {
                     WordStats stats = new WordStats();
@@ -306,7 +241,6 @@ public class DirectIndexer {
                 }
             }
         }
-
 
         // parse images and populate imageMap
 
@@ -570,89 +504,6 @@ public class DirectIndexer {
 
     }
 
-//    private static String[] tokenizeText (String text){
-//        // helper to tokenize text for both entity and single word
-//        if (text == null || text.isEmpty()) {
-//            return null;
-//        }
-//        String[] tokens = tokenizer.tokenize(text);
-//        if (tokens.length == 0) {
-//            return null;
-//        }
-//
-//        return tokens;
-//    }
-
-//    public static String[] normalizeWord(String[] tokens) {
-//        if (tokens == null || tokens.length == 0) return new String[0];
-//
-//        List<String> allValidWords = new ArrayList<>(tokens.length);
-//
-//        String[] batchTokens = new String[Math.min(1000, tokens.length)];
-//        int batchSize = 0;
-//
-//        for (String token : tokens) {
-//            String cached = wordCache.get(token);
-//            if (cached != null) {
-//                if (!cached.isEmpty()) {
-//                    allValidWords.add(cached);
-//                }
-//                continue;
-//            }
-//
-//            batchTokens[batchSize++] = token;
-//
-//            if (batchSize == batchTokens.length) {
-//                processTokenBatch(batchTokens, batchSize, allValidWords);
-//                batchSize = 0;
-//            }
-//        }
-//
-//        if (batchSize > 0) {
-//            processTokenBatch(batchTokens, batchSize, allValidWords);
-//        }
-//
-//        return allValidWords.toArray(new String[0]);
-//    }
-
-//    private static void processTokenBatch(String[] batchTokens, int batchSize, List<String> allValidWords) {
-//        String[] actualBatch = Arrays.copyOf(batchTokens, batchSize);
-//
-//        String[] tags = posTagger.tag(actualBatch);
-//        String[] lemmas = lemmatizer.lemmatize(actualBatch, tags);
-//
-//        for (int i = 0; i < batchSize; i++) {
-//            String originalToken = actualBatch[i];
-//            String lemma = lemmas[i].toLowerCase();
-//
-//            if (!lemma.isEmpty() && isValidWord(lemma, tags[i]) && !stopWords.contains(lemma)) {
-//                allValidWords.add(lemma);
-//                wordCache.put(originalToken, lemma);
-//            } else {
-//                wordCache.put(originalToken, "");
-//            }
-//        }
-//    }
-
-//    public static boolean isValidWord(String word, String pos) {
-//        if (word.length() <= 2) {
-//            return false;
-//        }
-//
-//        if (!word.matches("^[a-zA-Z]+$")) {
-//            return false;
-//        }
-//
-//        if (word.matches(".*(.)\\1{2,}.*")) {
-//            return false;
-//        }
-//
-//        if (INVALID_POS.contains(pos)) {
-//            return false;
-//        }
-//
-//        return true;
-//    }
 
     static Map<String, Set<String>> parseImages(String images) {
         if(images == null || images.isEmpty()){
@@ -684,10 +535,15 @@ public class DirectIndexer {
                         continue;
                     }
                 }
-                if (word.matches(VALID_WORD)) {
-                    Set<String> imageSet = wordImageMap.computeIfAbsent(word, k -> ConcurrentHashMap.newKeySet());
-                    imageSet.add(src);
+
+                word = word.replaceAll("[^a-zA-Z]", "").toLowerCase();
+                String lemma = LemmaLoader.getLemma(word);
+                if (lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)) {
+                    continue;
                 }
+
+                Set<String> imageSet = wordImageMap.computeIfAbsent(word, k -> ConcurrentHashMap.newKeySet());
+                imageSet.add(src);
             }
         }
         return wordImageMap;
