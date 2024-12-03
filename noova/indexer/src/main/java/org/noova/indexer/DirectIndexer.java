@@ -538,7 +538,7 @@ public class DirectIndexer {
                     continue;
                 }
 
-                Set<String> imageSet = wordImageMap.computeIfAbsent(word, k -> ConcurrentHashMap.newKeySet());
+                Set<String> imageSet = wordImageMap.computeIfAbsent(lemma, k -> ConcurrentHashMap.newKeySet());
                 imageSet.add(src);
             }
         }
