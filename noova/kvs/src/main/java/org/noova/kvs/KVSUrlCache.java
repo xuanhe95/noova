@@ -10,8 +10,16 @@ import java.util.Map;
 public class KVSUrlCache {
     static final Map<String, String> URL_ID_CACHE = new HashMap<>();
 
+    static final Map<String, String> ID_URL_CACHE = new HashMap<>();
+
     private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id");
     private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url-id.id");
+
+    private static final String ID_URL_TABLE = PropertyLoader.getProperty("table.id-url");
+
+    private static final String ID_URL_VALUE = PropertyLoader.getProperty("table.id-url.url");
+
+
 
     private static final KVS KVS_CLIENT = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
     private static final String IMG_MAPPING_TABLE = PropertyLoader.getProperty("table.image-mapping");
@@ -72,13 +80,33 @@ public class KVSUrlCache {
 
     }
 
-    public static void loadUrlId() throws IOException {
+
+    public static String getHashedUrl(String id) throws IOException {
+        if(URL_ID_CACHE.containsKey(id)){
+            return URL_ID_CACHE.get(id);
+        }
+
+
+        Row row = KVS_CLIENT.getRow(ID_URL_TABLE, id);
+
+
+        if (row != null) {
+            String url = row.get(ID_URL_VALUE);
+            ID_URL_CACHE.put(id, url);
+            return url;
+        }
+
+        return null;
+    }
+
+    public static void loadAllUrlWithId() throws IOException {
         var ids = KVS_CLIENT.scan(URL_ID_TABLE, null, null);
         ids.forEachRemaining(row -> {
             String id = row.get(URL_ID_VALUE);
             if(id == null){
                 return;
             }
+            ID_URL_CACHE.put(id, row.key());
             URL_ID_CACHE.put(row.key(), id);
         });
     }

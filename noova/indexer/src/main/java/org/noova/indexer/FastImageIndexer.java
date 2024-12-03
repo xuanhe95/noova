@@ -1,6 +1,5 @@
 package org.noova.indexer;
 
-import opennlp.tools.lemmatizer.DictionaryLemmatizer;
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.KVSUrlCache;
@@ -13,8 +12,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,7 +35,7 @@ public class FastImageIndexer {
     public static void main(String[] args) throws IOException {
         // load url id to the cache
         System.out.println("Loading URL ID...");
-        KVSUrlCache.loadUrlId();
+        KVSUrlCache.loadAllUrlWithId();
         System.out.println("URL ID loaded");
 
         Iterator<Row> pages = KVS_CLIENT.scan(PROCESSED_TABLE, null, null);

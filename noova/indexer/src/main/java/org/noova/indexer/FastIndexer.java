@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ForkJoinPool;
 
@@ -38,7 +37,7 @@ public class FastIndexer {
     public static void main(String[] args) throws IOException {
         // load url id to the cache
         System.out.println("Loading URL ID...");
-        KVSUrlCache.loadUrlId();
+        KVSUrlCache.loadAllUrlWithId();
         System.out.println("URL ID loaded");
 
         var rows = KVS_CLIENT.scan(PROCESSED_TABLE, null, null);

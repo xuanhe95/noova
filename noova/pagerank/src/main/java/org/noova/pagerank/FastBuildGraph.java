@@ -41,7 +41,7 @@ public class FastBuildGraph {
         Iterator<Row> pages = KVS_CLIENT.scan(PROCESSED_TABLE, startKey, endKeyExclusive);
 
         System.out.println("Loading URL ID...");
-        KVSUrlCache.loadUrlId();
+        KVSUrlCache.loadAllUrlWithId();
         System.out.println("URL ID loaded");
 
         buildGraphBatch(pages);
