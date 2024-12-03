@@ -43,15 +43,24 @@ public class FastPageRank implements Serializable {
 
         System.out.println("start");
 
-        int totalPages = KVS_CLIENT.count(PROCESSED_TABLE);
+        //int totalPages = KVS_CLIENT.count(PROCESSED_TABLE);
 
-        System.out.println("Total pages: " + totalPages);
+        //System.out.println("Total pages: " + totalPages);
 
-        Map<String, Double> pageRanks = processPageRank(totalPages);
+        Map<String, Double> pageRanks = processPageRank();
         Map<String, Integer> rankDistribution = new HashMap<>();
 
 
         pageRanks.forEach((page, rank) -> {
+
+//            try {
+//                if(!KVS_CLIENT.existsRow(PROCESSED_TABLE, page)){
+//                    System.out.println("Page not found: " + page);
+//                    return;
+//                }
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
 
             double roundedRank = Math.floor(rank * 100) / 100.0;
             rankDistribution.merge(String.valueOf(roundedRank), 1, Integer::sum);
@@ -63,7 +72,7 @@ public class FastPageRank implements Serializable {
                 throw new RuntimeException(e);
             }
             try {
-                Thread.sleep(10);
+                Thread.sleep(1);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -79,27 +88,30 @@ public class FastPageRank implements Serializable {
         Map<String, Double> pageRanks = new HashMap<>();
 
         // traverse all pages
-        for(var pageEntity : OUTGOING_GRAPH_CACHE.entrySet()){
-            Row page = pageEntity.getValue();
-            String hashedUrl = page.key();
+        for(var pageEntity : prevPageRanks.entrySet()){
 
+            String hashedUrl = pageEntity.getKey();
 
-            double rankSum = totalSourcePages * DECAY_RATE / totalPages;
+            //Row page = OUTGOING_GRAPH_CACHE.getOrDefault(hashedUrl, null);
+            Row reversedPage = INCOMING_GRAPH_CACHE.getOrDefault(hashedUrl, null);
+
+            double rankSum = 0;
+                    //totalSourcePages * DECAY_RATE / totalPages;
             double sinkPR = 0;
 
             // all pages link to this page, without source page
-            Row reversedPage = INCOMING_GRAPH_CACHE.getOrDefault(hashedUrl, null);
-            if(reversedPage == null){
-                System.out.println("No incoming graph for " + hashedUrl);
-                continue;
-            }
+            if(reversedPage != null){
+                //System.out.println("No incoming graph for " + hashedUrl);
+
             var links = reversedPage.columns();
 
             // each link i contributes to the page PR(i)/L(i)
             for(String hashedLink : links){
-                if(!prevPageRanks.containsKey(hashedLink)){
-                    continue;
-                }
+//                if(!prevPageRanks.containsKey(hashedLink)){
+//                    continue;
+//                }                if(!prevPageRanks.containsKey(hashedLink)){
+//                    continue;
+//                }
                 Row linkRow = OUTGOING_GRAPH_CACHE.getOrDefault(hashedLink, null);
                 Set<String> linkToOthers;
                 if(linkRow == null){
@@ -112,13 +124,32 @@ public class FastPageRank implements Serializable {
                     } else{
                         // each link i contributes to the page PR(i)/L(i)
                         rankSum += prevPageRanks.get(hashedLink) / linkToOthers.size();
+//                        if(rankSum== 1.0){
+//                            System.out.println("rankSum: " + rankSum);
+//                            System.out.println("sinkPR: " + sinkPR);
+//                            System.out.println("linktoothers: " + linkToOthers.size());
+//                        }
+
                     }
                 }
             }
+            }
+//            else{
+//                sinkPR = prevPageRanks.get(hashedUrl);
+//            }
 
             // count sink node contribution to this page
             double sinkContribution = DECAY_RATE * sinkPR / totalPages;
             double randomJump = (1 - DECAY_RATE);
+
+
+//            if(randomJump + DECAY_RATE * rankSum + sinkContribution == 1.0){
+//                System.out.println("1.0 Page: " + hashedUrl + ", Rank: " + (randomJump + DECAY_RATE * rankSum + sinkContribution));
+//                System.out.println("rankSum: " + rankSum);
+//                System.out.println("sinkPR: " + sinkPR);
+//                System.out.println("sinkContribution: " + sinkContribution);
+//            }
+
             pageRanks.put(hashedUrl, randomJump + DECAY_RATE * rankSum + sinkContribution);
         }
 
@@ -126,13 +157,15 @@ public class FastPageRank implements Serializable {
     }
 
 
-    public static Map<String, Double> processPageRank(int totalPages) throws IOException {
+    public static Map<String, Double> processPageRank() throws IOException {
+
 
         Map<String, Double> pageRanks = new HashMap<>();
         Map<String, Double> prevPageRanks;
 
         // this part should scan all data to make sure all pages (vertices) are included
         Iterator<Row> pages = KVS_CLIENT.scan(OUTGOING_GRAPH, null, null);
+        Iterator<Row> reversedPages = KVS_CLIENT.scan(INCOMING_GRAPH, null, null);
 
 
         int totalSourcePages = 0;
@@ -145,32 +178,49 @@ public class FastPageRank implements Serializable {
                 totalSourcePages++;
                 continue;
             }
-
-
             INCOMING_GRAPH_CACHE.put(page.key(), reversedPage);
-
-
-
-
             Set<String> linksFrom = reversedPage.columns();
 
             if(linksFrom.isEmpty()){
                 // source node
-                totalSourcePages++;
+                //totalSourcePages++;
+                pageRanks.put(page.key(), 1.0);
             } else{
                 // normal node and sink node
                 pageRanks.put(page.key(), 1.0);
             }
         }
 
+        // not all pages are included in the outgoing graph
+        while(reversedPages != null && reversedPages.hasNext()){
+            Row reversedPage = reversedPages.next();
+
+            if(!pageRanks.containsKey(reversedPage.key())){
+                // process t
+                pageRanks.put(reversedPage.key(), 1.0);
+                INCOMING_GRAPH_CACHE.put(reversedPage.key(), reversedPage);
+            }
+
+            for(String link : reversedPage.columns()){
+                if(!pageRanks.containsKey(link)){
+                    pageRanks.put(link, 1.0);
+                }
+            }
+        }
+
+        //int totalPages = pageRanks.size();
+
         int iteration = 0;
         boolean converged;
 
         Set<String> convergedPages = new HashSet<>();
 
+        long start = System.currentTimeMillis();
+
         do {
             prevPageRanks = pageRanks;
-            pageRanks = iteratePageRank(prevPageRanks, totalPages, totalSourcePages);
+
+            pageRanks = iteratePageRank(prevPageRanks, prevPageRanks.size(), totalSourcePages);
 
             converged = checkConvergence(pageRanks, prevPageRanks, CONVERGENCE_THRESHOLD, convergedPages);
             iteration++;
@@ -178,6 +228,8 @@ public class FastPageRank implements Serializable {
 
         } while (!converged && iteration < MAX_ITERATIONS);
 
+        long end = System.currentTimeMillis();
+        System.out.println("Time: " + (end - start) + "ms");
         System.out.println("Iterations: " + iteration);
 
         return pageRanks;

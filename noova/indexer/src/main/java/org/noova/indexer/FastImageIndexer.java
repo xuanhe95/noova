@@ -23,29 +23,15 @@ import java.util.regex.Pattern;
 public class FastImageIndexer {
 
     private static final Logger log = Logger.getLogger(FastImageIndexer.class);
-    private static final boolean ENABLE_PARSE_ENTITY = false;
     private static final String DEFAULT_DELIMITER = PropertyLoader.getProperty("delimiter.default");
-
-    private static final String COMMA_DELIMITER = PropertyLoader.getProperty("delimiter.comma");
-
-    private static final String COLON_DELIMITER = PropertyLoader.getProperty("delimiter.colon");
-    private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
-    private static final String INDEX_ENTITY_TABLE = PropertyLoader.getProperty("table.index.entity");
-    private static final String INDEX_LINKS = PropertyLoader.getProperty("table.index.links");
     private static final String PROCESSED_URL = PropertyLoader.getProperty("table.processed.url");
     private static final String PROCESSED_IMAGES = PropertyLoader.getProperty("table.processed.images");
     private static final String PROCESSED_TABLE = PropertyLoader.getProperty("table.processed");
-    private static final String IMAGE_TABLE = PropertyLoader.getProperty("table.image");
-    private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id");
-    private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url-id.id");
-    private static final String INDEX_IMAGES_TO_PAGE = PropertyLoader.getProperty("table.index.img-page");
-    private static final Map<String, Row> WORD_MAP = new ConcurrentHashMap<>();
-    private static final Map<String, Row> IMAGE_MAP = new ConcurrentHashMap<>();
-
     private static final String IMAGE_MAPPING_TABLE = PropertyLoader.getProperty("table.image-mapping");
-    private static final Map<String, String> HASHED_IMAGE_MAP = new ConcurrentHashMap<>();
+    private static final String IMAGE_TABLE = PropertyLoader.getProperty("table.image");
+    private static final Map<String, Row> IMAGE_MAP = new HashMap<>();
+    private static final Map<String, String> HASHED_IMAGE_MAP = new HashMap<>();
 
-    private static final long MAX_SUFFIX_LENGTH = 10 * 1024;
     private static final KVS KVS_CLIENT = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
     static int pageCount = 0;
 
@@ -130,26 +116,6 @@ public class FastImageIndexer {
 
     }
 
-
-    static Row getWordRow(String word) {
-
-        Row wordRow = WORD_MAP.get(word);
-        if(wordRow == null){
-            try {
-                wordRow = KVS_CLIENT.getRow(INDEX_TABLE, word);
-                if(wordRow == null){
-                    wordRow = new Row(word);
-                }
-            } catch (IOException e) {
-                log.error("Error fetching word row: " + e.getMessage());
-                wordRow = new Row(word);
-            }
-            WORD_MAP.put(word, wordRow);
-        }
-
-        return wordRow;
-    }
-
     private static void processImages(String fromUrl, String images){
         var wordImageMap = parseImages(images);
 
@@ -167,8 +133,6 @@ public class FastImageIndexer {
             Row wordRow = getImageRow(word);
             Set<String> imageSet = wordImageMap.get(word);
             for(String image : imageSet){
-                //String hashedImage = Hasher.hash(image);
-                //wordRow.put(urlId, image);
                 wordToImages.compute(word, (k, v) -> {
 
                     String hashedImage = Hasher.hash(image);
@@ -254,7 +218,7 @@ public class FastImageIndexer {
             }
 
 //            String[] words = tokenizeText(alt);
-            String[] words = alt.split("\\s+"); // skip nlp processing for img alt
+            String[] words = alt.toLowerCase().split("\\s+"); // skip nlp processing for img alt
 
             for(String word : words){
                 word = Parser.removeAfterFirstPunctuation(word);
@@ -264,15 +228,7 @@ public class FastImageIndexer {
                 if(word == null || word.isBlank() || StopWordsLoader.isStopWord(word)){
                     continue;
                 }
-                //word = Parser.processWord(word).toLowerCase();
-
-                String lemma = LemmaLoader.getLemma(word);
-                System.out.println("Word: " + word+ " lemma: " + lemma);
-                if (lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)) {
-                    continue;
-                }
-
-                Set<String> imageSet = wordImageMap.computeIfAbsent(lemma, k -> new HashSet<>());
+                Set<String> imageSet = wordImageMap.computeIfAbsent(word, k -> new HashSet<>());
                 imageSet.add(src);
             }
         }
