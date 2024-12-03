@@ -217,16 +217,19 @@ public class BuildProcessedTable {
         try {
 
             // use 'page' in pt-crawl to populate 'rawText' in pt-processed
-            String text = page.get("text"); // use original crawled text if any
+//            String text = page.get("text"); // use original crawled text if any
+//            String text="";
+//            if(text.isBlank()){ // use new parseVisibleText if pt-crawl 'text' is empty
+//                Element body = Jsoup.parse(rawPageContent).body();
+//                body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
+//                        ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
+//                text = parseVisibleText(body);
+//            }
 
-            if(text.isBlank()){ // use new parseVisibleText if pt-crawl 'text' is empty
-                Element body = Jsoup.parse(rawPageContent).body();
-                body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
-                        ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
-                text = parseVisibleText(body);
-            }
-
-            text = Parser.processWord(text); // rm non-ascii + normalize spaces
+            Element body = Jsoup.parse(rawPageContent).body();
+            body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
+                    ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
+            String text = Parser.processWord(parseVisibleText(body));
 
             // store row for pt-processed
             Row processedRow = new Row(rowKey);
