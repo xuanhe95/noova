@@ -37,6 +37,14 @@ public class GatewayServer {
 
         log.info("[proxy] ProxyServer starting on port " + port);
         Server.port(port);
+
+        String staticFilesPath = PropertyLoader.getProperty("gateway.static.files");
+        if (staticFilesPath == null || staticFilesPath.isEmpty()) {
+            log.error("Static files location is not set in properties.");
+            throw new IllegalArgumentException("Static files location must be configured.");
+        }
+        Server.staticFiles.location(staticFilesPath);
+
         Controller.registerRoutes();
 
         get("/", (req, res) -> {
