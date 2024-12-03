@@ -221,6 +221,7 @@ public class DirectIndexer {
             String[] words = text.split("\\s+");
             for(int i = 0; i < words.length; i++){
                 String word = words[i].toLowerCase();
+                word = Parser.processWord(word);
                 word = Parser.removeAfterFirstPunctuation(word);
                 String lemma = LemmaLoader.getLemma(word) != null ? LemmaLoader.getLemma(word) : word;
                 System.out.println("Word: " + word+ " lemma: " + lemma);
