@@ -1,5 +1,8 @@
 package org.noova.tools;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class Parser {
 
 
@@ -56,6 +59,16 @@ public class Parser {
         }
 
         return input.substring(0, firstPunctuationIndex);
+    }
+
+    public static String extractNumber(String input) {
+
+        Pattern pattern = Pattern.compile("\\d+");
+        Matcher matcher = pattern.matcher(input);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+        return null;
     }
 
     public static void main(String[] args) {

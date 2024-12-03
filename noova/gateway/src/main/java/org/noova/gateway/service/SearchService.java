@@ -10,6 +10,7 @@ import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
 import org.noova.tools.Hasher;
 import org.noova.tools.Logger;
+import org.noova.tools.Parser;
 import org.noova.tools.PropertyLoader;
 
 import java.io.IOException;
@@ -111,28 +112,41 @@ public class SearchService implements IService {
             log.warn("[search] No row found for keyword: " + keyword);
             return result;
         }
-        log.info("[search] Found row: " + keyword);
-        log.info("[search] Columns: " + row.columns());
-        row.columns().forEach(column -> {
-            result.putAll(parseUrlWithPositions(row.get(column)));
-        });
+//        log.info("[search] Found row: " + keyword);
+//        log.info("[search] Columns: " + row.columns());
+//        row.columns().forEach(column -> {
+//            result.putAll(parseUrlWithPositions(row.get(column)));
+//        });
+
+        Set<String> fromIds = row.columns();
+
+        for (String fromUrlId : fromIds) {
+            String texts = row.get(fromUrlId);
+            if(texts.isEmpty()){
+                continue;
+            }
+            Set<Integer> positions = parseUrlWithPositions(texts);
+            if(result.containsKey(fromUrlId)){
+                result.get(fromUrlId).addAll(positions);
+            } else{
+                result.put(fromUrlId, positions);
+            }
+        }
         return result;
+
     }
 
-    private Map<String, Set<Integer>> parseUrlWithPositions(String urlsWithPositions) {
-        Map<String, Set<Integer>> result = new HashMap<>();
-        String[] urlArray = urlsWithPositions.split(",");
-        for (String urlWithPosition : urlArray) {
-            String rawPosition = urlWithPosition.substring(urlWithPosition.lastIndexOf(":") + 1);
-            String normalizedUrl = urlWithPosition.substring(0, urlWithPosition.lastIndexOf(":"));
-            String[] positions = rawPosition.split(" ");
-            Set<Integer> positionSet = new HashSet<>();
-
-            for (String position : positions) {
-                positionSet.add(Integer.parseInt(position));
+    private Set<Integer> parseUrlWithPositions(String urlsWithPositions) {
+        Set<Integer> result = new HashSet<>();
+        String rawPosition = urlsWithPositions.split(":")[0];
+//        System.out.println(rawPosition);
+        String[] positions = rawPosition.split("\\s+");
+//        System.out.println(positions.length);
+        for (String position : positions) {
+            position = Parser.extractNumber(position);
+            if (!position.isEmpty()) {
+                result.add(Integer.parseInt(position));
             }
-
-            result.put(normalizedUrl, positionSet);
         }
         return result;
     }
@@ -204,7 +218,7 @@ public class SearchService implements IService {
         Map<String, Double> queryTfidf = new HashMap<>();
 
         for (String term : queryTokens) {
-            int df = documentFrequency(term);
+            int df = 0;// need to update
             if (df > 0) {
                 double idf = Math.log((double) totalDocuments / (1 + df));
                 double tf = Collections.frequency(queryTokens, term) / (double) queryTokens.size();
@@ -241,7 +255,7 @@ public class SearchService implements IService {
             String term = entry.getKey();
             long tf = entry.getValue();
 
-            int df = documentFrequency(term);
+            int df = 0;// need to udpate
             if (df > 0) {
                 double idf = Math.log((double) totalDocuments / (1 + df));
                 double tfidfValue = (tf / (double) docLength) * idf;
@@ -272,17 +286,17 @@ public class SearchService implements IService {
         return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
 
-    private int documentFrequency(String term) throws IOException {
-        Row row = KVS.getRow(PropertyLoader.getProperty("table.index"), term);
-        Map<String, Set<Integer>> result = new HashMap<>();
-
-        row.columns().forEach(column -> {
-            result.putAll(parseUrlWithPositions(row.get(column)));
-        });
-
-//        log.info("[search] Found row: " + row + " result: " + result + " number of file: " + result.size());
-        return result.size();
-    }
+//    private int documentFrequency(String term) throws IOException {
+//        Row row = KVS.getRow(PropertyLoader.getProperty("table.index"), term);
+//        Map<String, Set<Integer>> result = new HashMap<>();
+//
+//        row.columns().forEach(column -> {
+//            result.putAll(parseUrlWithPositions(row.get(column)));
+//        });
+//
+////        log.info("[search] Found row: " + row + " result: " + result + " number of file: " + result.size());
+//        return result.size();
+//    }
 
     public String getPageContent(String url) throws IOException {
         String hashedUrl = Hasher.hash(url);
