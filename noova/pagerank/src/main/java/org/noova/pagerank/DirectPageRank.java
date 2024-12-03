@@ -46,8 +46,6 @@ public class DirectPageRank implements Serializable {
     }
 
     public static void main(String[] args) throws Exception {
-
-
         KVS kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
 
 
@@ -127,7 +125,7 @@ public class DirectPageRank implements Serializable {
         );
     }
 
-    public static Map<String, Double>calculatePageRankParallel(KVS kvs, Map<String, Double> prevPageRanks, String startRow, String endRowExclusive, int totalPages) throws IOException {
+    public static Map<String, Double>calculatePageRankParallel(KVS kvs, Map<String, Double> prevPageRanks, String startRow, String endRowExclusive, int totalPages, int totalSourcePages) throws IOException {
         Map<String, Double> pageRanks = new HashMap<>();
 
         Iterator<Row> pages = kvs.scan(GRAPH_TABLE, startRow, endRowExclusive);
@@ -146,10 +144,10 @@ public class DirectPageRank implements Serializable {
                 continue;
             }
 
-            double rankSum = 0.0;
-            double sinkPR = 0.0;
+            double rankSum = totalSourcePages * DECAY_RATE;
+            double sinkPR = 0;
 
-            // all pages link to this page
+            // all pages link to this page, without source page
             var linkToPages = page.get(INCOMING_COLUMN);
 
             Set<String> links = efficientParsePageLinks(linkToPages);
@@ -164,6 +162,7 @@ public class DirectPageRank implements Serializable {
                 Set<String> linkToOthers = efficientParsePageLinks(linkRow.get(OUTGOING_COLUMN));
                 if(linkToOthers.isEmpty()){
                     // apply sink node
+                    System.out.println("This should not happen");
                     sinkPR += prevPageRanks.get(hashedLink);
                 } else{
                     // each link i contributes to the page PR(i)/L(i)
@@ -180,69 +179,15 @@ public class DirectPageRank implements Serializable {
     }
 
 
-
-    private static Map<String, Double> calculatePageRankParallel(Map<String, Set<String>> webGraph, Map<String, Set<String>> reversedWebGraph, Map<String, Double> prevPageRanks){
-        Map<String, Double> pageRanks = webGraph.keySet().parallelStream().collect(
-                Collectors.toMap(page -> page, page ->{
-                    double rankSum = 0.0;
-                    double sinkPR = 0.0;
-
-                    var linkToPages = reversedWebGraph.get(page);
-                    if(linkToPages != null){
-                        for(String link : linkToPages){
-                            Set<String> links = webGraph.get(link);
-                            rankSum += prevPageRanks.get(link) / links.size();
-                        }
-                    } else{
-                        sinkPR += prevPageRanks.get(page);
-                    }
-
-                    double sinkContribution = DECAY_RATE * sinkPR / totalPages;
-                    double randomJump = (1 - DECAY_RATE);
-                    return randomJump + DECAY_RATE * rankSum + sinkContribution;
-                }));
-        return pageRanks;
-    }
-
-    public static Map<String, Double> calculatePageRankSerial(Map<String, Set<String>> webGraph, Map<String, Set<String>> reversedWebGraph, Map<String, Double> prevPageRanks) {
-        Map<String, Double> pageRanks = new HashMap<>();
-        // 合并遍历计算 sink 节点的贡献和每个页面的 PageRank
-        for (Map.Entry<String, Set<String>> entry : webGraph.entrySet()) {
-            String page = entry.getKey();
-
-            double rankSum = 0.0;
-            double sinkPR = 0.0;
-
-            // link to page
-            Set<String> linkToPages = reversedWebGraph.get(page);
-            if (linkToPages == null) {
-                System.out.println("linkToPages is null");
-                // this is sink
-                sinkPR += prevPageRanks.get(page);
-            } else {
-                for (String link : linkToPages) {
-                    Set<String> linksTo = webGraph.get(link);
-                    // each link i contributes to the page PR(i)/L(i)
-                    rankSum += prevPageRanks.get(link) / linksTo.size();
-                }
-            }
-            //double sinkPRValue = sinkPages.stream().mapToDouble(prevPageRanks::get).sum();
-
-            // 加入 sink 节点的贡献和跳转因子
-            double sinkContribution = DECAY_RATE * sinkPR / totalPages;
-            // not apply divide N to each page
-            double randomJump = (1 - DECAY_RATE);
-            pageRanks.put(page, randomJump + DECAY_RATE * rankSum + sinkContribution);
-        }
-        return pageRanks;
-    }
-
     public static Map<String, Double> calculatePageRank(KVS kvs, String startKey, String endKeyExclusive, int totalPages) throws IOException {
         Map<String, Double> pageRanks = new HashMap<>();
         Map<String, Double> prevPageRanks;
 
         // this part should scan all data to make sure all pages (vertices) are included
         Iterator<Row> pages = kvs.scan(GRAPH_TABLE, null, null);
+
+        int totalSourcePages = 0;
+
         while(pages != null && pages.hasNext()){
             Row page = pages.next();
             Set<String> columns = page.columns();
@@ -250,7 +195,14 @@ public class DirectPageRank implements Serializable {
                 pageRanks.put(page.key(), 1.0);
             }
             else{
-                pageRanks.put(page.key(), 1.0);
+                if(columns.contains(INCOMING_COLUMN)){
+                    // not source page
+                    pageRanks.put(page.key(), 1.0);
+                } else{
+                    // source page, only contribute to other pages
+                    totalSourcePages++;
+                }
+                //pageRanks.put(page.key(), 1.0);
             }
         }
 
@@ -261,7 +213,7 @@ public class DirectPageRank implements Serializable {
 
         do {
             prevPageRanks = pageRanks;
-            pageRanks = calculatePageRankParallel(kvs, prevPageRanks, null, null, totalPages);
+            pageRanks = calculatePageRankParallel(kvs, prevPageRanks, null, null, totalPages, totalSourcePages);
 
             converged = checkConvergence(pageRanks, prevPageRanks, CONVERGENCE_THRESHOLD, convergedPages);
             iteration++;
@@ -274,35 +226,6 @@ public class DirectPageRank implements Serializable {
         return pageRanks;
     }
 
-
-    public static Map<String, Double> calculatePageRank(Map<String, Set<String>> webGraph, Map<String, Set<String>> reversedWebGraph, int totalPages) {
-        Map<String, Double> pageRanks = new HashMap<>();
-        Map<String, Double> prevPageRanks;
-
-        // 初始化 PageRank 值
-        for (String page : webGraph.keySet()) {
-            pageRanks.put(page, 1.0);
-        }
-
-        int iteration = 0;
-        boolean converged;
-
-        Set<String> convergedPages = new HashSet<>();
-
-        do {
-            prevPageRanks = pageRanks;
-            pageRanks = calculatePageRankParallel(webGraph, reversedWebGraph, prevPageRanks);
-
-            converged = checkConvergence(pageRanks, prevPageRanks, CONVERGENCE_THRESHOLD, convergedPages);
-            iteration++;
-            System.out.println("Iteration: " + iteration);
-
-        } while (!converged && iteration < MAX_ITERATIONS);
-
-        System.out.println("Iterations: " + iteration);
-
-        return pageRanks;
-    }
 
     private static boolean checkConvergence(Map<String, Double> current, Map<String, Double> previous, double threshold, Set<String> convergedPages) {
         if((double) convergedPages.size() / current.size() * 100 > convergenceRatioInPercentage){
