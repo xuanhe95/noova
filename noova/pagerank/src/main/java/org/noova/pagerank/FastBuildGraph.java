@@ -12,7 +12,6 @@ import java.util.*;
 
 public class FastBuildGraph {
 
-    private static final String GRAPH_TABLE = PropertyLoader.getProperty("table.graph");
     private static final String PROCESSED_TABLE = PropertyLoader.getProperty("table.processed");
     private static final KVS KVS_CLIENT = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
     private static final String OUTGOING_GRAPH = PropertyLoader.getProperty("table.outgoing");
@@ -53,7 +52,6 @@ public class FastBuildGraph {
         Map<String, Row> incomingGraph = new HashMap<>();
         Map<String, Row> outgoingGraph = new HashMap<>();
 
-        Map<String, String> hashToUrl = new HashMap<>();
 
         while(it != null && it.hasNext()){
             Row row = it.next();
@@ -91,8 +89,8 @@ public class FastBuildGraph {
     }
 
     private static void processOutgoingBatch(Map<String, Row> graphRows, String url, Set<String> linkSet) throws IOException {
-        String urlId = KVSUrlCache.getUrlId(url);
-        String hashedUrl = Hasher.hash(url);
+        //String urlId = KVSUrlCache.getUrlId(url);
+        String urlId = Hasher.hash(url);
 
         if(urlId == null){
             return;
@@ -118,15 +116,25 @@ public class FastBuildGraph {
     private static void processIncomingBatch(Map<String, Row> graphRows, String fromUrl, Set<String> linkSet) throws IOException {
         String hashedFromUrl = Hasher.hash(fromUrl);
 
+//        String urlId = KVSUrlCache.getUrlId(fromUrl);
+//        if(urlId == null){
+//            return;
+//        }
+
         // build reversed graph
         for(String link : linkSet){
             String hashedLink = Hasher.hash(link);
+
+//            String linkId = KVSUrlCache.getUrlId(link);
+//            if(linkId == null){
+//                continue;
+//            }
 
             if (ENABLE_ONLY_CRAWLED_PAGES && !KVSUrlCache.checkUrlId(hashedLink)){
                 continue;
             }
 
-            Row linkRow = graphRows.getOrDefault(hashedLink, KVS_CLIENT.getRow(GRAPH_TABLE, hashedLink));
+            Row linkRow = graphRows.getOrDefault(hashedLink, KVS_CLIENT.getRow(INCOMING_GRAPH, hashedLink));
 
             if(linkRow == null){
                 linkRow = new Row(hashedLink);

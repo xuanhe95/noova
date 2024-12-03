@@ -14,6 +14,7 @@ public class KVSUrlCache {
     private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url-id.id");
 
     private static final KVS KVS_CLIENT = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
+    private static final String IMG_MAPPING_TABLE = PropertyLoader.getProperty("table.image-mapping");
     //private static KVSUrlCache instance = null;
 
 
@@ -28,6 +29,26 @@ public class KVSUrlCache {
 //        }
 //        return instance;
 //    }
+
+    public static String[] hashedImagesToHtml(String hashedImages) {
+        String delimiter = PropertyLoader.getProperty("delimiter.default");
+
+
+        String[] imageArray = hashedImages.split(delimiter);
+        String[] htmlArray = new String[imageArray.length];
+        for(int i = 0; i < imageArray.length; i++){
+            System.out.println("image: " + imageArray[i]);
+
+            Row row = null;
+            try {
+                row = KVS_CLIENT.getRow(IMG_MAPPING_TABLE, imageArray[i]);
+            } catch (IOException e) {
+                continue;
+            }
+            htmlArray[i] = "<img src=\"" + row.get(PropertyLoader.getProperty("table.default.value")) + "\" />";
+        }
+        return htmlArray;
+    }
 
     public static String getUrlId(String url) throws IOException {
         // helper to find an url's corresponding urlID

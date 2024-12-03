@@ -2,6 +2,9 @@ package org.noova.tools;
 
 public class Parser {
 
+
+
+
     public static String[] imagesToHtml(String images){
         String delimiter = PropertyLoader.getProperty("delimiter.default");
         String[] imageArray = images.split(delimiter);
@@ -29,12 +32,11 @@ public class Parser {
                 .trim();
     }
 
-//    public static String processSingleWord(String rawWord){
-//        if(rawWord==null || rawWord.isEmpty()) return rawWord;
-//        return rawWord.replaceAll("[^\\p{ASCII}]", "") // non ascii remove
-//                .replaceAll("\\s+", " ")             // Normalize spaces
-//                .trim();
-//    }
+    public static String processSingleWord(String rawWord){
+        if(rawWord==null || rawWord.isEmpty()) return rawWord;
+        return rawWord.replaceAll("[^\\p{ASCII}]", "") // non ascii remove
+                .trim();
+    }
 
     public static String removeAfterFirstPunctuation(String input) {
 

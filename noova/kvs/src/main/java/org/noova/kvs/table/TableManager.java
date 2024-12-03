@@ -1,5 +1,6 @@
 package org.noova.kvs.table;
 
+import org.noova.kvs.KVSUrlCache;
 import org.noova.kvs.Row;
 import org.noova.kvs.Worker;
 import org.noova.kvs.version.Version;
@@ -179,7 +180,16 @@ public class TableManager implements ITableManager {
                 } else {
                     log.info("[view] get value: " + new String(value));
                     String textValue = new String(value);
-                    if(tableKey.equals(PropertyLoader.getProperty("table.index"))){
+                    if(tableKey.equals(PropertyLoader.getProperty("table.image"))){
+                        String[] imageContents = KVSUrlCache.hashedImagesToHtml(textValue);
+                        StringBuilder imgBuilder = new StringBuilder();
+                        for(String img : imageContents){
+                            imgBuilder.append(img);
+                        }
+                        textValue = imgBuilder.toString();
+
+                    }
+                    else if(tableKey.equals(PropertyLoader.getProperty("table.index"))){
                         if(columnName.toLowerCase().strip().equals(PropertyLoader.getProperty("table.crawler.images"))){
                             String[] imageContents = Parser.imagesToHtml(textValue);
                             StringBuilder imgBuilder = new StringBuilder();

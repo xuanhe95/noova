@@ -36,39 +36,47 @@ public class BuildImgDictionary {
 
         int test_run_round = 1;
         // Loop through key pairs (a b, b c, ..., y z)
-        for (char c1 = 'a'; c1 <= 'z'; c1++) {
-            char c2 = (char) (c1 + 1); // Next character for endKey
-            String startKey = String.valueOf(c1);
-            String endKey = String.valueOf(c2);
-            if (c1 == 'z'){
-                endKey = null;
-            }
-            test_run_round++;
-            if (test_run_round<27){
-                //continue;
-            }
-            System.out.println("Processing range: " + startKey + " to " + endKey);
 
-            Iterator<Row> pages = null;
-            try {
-                pages = kvs.scan(CRAWL_TABLE, startKey, endKey);
-            } catch (IOException e) {
-                System.err.println("Error scanning range " + startKey + " to " + endKey + ": " + e.getMessage());
-                continue;
-            }
 
-            Iterator<Row> image_mapping = null;
-            try {
-                image_mapping = kvs.scan(IMG_MAPPING_TABLE, null, null);
-            } catch (IOException e) {
-                System.err.println("Error scanning range " + startKey + " to " + endKey + ": " + e.getMessage());
-                continue;
-            }
+        var rows = kvs.scan(CRAWL_TABLE, null, null);
+        var image_mapping = kvs.scan(IMG_MAPPING_TABLE, null, null);
+        globalCounter = processSlice(kvs, rows, image_mapping);
+        updateGlobalCounter(kvs,globalCounter);
 
-            // Process each slice and populate the new tables
-            globalCounter = processSlice(kvs, pages, image_mapping);
-            updateGlobalCounter(kvs,globalCounter);
-        }
+
+//        for (char c1 = 'a'; c1 <= 'z'; c1++) {
+//            char c2 = (char) (c1 + 1); // Next character for endKey
+//            String startKey = String.valueOf(c1);
+//            String endKey = String.valueOf(c2);
+//            if (c1 == 'z'){
+//                endKey = null;
+//            }
+//            test_run_round++;
+//            if (test_run_round<27){
+//                //continue;
+//            }
+//            System.out.println("Processing range: " + startKey + " to " + endKey);
+//
+//            Iterator<Row> pages = null;
+//            try {
+//                pages = kvs.scan(CRAWL_TABLE, startKey, endKey);
+//            } catch (IOException e) {
+//                System.err.println("Error scanning range " + startKey + " to " + endKey + ": " + e.getMessage());
+//                continue;
+//            }
+//
+//            Iterator<Row> image_mapping = null;
+//            try {
+//                image_mapping = kvs.scan(IMG_MAPPING_TABLE, null, null);
+//            } catch (IOException e) {
+//                System.err.println("Error scanning range " + startKey + " to " + endKey + ": " + e.getMessage());
+//                continue;
+//            }
+//
+//            // Process each slice and populate the new tables
+//            globalCounter = processSlice(kvs, pages, image_mapping);
+//            updateGlobalCounter(kvs,globalCounter);
+//        }
 
         System.out.println("Processing complete. Final counter value: " + globalCounter);
     }

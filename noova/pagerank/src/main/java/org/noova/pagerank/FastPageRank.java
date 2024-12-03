@@ -84,18 +84,22 @@ public class FastPageRank implements Serializable {
             String hashedUrl = page.key();
 
 
-            double rankSum = totalSourcePages * DECAY_RATE;
+            double rankSum = totalSourcePages * DECAY_RATE / totalPages;
             double sinkPR = 0;
 
             // all pages link to this page, without source page
             Row reversedPage = INCOMING_GRAPH_CACHE.getOrDefault(hashedUrl, null);
             if(reversedPage == null){
-                throw new RuntimeException("reversed page not found: " + hashedUrl);
+                System.out.println("No incoming graph for " + hashedUrl);
+                continue;
             }
             var links = reversedPage.columns();
 
             // each link i contributes to the page PR(i)/L(i)
             for(String hashedLink : links){
+                if(!prevPageRanks.containsKey(hashedLink)){
+                    continue;
+                }
                 Row linkRow = OUTGOING_GRAPH_CACHE.getOrDefault(hashedLink, null);
                 Set<String> linkToOthers;
                 if(linkRow == null){
@@ -137,7 +141,16 @@ public class FastPageRank implements Serializable {
             Row page = pages.next();
             OUTGOING_GRAPH_CACHE.put(page.key(), page);
             Row reversedPage = KVS_CLIENT.getRow(INCOMING_GRAPH, page.key());
+            if(reversedPage == null){
+                totalSourcePages++;
+                continue;
+            }
+
+
             INCOMING_GRAPH_CACHE.put(page.key(), reversedPage);
+
+
+
 
             Set<String> linksFrom = reversedPage.columns();
 

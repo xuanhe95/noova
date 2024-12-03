@@ -35,12 +35,16 @@ public class FastIndexer {
     private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id");
     private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url-id.id");
     private static final String INDEX_IMAGES_TO_PAGE = PropertyLoader.getProperty("table.index.img-page");
+
     private static final Map<String, Row> WORD_MAP = new ConcurrentHashMap<>();
+
+    private static final Map<String, Map<String, StringBuilder>> URL_WORD_MAP = new ConcurrentHashMap<>();
 
     private static final long MAX_SUFFIX_LENGTH = 10 * 1024;
     private static final KVS KVS_CLIENT = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
     private static final boolean ENABLE_WORD_SUFFIX = true;
-    private static final int SUFFIX_LENGTH = 3;
+    private static final int SUFFIX_LENGTH = 0;
+    private static final int PARSE_POSITION_LIMIT = 10;
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
     static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
@@ -51,31 +55,34 @@ public class FastIndexer {
         loadUrlId();
         System.out.println("URL ID loaded");
 
-        for (char c1 = 'a'; c1 <= 'z'; c1++) {
-            char c2 = (char) (c1 + 1); // Next character for endKey
-            String startKey = String.valueOf(c1);
-            String endKey = String.valueOf(c2);
-            if (c1 == 'z') {
-                endKey = null;
-            }
-            System.out.println("Processing range: " + startKey + " to " + endKey);
+        var rows = KVS_CLIENT.scan(PROCESSED_TABLE, null, null);
+        generateInvertedIndexBatch(rows);
 
-            long start = System.currentTimeMillis();
-            System.out.println("Start indexing");
-            Iterator<Row> pages = null;
-            try {
-                pages = KVS_CLIENT.scan(PROCESSED_TABLE, startKey, endKey);
-            } catch (IOException e) {
-                System.out.println("Error: " + e.getMessage());
-                return;
-            }
-
-            generateInvertedIndexBatch(pages);
-
-            long end = System.currentTimeMillis();
-
-            System.out.println("Time: " + (end - start) + "ms");
-        }
+//        for (char c1 = 'a'; c1 <= 'z'; c1++) {
+//            char c2 = (char) (c1 + 1); // Next character for endKey
+//            String startKey = String.valueOf(c1);
+//            String endKey = String.valueOf(c2);
+//            if (c1 == 'z') {
+//                endKey = null;
+//            }
+//            System.out.println("Processing range: " + startKey + " to " + endKey);
+//
+//            long start = System.currentTimeMillis();
+//            System.out.println("Start indexing");
+//            Iterator<Row> pages = null;
+//            try {
+//                pages = KVS_CLIENT.scan(PROCESSED_TABLE, startKey, endKey);
+//            } catch (IOException e) {
+//                System.out.println("Error: " + e.getMessage());
+//                return;
+//            }
+//
+//            generateInvertedIndexBatch(pages);
+//
+//            long end = System.currentTimeMillis();
+//
+//            System.out.println("Time: " + (end - start) + "ms");
+//        }
     }
 
     private static void generateInvertedIndexBatch(Iterator<Row> pages) {
@@ -167,16 +174,21 @@ public class FastIndexer {
 
         Map<String, StringBuilder> suffixMap = new HashMap<>();
             for(int i = 0; i < words.length; i++){
-                String word = words[i].toLowerCase();
+                String word = words[i];
                 //word = Parser.processWord(word);
                 word = Parser.removeAfterFirstPunctuation(word);
                 String lemma = LemmaLoader.getLemma(word);
                 //String lemma = LemmaLoader.getLemma(word);
+//                if(lemma == null || lemma.isEmpty()){
+//                    continue;
+//                }
                 if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
                     continue;
                 }
 
-                if(!wordCountInPage.containsKey(lemma)){
+
+                wordCountInPage.compute(lemma, (k, v) -> v == null ? 1 : v + 1);
+                if(wordCountInPage.getOrDefault(lemma, 0) < PARSE_POSITION_LIMIT){
                     //Row wordRow = getWordRow(lemma);
 
                     if(ENABLE_WORD_SUFFIX){
@@ -194,15 +206,16 @@ public class FastIndexer {
                             for(int j = 1; j <= SUFFIX_LENGTH; j++){
                                 int pos = i+j;
                                 if(pos < words.length){
-                                    builder.append(COMMA_DELIMITER).append(words[pos]);
+                                    String nextWord = Parser.processSingleWord(words[pos]);
+                                    nextWord = LemmaLoader.getLemma(nextWord);
+                                    if(nextWord == null || nextWord.isEmpty() || StopWordsLoader.isStopWord(lemma)){
+                                        continue;
+                                    }
+                                    builder.append(COMMA_DELIMITER).append(nextWord);
                                 }
                             }
                             builder.append(DEFAULT_DELIMITER);
                     }
-                    wordCountInPage.put(lemma, 1);
-                }
-                else {
-                    wordCountInPage.compute(lemma, (k, v) -> v == null ? 1 : v + 1);
                 }
             }
 
@@ -215,16 +228,40 @@ public class FastIndexer {
 
 
             StringBuilder builder = suffixMap.getOrDefault(word, new StringBuilder());
-            builder.append(COLON_DELIMITER).append((double) count / totalWordsCountInPage);
-
-            wordRow.put(urlId, builder.toString());
+            builder.append(COLON_DELIMITER).append(count).append("/").append(totalWordsCountInPage).append(DEFAULT_DELIMITER);
+            //wordRow.put(urlId, builder.toString());
         });
+
+        URL_WORD_MAP.put(url, suffixMap);
     }
 
     private static void saveIndexToTable () {
         var count = 1;
         long lastTime = System.nanoTime();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+
+
+        for(String url : URL_WORD_MAP.keySet()) {
+            Map<String, StringBuilder> suffixMap = URL_WORD_MAP.get(url);
+            for(String word : suffixMap.keySet()) {
+                Row row = getWordRow(word);
+                StringBuilder builder = suffixMap.get(word);
+                String urlId = null;
+                try {
+                    urlId = getUrlId(url);
+                } catch (IOException e) {
+                    System.err.println("Error fetching/assigning ID for URL: " + url + ", " + e.getMessage());
+                    continue;
+                }
+
+                row.put(urlId, builder.toString());
+            }
+        }
+
+
+
+
 
         for(String word : WORD_MAP.keySet()) {
             Row row = WORD_MAP.get(word);

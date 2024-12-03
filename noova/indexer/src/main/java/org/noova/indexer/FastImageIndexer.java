@@ -1,5 +1,6 @@
 package org.noova.indexer;
 
+import opennlp.tools.lemmatizer.DictionaryLemmatizer;
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.KVSUrlCache;
@@ -41,13 +42,12 @@ public class FastImageIndexer {
     private static final Map<String, Row> WORD_MAP = new ConcurrentHashMap<>();
     private static final Map<String, Row> IMAGE_MAP = new ConcurrentHashMap<>();
 
+    private static final String IMAGE_MAPPING_TABLE = PropertyLoader.getProperty("table.image-mapping");
+    private static final Map<String, String> HASHED_IMAGE_MAP = new ConcurrentHashMap<>();
+
     private static final long MAX_SUFFIX_LENGTH = 10 * 1024;
     private static final KVS KVS_CLIENT = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
-    private static final boolean ENABLE_WORD_SUFFIX = true;
-    private static final int SUFFIX_LENGTH = 3;
     static int pageCount = 0;
-    static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
-    static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
 
     public static void main(String[] args) throws IOException {
         // load url id to the cache
@@ -55,31 +55,34 @@ public class FastImageIndexer {
         KVSUrlCache.loadUrlId();
         System.out.println("URL ID loaded");
 
-        for (char c1 = 'a'; c1 <= 'z'; c1++) {
-            char c2 = (char) (c1 + 1); // Next character for endKey
-            String startKey = String.valueOf(c1);
-            String endKey = String.valueOf(c2);
-            if (c1 == 'z') {
-                endKey = null;
-            }
-            System.out.println("Processing range: " + startKey + " to " + endKey);
+        Iterator<Row> pages = KVS_CLIENT.scan(PROCESSED_TABLE, null, null);
+        generateInvertedIndexBatch(pages);
 
-            long start = System.currentTimeMillis();
-            System.out.println("Start indexing");
-            Iterator<Row> pages = null;
-            try {
-                pages = KVS_CLIENT.scan(PROCESSED_TABLE, startKey, endKey);
-            } catch (IOException e) {
-                System.out.println("Error: " + e.getMessage());
-                return;
-            }
-
-            generateInvertedIndexBatch(pages);
-
-            long end = System.currentTimeMillis();
-
-            System.out.println("Time: " + (end - start) + "ms");
-        }
+//        for (char c1 = 'a'; c1 <= 'z'; c1++) {
+//            char c2 = (char) (c1 + 1); // Next character for endKey
+//            String startKey = String.valueOf(c1);
+//            String endKey = String.valueOf(c2);
+//            if (c1 == 'z') {
+//                endKey = null;
+//            }
+//            System.out.println("Processing range: " + startKey + " to " + endKey);
+//
+//            long start = System.currentTimeMillis();
+//            System.out.println("Start indexing");
+//            Iterator<Row> pages = null;
+//            try {
+//                pages = KVS_CLIENT.scan(PROCESSED_TABLE, startKey, endKey);
+//            } catch (IOException e) {
+//                System.out.println("Error: " + e.getMessage());
+//                return;
+//            }
+//
+//            generateInvertedIndexBatch(pages);
+//
+//            long end = System.currentTimeMillis();
+//
+//            System.out.println("Time: " + (end - start) + "ms");
+//        }
     }
 
     private static void generateInvertedIndexBatch(Iterator<Row> pages) {
@@ -96,9 +99,9 @@ public class FastImageIndexer {
 
 
         try (BufferedWriter pageWriter = new BufferedWriter(new FileWriter("pages_processed.txt", true))) {
-            for (String detail : pageDetails) {
-                pageWriter.write(detail);
-            }
+//            for (String detail : pageDetails) {
+//                pageWriter.write(detail);
+//            }
         } catch (IOException e) {
             System.err.println("Error writing pages to file: " + e.getMessage());
         }
@@ -150,6 +153,8 @@ public class FastImageIndexer {
     private static void processImages(String fromUrl, String images){
         var wordImageMap = parseImages(images);
 
+        Map<String, StringBuilder> wordToImages = new HashMap<>();
+
         String urlId = null;
         try{
             urlId = KVSUrlCache.getUrlId(fromUrl);
@@ -163,114 +168,35 @@ public class FastImageIndexer {
             Set<String> imageSet = wordImageMap.get(word);
             for(String image : imageSet){
                 //String hashedImage = Hasher.hash(image);
-                wordRow.put(urlId, image);
+                //wordRow.put(urlId, image);
+                wordToImages.compute(word, (k, v) -> {
+
+                    String hashedImage = Hasher.hash(image);
+                    HASHED_IMAGE_MAP.put(hashedImage, image);
+
+                    if(v == null){
+                        return new StringBuilder(hashedImage);
+                    }
+                    return v.append(DEFAULT_DELIMITER).append(hashedImage);
+                });
             }
+        }
+
+        for(String word : wordToImages.keySet()){
+            Row wordRow = getImageRow(word);
+            wordRow.put(urlId, wordToImages.get(word).toString());
         }
 
     }
 
-    private static void processWord(String url, String cleanText){
-        // skip op-heavy nlp tasks if url DNE
-        if (url == null || url.isEmpty()) {
-            System.out.println("Skipping row with no URL: " + url);
-            return;
-        }
-
-        // get urlId base on url
-        String urlId;
-        try {
-            urlId = KVSUrlCache.getUrlId(url);
-        } catch (IOException e) {
-            System.err.println("Error fetching/assigning ID for URL: " + url + ", " + e.getMessage());
-            return;
-        }
-
-        // URL_ID map does not have url mapped
-        if (urlId==null) {
-            System.out.println("Skipping row with no url id mapped: " + url);
-            return;
-        }
-
-
-        if(cleanText == null || cleanText.isEmpty()){
-            System.out.println("Skipping row with no clean text: " + url);
-            return;
-        }
-
-
-        String[] words = cleanText.split("\\s+");
-        int totalWordsCountInPage = words.length;
-        Map<String, Integer> wordCountInPage = new HashMap<>();
-        // populate wordMap for single index using cleanText from pt-processed
-
-        Map<String, StringBuilder> suffixMap = new HashMap<>();
-        for(int i = 0; i < words.length; i++){
-            String word = words[i].toLowerCase();
-            //word = Parser.processWord(word);
-            word = Parser.removeAfterFirstPunctuation(word);
-            String lemma = LemmaLoader.getLemma(word);
-            //String lemma = LemmaLoader.getLemma(word);
-            if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
-                continue;
-            }
-
-            if(!wordCountInPage.containsKey(lemma)){
-                //Row wordRow = getWordRow(lemma);
-
-                if(ENABLE_WORD_SUFFIX){
-                    StringBuilder builder = suffixMap.computeIfAbsent(lemma, k -> new StringBuilder());
-
-                    if(builder.length() > MAX_SUFFIX_LENGTH){
-                        continue;
-                    }
-                    // word position in page
-
-                    // automatically append to buffer
-                    // position,word1,word2.. e.g. 1,word1,word2,word3,
-
-                    builder.append(i);
-                    for(int j = 1; j <= SUFFIX_LENGTH; j++){
-                        int pos = i+j;
-                        if(pos < words.length){
-                            builder.append(COMMA_DELIMITER).append(words[pos]);
-                        }
-                    }
-                    builder.append(DEFAULT_DELIMITER);
-                }
-                wordCountInPage.put(lemma, 1);
-            }
-            else {
-                wordCountInPage.compute(lemma, (k, v) -> v == null ? 1 : v + 1);
-            }
-        }
-
-
-        wordCountInPage.forEach((word, count) -> {
-            Row wordRow = getWordRow(word);
-
-            // final result:
-            // 0,word1,word2,word3 /n 1,word1,word2,word3,word4 /n :0.4
-
-
-            StringBuilder builder = suffixMap.getOrDefault(word, new StringBuilder());
-            builder.append(COLON_DELIMITER).append((double) count / totalWordsCountInPage);
-
-            wordRow.put(urlId, builder.toString());
-        });
-    }
 
     private static void processPage(Row page) throws InterruptedException{
         pageCount++;
-        pageDetails.add(page.key()+"\n");
-//        System.out.println("processing: " + page.key());
 
         String url = page.get(PROCESSED_URL);
-        String cleanText = page.get("text"); // cleanText for single-word parsing
         String images = page.get(PROCESSED_IMAGES);
 
         processImages(url, images);
-        processWord(url, cleanText);
-
 
     }
 
@@ -279,10 +205,12 @@ public class FastImageIndexer {
         long lastTime = System.nanoTime();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        for(String word : WORD_MAP.keySet()) {
-            Row row = WORD_MAP.get(word);
-            try {
 
+
+
+        for(String word : IMAGE_MAP.keySet()) {
+            Row row = IMAGE_MAP.get(word);
+            try {
                 count++;
                 if (count % 500 == 0) {
                     int remainder = count % 1000;
@@ -293,9 +221,19 @@ public class FastImageIndexer {
                             count , remainder , formattedTime , deltaTime);
                     lastTime=currentTime;
                 }
-
-                KVS_CLIENT.putRow(INDEX_TABLE , row);
+                KVS_CLIENT.putRow(IMAGE_TABLE , row);
             } catch (Exception e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+        }
+
+
+        for(String hashedImage : HASHED_IMAGE_MAP.keySet()) {
+            Row row = new Row(hashedImage);
+            row.put(PropertyLoader.getProperty("table.default.value"), HASHED_IMAGE_MAP.get(hashedImage));
+            try {
+                KVS_CLIENT.putRow(IMAGE_MAPPING_TABLE, row);
+            } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
             }
         }
@@ -319,12 +257,14 @@ public class FastImageIndexer {
             String[] words = alt.split("\\s+"); // skip nlp processing for img alt
 
             for(String word : words){
+                word = Parser.removeAfterFirstPunctuation(word);
+                word = Parser.processSingleWord(word);
+                word = LemmaLoader.getLemma(word);
                 // ignore empty words
-                if(word == null || word.isBlank()){
+                if(word == null || word.isBlank() || StopWordsLoader.isStopWord(word)){
                     continue;
                 }
                 //word = Parser.processWord(word).toLowerCase();
-                word = Parser.removeAfterFirstPunctuation(word);
 
                 String lemma = LemmaLoader.getLemma(word);
                 System.out.println("Word: " + word+ " lemma: " + lemma);
