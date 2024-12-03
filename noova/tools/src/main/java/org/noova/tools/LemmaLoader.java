@@ -5,13 +5,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class LemmaLoader {
     private static final Logger log = Logger.getLogger(LemmaLoader.class);
     private static final Map<String, String> lemmaMap = new HashMap<>();
+    private static final Set<String> dictionary = new HashSet<>();
 
     static {
         String filePath = "/models/lemmatization-en.txt";
@@ -25,7 +24,8 @@ public class LemmaLoader {
                     if (!line.trim().isEmpty()) {
                         String[] parts = line.split("\\s+");
                         if (parts.length == 2) {
-                            lemmaMap.put(parts[0].toLowerCase(), parts[1].toLowerCase());
+                            lemmaMap.put(parts[1].toLowerCase(), parts[0].toLowerCase());
+                            dictionary.add(parts[0].toLowerCase());
                         } else {
                             log.warn("Skipping malformed line: " + line);
                         }
@@ -42,6 +42,11 @@ public class LemmaLoader {
         if (word == null) return null;
         return lemmaMap.get(word.toLowerCase());
     }
+
+    public static boolean getDictionary(String word) {
+        return dictionary.contains(word.toLowerCase());
+    }
+
 
     public static Map<String, String> getLemmaMap() {
         return Collections.unmodifiableMap(lemmaMap);

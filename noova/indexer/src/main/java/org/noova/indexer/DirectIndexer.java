@@ -220,11 +220,11 @@ public class DirectIndexer {
         if(text!=null && !text.isEmpty()){
             String[] words = text.split("\\s+");
             for(int i = 0; i < words.length; i++){
-                String word = words[i];
-                word = Parser.processWord(word);
+                String word = words[i].toLowerCase();
                 word = Parser.removeAfterFirstPunctuation(word);
-                String lemma = LemmaLoader.getLemma(word);
-                if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
+                String lemma = LemmaLoader.getLemma(word) != null ? LemmaLoader.getLemma(word) : word;
+                System.out.println("Word: " + word+ " lemma: " + lemma);
+                if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma) || !LemmaLoader.getDictionary(lemma)){
                     continue;
                 }
                 wordMap.putIfAbsent(lemma, new ConcurrentHashMap<>());
@@ -529,12 +529,12 @@ public class DirectIndexer {
                 if(word == null || word.isBlank()){
                     continue;
                 }
-
-                word = Parser.processWord(word);
+                word = Parser.processWord(word).toLowerCase();
                 word = Parser.removeAfterFirstPunctuation(word);
 
-                String lemma = LemmaLoader.getLemma(word);
-                if (lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)) {
+                String lemma = LemmaLoader.getLemma(word) != null ? LemmaLoader.getLemma(word) : word;
+                System.out.println("Word: " + word+ " lemma: " + lemma);
+                if (lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma) || !LemmaLoader.getDictionary(lemma)) {
                     continue;
                 }
 
