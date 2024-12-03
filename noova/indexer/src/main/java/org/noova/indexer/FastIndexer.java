@@ -188,7 +188,10 @@ public class FastIndexer {
 
         wordCountInPage.forEach((word, count) -> {
             Row wordRow = getWordRow(word);
-            wordRow.put("frequency", String.valueOf( (float) count / totalWordsCountInPage));
+            String urlPosition = wordRow.get(urlId);
+
+            urlPosition = urlPosition + "," + (double) count / totalWordsCountInPage;
+            wordRow.put(urlId, urlPosition);
         });
     }
 
