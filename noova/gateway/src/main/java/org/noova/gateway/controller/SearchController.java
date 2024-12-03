@@ -13,7 +13,7 @@ import org.noova.kvs.KVS;
 
 import java.io.IOException;
 import java.util.*;
-
+import java.util.stream.Collectors;
 
 
 /**
@@ -47,12 +47,31 @@ public class SearchController implements IController {
     private void searchByKeyword(Request req, Response res) throws IOException {
         log.info("[search] Searching by keyword");
         String keyword = req.queryParams("keyword");
+        int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
+        int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
+
         log.info("[search] Searching by keyword: " + keyword);
         Map<String, Set<Integer>> urlsWithPositions = SEARCH_SERVICE.searchByKeyword(keyword);
         urlsWithPositions.forEach((normalizedUrl, position) -> {
             log.info("[search] Found keyword: " + keyword + " at " + normalizedUrl + ": " + position);
         });
-        String json = OBJECT_MAPPER.writeValueAsString(urlsWithPositions);
+
+        // Sort the results by key (normalized URL) to ensure a consistent order
+        List<Map.Entry<String, Set<Integer>>> sortedEntries = urlsWithPositions.entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByKey())
+                .toList();
+
+        // Calculate the range for pagination
+        int fromIndex = Math.min(offset * limit, sortedEntries.size());
+        int toIndex = Math.min(fromIndex + limit, sortedEntries.size());
+        List<Map.Entry<String, Set<Integer>>> paginatedEntries = sortedEntries.subList(fromIndex, toIndex);
+
+        // Extract the subset of results for the current page
+        Map<String, Set<Integer>> paginatedResult = paginatedEntries.stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        String json = OBJECT_MAPPER.writeValueAsString(paginatedResult );
         res.body(json);
         res.type("application/json");
     }
