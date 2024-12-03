@@ -18,6 +18,7 @@ public class Controller implements IController {
         registerRoutes(SearchController.class);
         registerRoutes(AutocompleteController.class);
         registerRoutes(LocationController.class);
+        registerRoutes(ImageController.class);
     }
 
     public static void registerRoutes(Class clazz){
