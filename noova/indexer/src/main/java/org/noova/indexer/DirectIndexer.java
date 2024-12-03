@@ -223,9 +223,9 @@ public class DirectIndexer {
                 String word = words[i].toLowerCase();
                 word = Parser.processWord(word);
                 word = Parser.removeAfterFirstPunctuation(word);
-                String lemma = LemmaLoader.getLemma(word) != null ? LemmaLoader.getLemma(word) : word;
+                String lemma = LemmaLoader.getLemma(word);
                 System.out.println("Word: " + word+ " lemma: " + lemma);
-                if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma) || !LemmaLoader.getDictionary(lemma)){
+                if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
                     continue;
                 }
                 wordMap.putIfAbsent(lemma, new ConcurrentHashMap<>());
@@ -530,12 +530,12 @@ public class DirectIndexer {
                 if(word == null || word.isBlank()){
                     continue;
                 }
-                word = Parser.processWord(word).toLowerCase();
+                //word = Parser.processWord(word).toLowerCase();
                 word = Parser.removeAfterFirstPunctuation(word);
 
-                String lemma = LemmaLoader.getLemma(word) != null ? LemmaLoader.getLemma(word) : word;
+                String lemma = LemmaLoader.getLemma(word);
                 System.out.println("Word: " + word+ " lemma: " + lemma);
-                if (lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma) || !LemmaLoader.getDictionary(lemma)) {
+                if (lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)) {
                     continue;
                 }
 

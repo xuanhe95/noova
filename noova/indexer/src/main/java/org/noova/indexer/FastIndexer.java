@@ -167,14 +167,17 @@ public class FastIndexer {
 
         Map<String, StringBuilder> suffixMap = new HashMap<>();
             for(int i = 0; i < words.length; i++){
-                String word = words[i];
+                String word = words[i].toLowerCase();
+                //word = Parser.processWord(word);
+                word = Parser.removeAfterFirstPunctuation(word);
                 String lemma = LemmaLoader.getLemma(word);
+                //String lemma = LemmaLoader.getLemma(word);
                 if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
                     continue;
                 }
 
                 if(!wordCountInPage.containsKey(lemma)){
-                    Row wordRow = getWordRow(lemma);
+                    //Row wordRow = getWordRow(lemma);
 
                     if(ENABLE_WORD_SUFFIX){
                         StringBuilder builder = suffixMap.computeIfAbsent(lemma, k -> new StringBuilder());
