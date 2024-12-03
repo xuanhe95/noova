@@ -31,7 +31,7 @@ public class Parser {
 
     public static String removeAfterFirstPunctuation(String input) {
 
-        String punctuation = ".";
+        String punctuation = ".,!?:;\"'(){}[]-";
 
         int firstPunctuationIndex = -1;
 

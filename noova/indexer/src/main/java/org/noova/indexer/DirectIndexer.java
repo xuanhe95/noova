@@ -193,7 +193,7 @@ public class DirectIndexer {
         String images = page.get(PROCESSED_IMAGES);
         String url = page.get(PROCESSED_URL);
         String rawText = page.get("rawText");  // rawText for entity parsing
-        String cleanText = page.get("cleanText"); // cleanText for single-word parsing
+        String text = page.get("text");
 
         // skip op-heavy nlp tasks if url DNE
         if (url == null || url.isEmpty()) {
@@ -217,10 +217,12 @@ public class DirectIndexer {
         }
 
         // populate wordMap for single index using cleanText from pt-processed
-        if(cleanText!=null && !cleanText.isEmpty()){
-            String[] words = cleanText.split("\\s+");
+        if(text!=null && !text.isEmpty()){
+            String[] words = text.split("\\s+");
             for(int i = 0; i < words.length; i++){
-                String word = words[i].replaceAll("[^a-zA-Z]", "").toLowerCase();
+                String word = words[i];
+                word = Parser.processWord(word);
+                word = Parser.removeAfterFirstPunctuation(word);
                 String lemma = LemmaLoader.getLemma(word);
                 if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
                     continue;
@@ -527,16 +529,10 @@ public class DirectIndexer {
                 if(word == null || word.isBlank()){
                     continue;
                 }
-                if (word.contains(".")) {
-                    String[] parts = word.split("\\.");
-                    if (parts.length > 0) {
-                        word = parts[0];
-                    } else {
-                        continue;
-                    }
-                }
 
-                word = word.replaceAll("[^a-zA-Z]", "").toLowerCase();
+                word = Parser.processWord(word);
+                word = Parser.removeAfterFirstPunctuation(word);
+
                 String lemma = LemmaLoader.getLemma(word);
                 if (lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)) {
                     continue;
