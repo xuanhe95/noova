@@ -41,7 +41,7 @@ public class LemmaLoader {
     public static String getLemma(String word) {
         if (word == null) return null;
         String lowerCaseWord = word.toLowerCase();
-        if(dictionary.contains(lowerCaseWord) {
+        if(dictionary.contains(lowerCaseWord)){
             return lowerCaseWord;
         }
         return lemmaMap.getOrDefault(lowerCaseWord, null);
