@@ -140,21 +140,21 @@ public class BuildImgDictionary {
                     }
                     String imageHash = Hasher.hash(src);
                     try {
-                        if (!map_table.containsKey(rowKey)){
+                        if (!map_table.containsKey(imageHash)) {
                             //System.out.println("add new key: " + rowKey+" value: "+counter);
                             Row row = new Row(imageHash);
                             String rawText = Parser.processWord(alt);
                             row.put("src", src);
                             row.put("alt", Parser.removeAfterFirstPunctuation(rawText));
-                            row.put("from_url",url);
-                            kvs.putRow(IMG_MAPPING_TABLE,row);
+                            row.put("from_url", url);
+                            kvs.putRow(IMG_MAPPING_TABLE, row);
                             counter++;
+                            count++;
                         }
 
                     } catch (Exception e) {
                         System.err.println("Error processing row " + rowKey + ": " + e.getMessage());
                     }
-                    count++;
                     if (count % 10000 == 0) {
                         int remainder = count % 1000;
                         long currentTime = System.nanoTime();
