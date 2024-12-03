@@ -1,11 +1,5 @@
 package org.noova.indexer;
 
-import opennlp.tools.namefind.NameFinderME;
-import opennlp.tools.namefind.TokenNameFinderModel;
-import opennlp.tools.tokenize.Tokenizer;
-import opennlp.tools.tokenize.TokenizerME;
-import opennlp.tools.tokenize.TokenizerModel;
-import opennlp.tools.util.Span;
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
@@ -14,22 +8,23 @@ import org.noova.tools.*;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ForkJoinPool;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 public class FastIndexer {
 
     private static final Logger log = Logger.getLogger(FastIndexer.class);
     private static final boolean ENABLE_PARSE_ENTITY = false;
-    private static final String DELIMITER = PropertyLoader.getProperty("delimiter.default");
+    private static final String DEFAULT_DELIMITER = PropertyLoader.getProperty("delimiter.default");
+
+    private static final String COMMA_DELIMITER = PropertyLoader.getProperty("delimiter.comma");
+
+    private static final String COLON_DELIMITER = PropertyLoader.getProperty("delimiter.colon");
     private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
     private static final String INDEX_ENTITY_TABLE = PropertyLoader.getProperty("table.index.entity");
     private static final String INDEX_LINKS = PropertyLoader.getProperty("table.index.links");
@@ -40,17 +35,20 @@ public class FastIndexer {
     private static final String URL_ID_TABLE = PropertyLoader.getProperty("table.url-id");
     private static final String URL_ID_VALUE = PropertyLoader.getProperty("table.url-id.id");
     private static final String INDEX_IMAGES_TO_PAGE = PropertyLoader.getProperty("table.index.img-page");
+    private static final Map<String, Row> WORD_MAP = new ConcurrentHashMap<>();
 
+    private static final long MAX_SUFFIX_LENGTH = 10 * 1024;
     private static final KVS KVS_CLIENT = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
+    private static final boolean ENABLE_WORD_SUFFIX = true;
+    private static final int SUFFIX_LENGTH = 3;
     static int pageCount = 0;
     static Queue<String> pageDetails = new ConcurrentLinkedQueue<>();
     static final Map<String, String> URL_ID_CACHE = new WeakHashMap<>();
 
     public static void main(String[] args) throws IOException {
-        KVS kvs = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
         // load url id to the cache
         System.out.println("Loading URL ID...");
-        loadUrlId(kvs);
+        loadUrlId();
         System.out.println("URL ID loaded");
 
         for (char c1 = 'a'; c1 <= 'z'; c1++) {
@@ -66,7 +64,7 @@ public class FastIndexer {
             System.out.println("Start indexing");
             Iterator<Row> pages = null;
             try {
-                pages = kvs.scan(PROCESSED_TABLE, startKey, endKey);
+                pages = KVS_CLIENT.scan(PROCESSED_TABLE, startKey, endKey);
             } catch (IOException e) {
                 System.out.println("Error: " + e.getMessage());
                 return;
@@ -106,7 +104,6 @@ public class FastIndexer {
         saveIndexToTable();
     }
 
-    static final Map<String, Row> WORD_MAP = new ConcurrentHashMap<>();
 
     static Row getWordRow(String word) {
 
@@ -168,6 +165,7 @@ public class FastIndexer {
         Map<String, Integer> wordCountInPage = new HashMap<>();
         // populate wordMap for single index using cleanText from pt-processed
 
+        Map<String, StringBuilder> suffixMap = new HashMap<>();
             for(int i = 0; i < words.length; i++){
                 String word = words[i];
                 String lemma = LemmaLoader.getLemma(word);
@@ -177,7 +175,27 @@ public class FastIndexer {
 
                 if(!wordCountInPage.containsKey(lemma)){
                     Row wordRow = getWordRow(lemma);
-                    wordRow.put(urlId, String.valueOf(i));
+
+                    if(ENABLE_WORD_SUFFIX){
+                        StringBuilder builder = suffixMap.computeIfAbsent(lemma, k -> new StringBuilder());
+
+                        if(builder.length() > MAX_SUFFIX_LENGTH){
+                            continue;
+                        }
+                        // word position in page
+
+                        // automatically append to buffer
+                        // position,word1,word2.. e.g. 1,word1,word2,word3,
+
+                            builder.append(i);
+                            for(int j = 1; j <= SUFFIX_LENGTH; j++){
+                                int pos = i+j;
+                                if(pos < words.length){
+                                    builder.append(COMMA_DELIMITER).append(words[pos]);
+                                }
+                            }
+                            builder.append(DEFAULT_DELIMITER);
+                    }
                     wordCountInPage.put(lemma, 1);
                 }
                 else {
@@ -188,10 +206,15 @@ public class FastIndexer {
 
         wordCountInPage.forEach((word, count) -> {
             Row wordRow = getWordRow(word);
-            String urlPosition = wordRow.get(urlId);
 
-            urlPosition = urlPosition + "," + (double) count / totalWordsCountInPage;
-            wordRow.put(urlId, urlPosition);
+            // final result:
+            // 0,word1,word2,word3 /n 1,word1,word2,word3,word4 /n :0.4
+
+
+            StringBuilder builder = suffixMap.getOrDefault(word, new StringBuilder());
+            builder.append(COLON_DELIMITER).append((double) count / totalWordsCountInPage);
+
+            wordRow.put(urlId, builder.toString());
         });
     }
 
@@ -222,8 +245,8 @@ public class FastIndexer {
         }
     }
 
-    private static void loadUrlId(KVS kvs) throws IOException {
-        var ids = kvs.scan(URL_ID_TABLE, null, null);
+    private static void loadUrlId() throws IOException {
+        var ids = KVS_CLIENT.scan(URL_ID_TABLE, null, null);
         ids.forEachRemaining(row -> {
             String id = row.get(URL_ID_VALUE);
             if(id == null){
