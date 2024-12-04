@@ -505,7 +505,8 @@
         const $suggestionsBox = $('#suggestions');
 
         $searchBox.on('input', function() {
-            const query = $(this).val();
+            let query = $(this).val();
+            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
             if (query.length >= 1) { // Start suggesting after 1 or more characters
                 $.ajax({
                     url: '/autocomplete',

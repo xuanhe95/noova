@@ -7,6 +7,8 @@ import org.noova.webserver.Request;
 import org.noova.webserver.Response;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -43,10 +45,30 @@ public class AutocompleteController implements IController {
             return;
         }
 
-        log.info("[autocomplete] Fetching suggestions for prefix: " + prefix);
-        List<String> suggestions = SearchService.getInstance().getAutocompleteSuggestions(prefix, limit);
-        log.info("[autocomplete] suggestions: " + suggestions);
-        String json = OBJECT_MAPPER.writeValueAsString(suggestions);
+        String[] words = prefix.trim().split("\\s+"); // Split by spaces
+        String lastWord = words[words.length - 1]; // Get the last word
+
+        log.info("[autocomplete] Last word to autocomplete: " + lastWord);
+
+        // Fetch suggestions for the last word
+        List<String> wordSuggestions = SearchService.getInstance().getAutocompleteSuggestions(lastWord, limit);
+
+        // Combine suggestions with the rest of the prefix
+        List<String> fullSuggestions = new ArrayList<>();
+        String prefixWithoutLastWord = String.join(" ", Arrays.copyOf(words, words.length - 1)).trim();
+
+        for (String suggestion : wordSuggestions) {
+            if (!prefixWithoutLastWord.isEmpty()) {
+                fullSuggestions.add(prefixWithoutLastWord + " " + suggestion);
+            } else {
+                fullSuggestions.add(suggestion);
+            }
+        }
+
+        log.info("[autocomplete] Full suggestions: " + fullSuggestions);
+
+        // Return JSON response
+        String json = OBJECT_MAPPER.writeValueAsString(fullSuggestions);
         res.body(json);
         res.type("application/json");
     }
