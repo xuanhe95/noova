@@ -6,6 +6,7 @@ import org.noova.gateway.service.SearchService;
 import org.noova.gateway.service.Service;
 import org.noova.kvs.Row;
 import org.noova.tools.Logger;
+import org.noova.tools.Parser;
 import org.noova.tools.PropertyLoader;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
@@ -56,20 +57,8 @@ public class SearchController implements IController {
             log.info("[search] Found keyword: " + keyword + " at " + normalizedUrl + ": " + position);
         });
 
-        // Sort the results by key (normalized URL) to ensure a consistent order
-        List<Map.Entry<String, Set<Integer>>> sortedEntries = urlsWithPositions.entrySet()
-                .stream()
-                .sorted(Map.Entry.comparingByKey())
-                .toList();
-
-        // Calculate the range for pagination
-        int fromIndex = Math.min(offset * limit, sortedEntries.size());
-        int toIndex = Math.min(fromIndex + limit, sortedEntries.size());
-        List<Map.Entry<String, Set<Integer>>> paginatedEntries = sortedEntries.subList(fromIndex, toIndex);
-
-        // Extract the subset of results for the current page
-        Map<String, Set<Integer>> paginatedResult = paginatedEntries.stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        // Paginate results using the extracted method
+        Map<String, Set<Integer>> paginatedResult = Parser.paginateResults(urlsWithPositions, limit, offset);
 
         String json = OBJECT_MAPPER.writeValueAsString(paginatedResult );
         res.body(json);

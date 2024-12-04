@@ -199,6 +199,7 @@ public class SearchService implements IService {
     }
 
 
+
     public Map<String, Set<Integer>> searchByKeywords(String keywords) throws IOException {
         String[] terms = keywords.split("\\s+"); //TBD: auto correction logic and security checks
         Map<String, Set<Integer>> aggregatedResults = new HashMap<>();
@@ -212,7 +213,6 @@ public class SearchService implements IService {
 
         return aggregatedResults;
     }
-
     public Map<String, Double> calculateQueryTFIDF(String query) throws IOException {
         List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
         Map<String, Double> queryTfidf = new HashMap<>();

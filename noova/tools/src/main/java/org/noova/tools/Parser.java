@@ -1,7 +1,13 @@
 package org.noova.tools;
 
+import org.checkerframework.checker.units.qual.K;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class Parser {
 
@@ -70,6 +76,26 @@ public class Parser {
         }
         return null;
     }
+
+    public static <K extends Comparable<? super K>, V> Map<K, V> paginateResults(Map<K, V> data, int limit, int offset) {
+        // Sort the entries by key (natural ordering)
+        List<Map.Entry<K, V>> sortedEntries = data.entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByKey()) // Ensures keys are comparable
+                .toList();
+
+        // Calculate pagination indices
+        int fromIndex = Math.min(offset * limit, sortedEntries.size());
+        int toIndex = Math.min(fromIndex + limit, sortedEntries.size());
+
+        // Extract paginated entries
+        List<Map.Entry<K, V>> paginatedEntries = sortedEntries.subList(fromIndex, toIndex);
+
+        // Convert back to Map
+        return paginatedEntries.stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
 
     public static void main(String[] args) {
         String testString = "asd123.jpg";
