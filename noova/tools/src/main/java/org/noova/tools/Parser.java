@@ -5,13 +5,38 @@ import org.checkerframework.checker.units.qual.K;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class Parser {
 
+    public static List<String> getLammelizedWords(String text) {
+        // [Process Helper] Get words from text
+        // [Process Helper] Lammelized words
+        // [Process Helper] Remove non-english words
 
+        if(text==null || text.isEmpty()){
+            return new ArrayList<>();
+        }
+
+        String[] words = text.split("-+");
+
+        List<String> wordList = new ArrayList<>();
+
+        for(int i = 0; i < words.length; i++){
+            System.out.println("word: " + words[i]);
+            words[i] = processWord(words[i]);
+            words[i] = LemmaLoader.getLemma(words[i]);
+            if(words[i] != null){
+                wordList.add(words[i]);
+            }
+
+        }
+        return wordList;
+    }
 
 
     public static String[] imagesToHtml(String images){

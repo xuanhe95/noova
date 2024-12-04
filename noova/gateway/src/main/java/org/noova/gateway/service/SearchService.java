@@ -1,6 +1,7 @@
 package org.noova.gateway.service;
 
 //import com.fasterxml.jackson.databind.annotation.JsonAppend;
+import org.jsoup.nodes.Range;
 import org.noova.gateway.markov.EfficientMarkovWord;
 import org.noova.gateway.storage.StorageStrategy;
 import org.noova.gateway.trie.Trie;
@@ -8,11 +9,7 @@ import org.noova.gateway.trie.TrieManager;
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
-import org.noova.tools.Hasher;
-import org.noova.tools.Logger;
-import org.noova.tools.Parser;
-import org.noova.tools.PropertyLoader;
-import org.noova.tools.CapitalizeTitle;
+import org.noova.tools.*;
 
 import java.io.IOException;
 import java.util.*;
@@ -256,8 +253,142 @@ public class SearchService implements IService {
     }
 
 
+    public List<Integer> getBestPosition(List<String> words, Map<String, Set<Integer>> positions){
+        List<Integer> result = new ArrayList<>();
+
+        // 将 positions 转换成列表形式，方便操作
+        List<List<Integer>> allPositions = new ArrayList<>();
+        for (String word : words) {
+            if (positions.containsKey(word)) {
+                System.out.println("Word: " + word);
+                List<Integer> posList = new ArrayList<>(positions.get(word));
+                Collections.sort(posList);
+                allPositions.add(posList);
+            } else {
+                return result;
+            }
+        }
+
+        // 使用指针方法查找最小跨度
+        int[] indices = new int[allPositions.size()]; // 指针数组，表示每个列表当前访问的位置
+        int minDistance = Integer.MAX_VALUE;
+
+        while (true) {
+            int minPos = Integer.MAX_VALUE;
+            int maxPos = Integer.MIN_VALUE;
+            int minListIndex = -1;
+
+            // 找到当前指针对应的最小和最大位置
+            for (int i = 0; i < allPositions.size(); i++) {
+                int currentPos = allPositions.get(i).get(indices[i]);
+                if (currentPos < minPos) {
+                    minPos = currentPos;
+                    minListIndex = i;
+                }
+                if (currentPos > maxPos) {
+                    maxPos = currentPos;
+                }
+            }
+
+            // 更新最小距离
+            int currentDistance = maxPos - minPos;
+            if (currentDistance < minDistance) {
+                minDistance = currentDistance;
+                result.clear();
+                for (int i = 0; i < allPositions.size(); i++) {
+                    result.add(allPositions.get(i).get(indices[i]));
+                }
+            }
+
+            // 移动指针：最小位置的指针前进
+            indices[minListIndex]++;
+            if (indices[minListIndex] >= allPositions.get(minListIndex).size()) {
+                break; // 如果某个列表到达末尾，退出循环
+            }
+        }
+
+        return result;
+
+    }
+
+    public Map<String, List<Integer>> calculatePosition(List<String> words){
+        // only find pages that contains these words
+
+        Set<String> urlWithAllWords = new HashSet<>();
+
+        Map<String, Set<String>> urlWithWords = new HashMap<>();
+        Map<String, Map<String, Set<Integer>>> urlsForWordMap = new HashMap<>();
+
+        // url -> words -> positions
+        Map<String, List<Integer>> urlToPositions = new HashMap<>();
+
+
+        for(int i = 0; i < words.size(); i++){
+            String word = words.get(i);
+
+            System.out.println("Word: " + word);
+
+            Map<String, Set<Integer>> urlsForWord = null;
+            try {
+                // get all urls for this word
+                urlsForWord = searchByKeyword(word);
+
+                System.out.println("URLs for word: " + urlsForWord.size());
+
+                urlsForWord.forEach((url, pos) -> {
+                    System.out.println("URL: " + url);
+                    // add urls
+                    if(urlWithWords.containsKey(url)){
+                        urlWithWords.get(url).add(word);
+                    } else{
+                        Set<String> wordSet = new HashSet<>();
+                        wordSet.add(word);
+                        urlWithWords.put(url, wordSet);
+                    }
+                });
+
+                for(String url: urlsForWord.keySet()){
+                    if(urlsForWordMap.containsKey(url)){
+                        urlsForWordMap.get(url).put(word, urlsForWord.get(url));
+                    } else{
+                        Map<String, Set<Integer>> wordToPos = new HashMap<>();
+                        wordToPos.put(word, urlsForWord.get(url));
+                        urlsForWordMap.put(url, wordToPos);
+                    }
+                }
+
+
+            } catch (IOException e) {
+                log.error("[search] Error searching by keyword: " + word);
+            }
+        }
+
+        // find urls that contain all words
+        urlWithWords.forEach((url, wordsForUrl) -> {
+            if(wordsForUrl.size() == words.size()){
+                //System.out.println("URL with all words: " + url);
+                urlWithAllWords.add(url);
+            }
+        });
+
+        urlWithAllWords.forEach(url ->{
+            //System.out.println("URL: " + url);
+            Map<String, Set<Integer>> valid = urlsForWordMap.get(url);
+            var best = getBestPosition(words, valid);
+            urlToPositions.put(url, best);
+        });
+        return urlToPositions;
+    }
+
+
     public Map<String, Set<Integer>> searchByKeywords(String keywords) throws IOException {
-        String[] terms = keywords.split("\\s+"); //TBD: auto correction logic and security checks
+
+        if(keywords == null || keywords.isEmpty()){
+            log.warn("[search] Empty keywords");
+            return new HashMap<>();
+        }
+
+        String[] terms = keywords.toLowerCase().split("\\s+"); //TBD: auto correction logic and security checks
         Map<String, Set<Integer>> aggregatedResults = new HashMap<>();
 
         for (String term : terms) {

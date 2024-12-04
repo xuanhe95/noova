@@ -41,7 +41,7 @@ public class ImageController implements IController{
 
         log.info("[search] Searching by keyword: " + keyword);
 
-        var imageMap = IMAGE_SERVICE.searchByKeyword(keyword);
+        var imageMap = IMAGE_SERVICE.searchByKeyword(keyword, 0, 10);
 
 
         String json = OBJECT_MAPPER.writeValueAsString(imageMap);
@@ -53,7 +53,10 @@ public class ImageController implements IController{
     private void searchByKeywords(Request req, Response res) throws IOException {
         log.info("[search] Searching by keywords");
         String keyword = req.queryParams("keyword");
-        String limit = req.queryParams("limit") == null ? "10" : req.queryParams("limit");
+
+
+        int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
+        int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
 
         if(keyword == null || keyword.isEmpty()){
             log.warn("[search] Empty keyword received");
@@ -65,11 +68,17 @@ public class ImageController implements IController{
         String[] keywords = keyword.toLowerCase().split("-");
 
 
+
+
         Map<String, Integer> keywordCount = new HashMap<>();
 
         Map<String, Set<String>> images= new HashMap<>();
 
-        for (String key : keywords) {
+
+
+        for (int i = 0; i < Math.min(keywords.length, 8); i++) {
+
+            String key = keywords[i];
             if(key == null || key.isEmpty()){
                 continue;
             }
@@ -77,7 +86,7 @@ public class ImageController implements IController{
             System.out.println("key: " + key);
             String lemma = LemmaLoader.getLemma(key);
             if (lemma != null) {
-                var imageMap = IMAGE_SERVICE.searchByKeyword(lemma);
+                var imageMap = IMAGE_SERVICE.searchByKeyword(lemma, 0, 10);
                 for (String imageUrl : imageMap.keySet()) {
                     keywordCount.put(imageUrl, keywordCount.getOrDefault(imageUrl, 0) + 1);
                 }
@@ -100,7 +109,7 @@ public class ImageController implements IController{
 
         SortedMap<String, Set<String>> result = new TreeMap<>();
 
-        for (int i = 0; i < Math.min(sortedImages.size(), Integer.parseInt(limit)); i++) {
+        for (int i = 0; i < Math.min(sortedImages.size(), limit); i++) {
             result.put(sortedImages.get(i).getKey(), images.get(sortedImages.get(i).getKey()));
         }
 

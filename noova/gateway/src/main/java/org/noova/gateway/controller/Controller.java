@@ -1,6 +1,8 @@
 package org.noova.gateway.controller;
 
 
+import org.noova.gateway.service.SearchService;
+import org.noova.gateway.trie.TrieManager;
 import org.noova.tools.Logger;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
@@ -19,6 +21,8 @@ public class Controller implements IController {
         registerRoutes(AutocompleteController.class);
         registerRoutes(LocationController.class);
         registerRoutes(ImageController.class);
+
+        SearchService.getInstance();
     }
 
     public static void registerRoutes(Class clazz){

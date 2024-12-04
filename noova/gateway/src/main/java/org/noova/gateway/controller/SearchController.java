@@ -109,6 +109,63 @@ public class SearchController implements IController {
         res.body(page);
     }
 
+
+    @Route(path = "/best", method = "GET")
+    private void getBest(Request req, Response res) throws IOException {
+        log.info("[search] Getting best");
+        String keyword = req.queryParams("keyword");
+        String limit = req.queryParams("limit") == null ? "10" : req.queryParams("limit");
+
+        List<String> lammatized = Parser.getLammelizedWords(keyword);
+
+
+        System.out.println("Lammatized: " + lammatized);
+
+        Map<String, List<Integer>> urlWithPositions = SEARCH_SERVICE.calculatePosition(lammatized);
+
+        urlWithPositions.forEach((url, position) -> {
+            System.out.println("URL: " + url + " | Positions: " + position);
+        });
+
+
+        SortedMap<String, List<Integer>> sortedMap = new TreeMap<>((a, b) -> {
+            int aSize = urlWithPositions.get(a).size();
+            int bSize = urlWithPositions.get(b).size();
+            int sizeComparison = Integer.compare(bSize, aSize);
+            if (sizeComparison != 0) {
+                return sizeComparison; // 优先按值排序
+            }
+
+            System.out.println("a: " + urlWithPositions.get(a).get(0) + " b: " + urlWithPositions.get(b).get(0));
+            System.out.println("a2: " + urlWithPositions.get(a).get(urlWithPositions.get(a).size() - 1) + " b2: " + urlWithPositions.get(b).get(urlWithPositions.get(b).size() - 1));
+
+            int aDiff = Math.abs(urlWithPositions.get(a).get(urlWithPositions.get(a).size() - 1) - urlWithPositions.get(a).get(0));
+            int bDiff = Math.abs(urlWithPositions.get(b).get(urlWithPositions.get(b).size() - 1) - urlWithPositions.get(b).get(0));
+
+            System.out.println("aDiff: " + aDiff + " bDiff: " + bDiff);
+
+            if(aDiff == bDiff){
+                return a.compareTo(b);
+            }
+            return aDiff - bDiff; // 次要按差值排序
+        });
+
+        System.out.println("URL Map: " + sortedMap + "size: " + urlWithPositions.size());
+
+        sortedMap.putAll(urlWithPositions);
+
+
+
+        System.out.println("Sorted Map: " + sortedMap + "size: " + sortedMap.size());
+
+
+
+        String json = OBJECT_MAPPER.writeValueAsString(sortedMap);
+        res.body(json);
+        res.type("application/json");
+    }
+
+
     @Route(path = "/search", method = "GET")
     private void searchByKeywords(Request req, Response res) throws IOException {
         log.info("[search] Searching by query");
