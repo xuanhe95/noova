@@ -116,11 +116,51 @@ public class SearchService implements IService {
         return result;
     }
 
-    public String getTitle(String url) throws IOException {
-        Row row = KVS.getRow(PROCESSED_TABLE, url);
+    public String getTitle(String hashedUrl) throws IOException {
+        Row row = KVS.getRow(PROCESSED_TABLE, hashedUrl);
         if(row==null) return "TBD";
         return CapitalizeTitle.toTitleCase(row.get("title"));
     }
+
+    public double calculateTitleMatchScore(String query, String title) throws IOException {
+        // [ranking] - title weight
+
+        if (title == null || title.isEmpty()) {
+            return 0.0;
+        }
+
+        List<String> titleTokens = Arrays.asList(title.toLowerCase().split("\\s+"));
+        List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
+
+        // count match
+        long matchCount = queryTokens.stream()
+                .filter(titleTokens::contains)
+                .count();
+
+        // norm weight by title size
+        return (double) matchCount / titleTokens.size();
+    }
+
+    public String getOGDescription(String hashedUrl) throws IOException {
+        Row row = KVS.getRow(PROCESSED_TABLE, hashedUrl);
+        if (row == null) return "";
+        return row.get("description");
+    }
+
+    public double calculateOGDescriptionMatch(String hashedUrl, String query) throws IOException {
+        String ogDescription = getOGDescription(hashedUrl);
+        if (ogDescription == null || ogDescription.isEmpty()) return 0.0;
+
+        List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
+        List<String> descriptionTokens = Arrays.asList(ogDescription.toLowerCase().split("\\s+"));
+
+        long matchCount = queryTokens.stream()
+                .filter(descriptionTokens::contains)
+                .count();
+
+        return (double) matchCount / queryTokens.size();
+    }
+
 
     public Map<String, Set<Integer>> searchByKeyword(String keyword) throws IOException {
         // uses HASHED_URL as key
@@ -184,8 +224,8 @@ public class SearchService implements IService {
         return result;
     }
 
-    public double getPagerank(String url) throws IOException {
-        String hashedUrl = Hasher.hash(url);
+    public double getPagerank(String hashedUrl) throws IOException {
+//        String hashedUrl = Hasher.hash(url);
 
         List<String> result = new ArrayList<>();
         // get the row from the pagerank table
@@ -258,13 +298,13 @@ public class SearchService implements IService {
         return queryTf;
     }
 
-    public Map<String, Double> calculateDocumentTF(String url, String query) throws IOException {
+    public Map<String, Double> calculateDocumentTF(String hashedUrl, String query) throws IOException {
         // [Prof approach] - pick a doc to score, normalize tf in a doc [a + (1 - a) * (freq of term / max freq of a word in doc)]
 
         Map<String, Double> docTf = new HashMap<>(); // doc_term:norm_tf
         List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
 
-        String hashedUrl = Hasher.hash(url); // col
+//        String hashedUrl = Hasher.hash(url); // col
         double maxFrequency = 0.0;
 
         // 1. scan index row once to update maxFreq and corr query_term freq
@@ -367,20 +407,20 @@ public class SearchService implements IService {
         return queryTfidf;
     }
 
-    public Map<String, Double> calculateDocumentTFIDF(String url, Set<Integer> positions) throws IOException {
+    public Map<String, Double> calculateDocumentTFIDF(String hashedUrl, Set<Integer> positions) throws IOException {
         Map<String, Double> docTfidf = new HashMap<>();
 
-        String hashedUrl = Hasher.hash(url);
+//        String hashedUrl = Hasher.hash(url);
         Row row = KVS.getRow(PropertyLoader.getProperty("table.crawler"), hashedUrl);
-        log.info("[search] Found row: " + hashedUrl + " for URL: " + url + "row: " + row);
+        log.info("[search] Found row: " + hashedUrl + " for URL: " + hashedUrl + "row: " + row);
         if (row == null) {
-            log.warn("[search] calculateDocumentTFIDF No content found for URL: " + url);
+            log.warn("[search] calculateDocumentTFIDF No content found for URL: " + hashedUrl);
             return docTfidf;
         }
 
         String pageContent = row.get("page");
         if (pageContent == null) {
-            log.warn("[search] calculateDocumentTFIDF No page content in 'page' column for URL: " + url);
+            log.warn("[search] calculateDocumentTFIDF No page content in 'page' column for URL: " + hashedUrl);
             return docTfidf;
         }
 
@@ -470,8 +510,8 @@ public class SearchService implements IService {
     }
 
 
-    public String getSnapshot(String url) throws IOException {
-        String hashedUrl = Hasher.hash(url);
+    public String getSnapshot(String hashedUrl) throws IOException {
+//        String hashedUrl = Hasher.hash(url);
         Row row = KVS.getRow(PropertyLoader.getProperty("table.crawler"), hashedUrl);
         if (row == null) {
             log.warn("[search] No row found for URL: " + hashedUrl);

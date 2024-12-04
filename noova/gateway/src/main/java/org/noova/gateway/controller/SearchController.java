@@ -30,6 +30,7 @@ public class SearchController implements IController {
     private static final SearchService SEARCH_SERVICE = SearchService.getInstance();
 
     private static final double alpha = 0.5; // Need more analysis
+    private static final double titleDespMatchWeight = 0.3;
 
     private static final int context_view = 30; // Can be in the config file
 
@@ -138,27 +139,35 @@ public class SearchController implements IController {
 
         List<Map<String, Object>> results = new ArrayList<>();
         for (Map.Entry<String, Set<Integer>> entry : urlsWithPositions.entrySet()) {
-            String url = entry.getKey();
+            String hashedUrl = entry.getKey();
             Set<Integer> positions = entry.getValue();
 
-            // get title
-            String title = SearchService.getInstance().getTitle(url);
+            // Calculate title weight
+            String title = SearchService.getInstance().getTitle(hashedUrl);
+            double titleMatchScore = SearchService.getInstance().calculateTitleMatchScore(query, title);
+
+            // Calculate og description weight
+            double despMatchScore = SearchService.getInstance().calculateTitleMatchScore(hashedUrl, title);
 
             // Calculate TF-IDF vector
 //            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTFIDF(url, entry.getValue());
-            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTF(url, query);
+            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTF(hashedUrl, query);
 
             // Calculate cosine similarity between query and document TF-IDF vectors
 //            double tfidfSimilarity = SearchService.getInstance().cosineSimilarity(queryTfidf, docTfidf);
             double tfidfSimilarity = SearchService.getInstance().calculateTFIDF(queryTfidf, docTfidf);
 
             // Get the PageRank score
-            double pageRank = SearchService.getInstance().getPagerank(url);
+            double pageRank = SearchService.getInstance().getPagerank(hashedUrl);
 
             // Combine scores with weighting (alpha for TF-IDF similarity, (1 - alpha) for PageRank)
-            double combinedScore = alpha * tfidfSimilarity + (1-alpha) * pageRank;
+//            double combinedScore = alpha * tfidfSimilarity + (1-alpha) * pageRank;
+            double combinedScore = alpha * tfidfSimilarity +
+                    (1 - alpha - titleDespMatchWeight) * pageRank +
+                    titleDespMatchWeight * (titleMatchScore+despMatchScore);
 
-            String pageContent = SearchService.getInstance().getPageContent(url);
+
+            String pageContent = SearchService.getInstance().getPageContent(hashedUrl);
             log.info("[search] page content: " + pageContent);
 
             String contextSnippet = SearchService.getInstance().ExtractContextSnippet(pageContent, positions, 60); // TBD, hardcoded
@@ -166,13 +175,13 @@ public class SearchController implements IController {
 
             Map<String, Object> result = new HashMap<>();
             result.put("title", title);
-            result.put("url", url);
+            result.put("url", hashedUrl);
             result.put("combinedScore", combinedScore);
             result.put("context", contextSnippet);
 
             results.add(result);
 
-            log.info("[search] URL: " + url + ", TF-IDF Similarity: " + tfidfSimilarity + ", PageRank: " + pageRank + ", Combined Score: " + combinedScore);
+            log.info("[search] URL: " + hashedUrl + ", TF-IDF Similarity: " + tfidfSimilarity + ", PageRank: " + pageRank + ", Combined Score: " + combinedScore);
         }
 
         results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
