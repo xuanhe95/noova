@@ -251,6 +251,30 @@ public class SearchController implements IController {
         log.info("[search] Returning " + imageUrls.size() + " images for keyword: " + keyword);
     }
 
+    @Route(path = "/search/pagelink", method = "GET")
+    private void searchPageLink(Request req, Response res) throws IOException {
+        String linkId = req.queryParams("query");
+        log.info("[search] Searching link by id: " + linkId);
+
+        if (linkId == null || linkId.isEmpty()) {
+            res.status(400, "Keyword cannot be empty");
+            return;
+        }
+
+        String actualLink = SEARCH_SERVICE.getLinkFromID(linkId);
+        System.out.println("actualLink"+actualLink);
+        if (actualLink.isEmpty()) {
+            log.warn("[search] No url found for keyword: " + linkId);
+            res.status(404, "No images found for the given keyword");
+            return;
+        }
+
+        String json = OBJECT_MAPPER.writeValueAsString(actualLink);
+        res.body(json);
+        res.type("application/json");
+        log.info("[search] Returning " + actualLink + " images for keyword: " + linkId);
+    }
+
 
     private static final ExecutorService executor = Executors.newFixedThreadPool(20);
     private static final int TIMEOUT_SECONDS = 5;

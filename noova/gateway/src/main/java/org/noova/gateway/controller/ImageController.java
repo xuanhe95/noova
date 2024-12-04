@@ -102,24 +102,21 @@ public class ImageController implements IController{
     }
 
     @Route(path = "/image/fuzzy", method = "GET")
-    private void searchByKeywords(Request req, Response res) throws IOException {
-        log.info("[search] Searching by keywords");
+    private void searchImageByKeywords(Request req, Response res) throws IOException {
+        log.info("[search] Searching by images");
         String keyword = req.queryParams("query");
 
         int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
         int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
 
         if(keyword == null || keyword.isEmpty()){
-            log.warn("[search] Empty keyword received");
+            log.warn("[search] Empty image keyword received");
             res.body("[error]");
             res.type("application/json");
             return;
         }
 
         List<String> keywords = Parser.getLammelizedWords(keyword);
-
-
-
 
         Map<String, Integer> keywordCount = new HashMap<>();
 
@@ -148,7 +145,7 @@ public class ImageController implements IController{
                     }
                     images.get(imageUrl).addAll(imageMap.get(imageUrl));
                 }
-                System.out.println("images: " + images);
+                //System.out.println("images: " + images);
 
             }
         }
@@ -157,7 +154,7 @@ public class ImageController implements IController{
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .toList();
 
-
+        System.out.println("Sort value done. ");
         SortedMap<String, Set<String>> result = new TreeMap<>();
 
         for (int i = 0; i < Math.min(sortedImages.size(), limit); i++) {

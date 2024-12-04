@@ -83,8 +83,7 @@ public class SearchService implements IService {
         executor.submit(this::preloadPageRankCache);
         executor.shutdown();
 
-        preloadIDUrlCache(); // preload url id cache in mem
-        loadWordToUrlsCache();
+        //loadWordToUrlsCache();
     }
 
 
@@ -145,11 +144,45 @@ public class SearchService implements IService {
     public Row getCachedRow(String tableName, String key) {
         return processedTableCache.computeIfAbsent(key, k -> {
             try {
-                return KVS.getRow(tableName, k);
+                return KVS.getRow(ID_URL_TABLE, k);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    public String getLinkFromID(String urlId) throws IOException {
+        System.out.println("here in getLinkFromID");
+        String hashedUrl = "";
+        if(ID_URL_CACHE.containsKey(urlId)){
+            hashedUrl = ID_URL_CACHE.get(urlId);
+            System.out.println("found in cache: "+hashedUrl);
+        }else{
+            byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, urlId, "value");
+            if(hashedUrlByte != null){
+                hashedUrl = new String(hashedUrlByte);
+            }
+            System.out.println("found in id table"+hashedUrl);
+
+        }
+        String url = "";
+        if (hashedUrl != null && !hashedUrl.isEmpty()) {
+            System.out.println("query processed table"+hashedUrl);
+            Row row = getCachedRow(PROCESSED_TABLE, hashedUrl);
+
+            if (row == null) {
+                byte[] urlByte = KVS.get(PROCESSED_TABLE,hashedUrl,"url");
+                if(urlByte != null){
+                    url = new String(urlByte);
+                }
+
+            }else{
+                url = row.get("url");
+            }
+            System.out.println("found in process table"+url);
+            return url;
+        }
+        return "";
     }
 
     public List<String> searchByKeyword(String keyword, String startRow, String endRowExclusive) throws IOException {
@@ -268,7 +301,6 @@ public class SearchService implements IService {
     private static void loadWordToUrlsCache(){
 
 
-
         try {
             WORD_TO_URLS_CACHE = CacheManager.getInstance().getCache("wordToUrlCache") == null ? new HashMap<>() :
                     (Map<String, List<String>>) CacheManager.getInstance().getCache("wordToUrlCache");
@@ -280,7 +312,7 @@ public class SearchService implements IService {
                 KVS.scan(INDEX_TABLE, null, null).forEachRemaining(row -> {
                     String word = row.key();
                     Set<String> urls = new HashSet<>(row.columns());
-                    WORD_TO_URLS_CACHE.put(word, (List<String>) urls);
+                    WORD_TO_URLS_CACHE.put(word, new ArrayList<>(row.columns()));
                 });
                 CacheManager.getInstance().saveCache("wordToUrlCache", WORD_TO_URLS_CACHE);
             }
