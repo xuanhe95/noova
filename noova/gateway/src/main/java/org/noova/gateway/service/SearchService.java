@@ -1191,16 +1191,16 @@ public class SearchService implements IService {
     public String generateSnippetFromPositions(String content, List<Integer> positions, int wordLimit) {
         // use best pos to get the snippet for highlight
 
-        if(positions ==  null || positions.isEmpty()){
-            System.out.println("Empty positions");
-            return "";
-        }
-
-        if (content == null || content.isEmpty() ||positions==null|| positions.isEmpty()) {
+        if (content == null || content.isEmpty()) {
             System.out.println("Empty content or positions");
             return "";
         }
         String[] words = content.split("\\s+");
+
+        if(positions == null || positions.isEmpty()){
+            return String.join(" ", Arrays.copyOfRange(words, 0, Math.min(words.length, wordLimit)));
+        }
+
         int start = Math.max(0, positions.get(0) - wordLimit / 2);
         int end = Math.min(words.length, start + wordLimit);
 
