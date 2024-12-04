@@ -30,7 +30,7 @@ public class Parser {
             System.out.println("word: " + words[i]);
             words[i] = processWord(words[i]);
             words[i] = LemmaLoader.getLemma(words[i]);
-            if(words[i] != null){
+            if(words[i] != null && !StopWordsLoader.isStopWord(words[i])){
                 wordList.add(words[i]);
             }
 

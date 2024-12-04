@@ -5,6 +5,7 @@ import org.noova.gateway.service.ImageService;
 import org.noova.gateway.service.SearchService;
 import org.noova.tools.LemmaLoader;
 import org.noova.tools.Logger;
+import org.noova.tools.Parser;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
 
@@ -65,8 +66,7 @@ public class ImageController implements IController{
             return;
         }
 
-        String[] keywords = keyword.toLowerCase().split("-");
-
+        List<String> keywords = Parser.getLammelizedWords(keyword);
 
 
 
@@ -76,9 +76,9 @@ public class ImageController implements IController{
 
 
 
-        for (int i = 0; i < Math.min(keywords.length, 8); i++) {
+        for (int i = 0; i < Math.min(keywords.size(), 8); i++) {
 
-            String key = keywords[i];
+            String key = keywords.get(i);
             if(key == null || key.isEmpty()){
                 continue;
             }

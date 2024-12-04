@@ -8,14 +8,11 @@ import org.noova.gateway.service.WeatherService;
 import org.noova.kvs.Row;
 import org.noova.tools.Logger;
 import org.noova.tools.Parser;
-import org.noova.tools.PropertyLoader;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
-import org.noova.kvs.KVS;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 /**
@@ -121,46 +118,13 @@ public class SearchController implements IController {
 
         System.out.println("Lammatized: " + lammatized);
 
-        Map<String, List<Integer>> urlWithPositions = SEARCH_SERVICE.calculatePosition(lammatized);
+        Map<String, List<Integer>> sortedUrlWithPositions = SEARCH_SERVICE.calculateSortedPosition(lammatized);
 
-        urlWithPositions.forEach((url, position) -> {
+        sortedUrlWithPositions.forEach((url, position) -> {
             System.out.println("URL: " + url + " | Positions: " + position);
         });
 
-
-        SortedMap<String, List<Integer>> sortedMap = new TreeMap<>((a, b) -> {
-            int aSize = urlWithPositions.get(a).size();
-            int bSize = urlWithPositions.get(b).size();
-            int sizeComparison = Integer.compare(bSize, aSize);
-            if (sizeComparison != 0) {
-                return sizeComparison; // 优先按值排序
-            }
-
-            System.out.println("a: " + urlWithPositions.get(a).get(0) + " b: " + urlWithPositions.get(b).get(0));
-            System.out.println("a2: " + urlWithPositions.get(a).get(urlWithPositions.get(a).size() - 1) + " b2: " + urlWithPositions.get(b).get(urlWithPositions.get(b).size() - 1));
-
-            int aDiff = Math.abs(urlWithPositions.get(a).get(urlWithPositions.get(a).size() - 1) - urlWithPositions.get(a).get(0));
-            int bDiff = Math.abs(urlWithPositions.get(b).get(urlWithPositions.get(b).size() - 1) - urlWithPositions.get(b).get(0));
-
-            System.out.println("aDiff: " + aDiff + " bDiff: " + bDiff);
-
-            if(aDiff == bDiff){
-                return a.compareTo(b);
-            }
-            return aDiff - bDiff; // 次要按差值排序
-        });
-
-        System.out.println("URL Map: " + sortedMap + "size: " + urlWithPositions.size());
-
-        sortedMap.putAll(urlWithPositions);
-
-
-
-        System.out.println("Sorted Map: " + sortedMap + "size: " + sortedMap.size());
-
-
-
-        String json = OBJECT_MAPPER.writeValueAsString(sortedMap);
+        String json = OBJECT_MAPPER.writeValueAsString(sortedUrlWithPositions);
         res.body(json);
         res.type("application/json");
     }
