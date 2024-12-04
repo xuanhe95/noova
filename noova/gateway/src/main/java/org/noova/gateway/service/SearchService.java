@@ -70,6 +70,8 @@ public class SearchService implements IService {
             }
         }
 
+        preloadIDUrlCache(); // preload url id cache in mem
+
     }
 
 
@@ -81,8 +83,13 @@ public class SearchService implements IService {
         return instance;
     }
 
-    public void preloadIDUrlCache() throws IOException {
-        Iterator<Row> rows = KVS.scan(ID_URL_TABLE, null, null);
+    public void preloadIDUrlCache() {
+        Iterator<Row> rows = null;
+        try {
+            rows = KVS.scan(ID_URL_TABLE, null, null);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         while (rows.hasNext()) {
             Row row = rows.next();
             String fromUrlId = row.key();
@@ -118,6 +125,22 @@ public class SearchService implements IService {
 //        System.out.println(positions.length);
         for (String position : positions) {
             position = Parser.extractNumber(position);
+            if (!position.isEmpty()) {
+                result.add(Integer.parseInt(position));
+            }
+        }
+        return result;
+    }
+
+    private List<Integer> parseUrlWithSortedPositions(String urlsWithPositions) {
+        List<Integer> result = new ArrayList<>();
+        String rawPosition = urlsWithPositions.split(":")[0];
+//        System.out.println(rawPosition);
+        String[] positions = rawPosition.split("\\s+");
+//        System.out.println(positions.length);
+        for (String position : positions) {
+            position = Parser.extractNumber(position);
+            assert position != null;
             if (!position.isEmpty()) {
                 result.add(Integer.parseInt(position));
             }
@@ -169,6 +192,67 @@ public class SearchService implements IService {
 
         return (double) matchCount / queryTokens.size();
     }
+
+
+    public Map<String, Map<String, List<Integer>>> searchByKeywordsIntersection(List<String> keywords) throws IOException {
+        // uses HASHED_URL as key
+
+
+
+        if (keywords == null || keywords.isEmpty()) {
+            log.warn("[search] Empty keyword");
+            return new HashMap<>();
+        }
+
+
+        Map<String, Map<String, List<Integer>>> allResults = new HashMap<>();
+
+        Map<String, Row> cache = new HashMap<>();
+
+        Set<String> allFromIds = null;
+
+        for (String keyword : keywords) {
+            Row row = KVS.getRow(INDEX_TABLE, keyword);
+            if (row == null) {
+                log.warn("[search] No row found for keyword: " + keyword);
+                continue;
+            }
+
+            cache.put(keyword, row);
+
+            if (row.columns() != null) {
+                if (allFromIds == null) {
+                    allFromIds = row.columns();
+                } else {
+                    allFromIds.retainAll(row.columns());
+                }
+            }
+        }
+
+        if (allFromIds == null || allFromIds.isEmpty()) {
+            log.warn("[search] No row found for keyword: " + keywords);
+            return allResults;
+        }
+        for (String fromUrlId : allFromIds) {
+
+            Map<String, List<Integer>> result = new HashMap<>();
+            for (String keyword : keywords) {
+                Row row = cache.get(keyword);
+
+                String texts = row.get(fromUrlId);
+                if (texts.isEmpty()) {
+                    continue;
+                }
+                List<Integer> positions = parseUrlWithSortedPositions(texts);
+                result.put(keyword, positions);
+            }
+            allResults.put(fromUrlId, result);
+        }
+        return allResults;
+
+    }
+
+
 
 
     public Map<String, Set<Integer>> searchByKeyword(String keyword) throws IOException {
@@ -284,13 +368,85 @@ public class SearchService implements IService {
         }
     }
 
-    public static List<Integer> getBestPosition(List<String> words, Map<String, Set<Integer>> positions, int maxSpan) {
+    public static List<Integer> getBestPositionWithSorted(List<String> words, Map<String, List<Integer>> positions, int spanTolerance, int spanLimit) {
         List<List<Integer>> allPositions = new ArrayList<>();
         PriorityQueue<Node> pq = new PriorityQueue<>();
 
         // 初始化所有位置列表，并将每个列表的第一个元素加入优先队列
         for (String word : words) {
             if (positions.containsKey(word)) {
+                List<Integer> posSortedList = positions.get(word);
+
+                allPositions.add(posSortedList);
+                pq.offer(new Node(posSortedList.get(0), 0, allPositions.size() - 1));
+            } else {
+                return new ArrayList<>(); // 如果某个单词没有位置，返回空
+            }
+        }
+
+        int minDistance = Integer.MAX_VALUE;
+        int maxPos = Integer.MIN_VALUE; // 记录当前窗口的最大位置
+        List<Integer> result = new ArrayList<>();
+
+        // 初始化最大位置
+        for (List<Integer> posList : allPositions) {
+            maxPos = Math.max(maxPos, posList.get(0));
+        }
+
+        while (true) {
+            Node minNode = pq.poll(); // 获取当前最小位置
+            int minPos = minNode.value;
+
+            // 更新最小距离和结果
+            int currentDistance = maxPos - minPos;
+            if (currentDistance < minDistance) {
+                minDistance = currentDistance;
+                result.clear();
+                for (Node node : pq) {
+                    result.add(allPositions.get(node.listIndex).get(node.index));
+                }
+                result.add(minPos); // 加入当前最小值
+            }
+
+            // 提前终止条件
+            if (currentDistance <= spanTolerance) {
+                return result;
+            }
+
+            // 移动指针到下一个位置
+            List<Integer> currentList = allPositions.get(minNode.listIndex);
+            if (minNode.index + 1 < currentList.size()) {
+                int nextValue = currentList.get(minNode.index + 1);
+                pq.offer(new Node(nextValue, minNode.index + 1, minNode.listIndex));
+                maxPos = Math.max(maxPos, nextValue); // 更新最大位置
+            } else {
+                break; // 如果某个列表已耗尽，结束
+            }
+        }
+
+        if(minDistance> spanLimit){
+            return new ArrayList<>();
+        }
+
+        return result;
+    }
+
+
+
+    public static List<Integer> getBestPosition(List<String> words, Map<String, Set<Integer>> positions, int spanTolerance, int spanLimit) {
+        List<List<Integer>> allPositions = new ArrayList<>();
+        PriorityQueue<Node> pq = new PriorityQueue<>();
+
+        // 初始化所有位置列表，并将每个列表的第一个元素加入优先队列
+        for (String word : words) {
+            if (positions.containsKey(word)) {
+                Set<Integer> posSet = positions.get(word);
+
+
+
+
+
+
                 List<Integer> posList = new ArrayList<>(positions.get(word));
                 Collections.sort(posList);
                 allPositions.add(posList);
@@ -325,6 +481,74 @@ public class SearchService implements IService {
             }
 
             // 提前终止条件
+            if (currentDistance <= spanTolerance) {
+                return result;
+            }
+
+            // 移动指针到下一个位置
+            List<Integer> currentList = allPositions.get(minNode.listIndex);
+            if (minNode.index + 1 < currentList.size()) {
+                int nextValue = currentList.get(minNode.index + 1);
+                pq.offer(new Node(nextValue, minNode.index + 1, minNode.listIndex));
+                maxPos = Math.max(maxPos, nextValue); // 更新最大位置
+            } else {
+                break; // 如果某个列表已耗尽，结束
+            }
+        }
+
+        if(minDistance> spanLimit){
+            return new ArrayList<>();
+        }
+
+        return result;
+    }
+
+    public static List<Integer> getBestPositionV2(List<String> words, Map<String, Set<Integer>> positions, int maxSpan) {
+        List<List<Integer>> allPositions = new ArrayList<>();
+        PriorityQueue<Node> pq = new PriorityQueue<>();
+
+        int globalMinPos = Integer.MAX_VALUE; // 全局最小位置
+
+        // 初始化所有位置列表，并将最小位置加入优先队列
+        for (String word : words) {
+            if (positions.containsKey(word)) {
+                List<Integer> posList = new ArrayList<>(positions.get(word));
+                Collections.sort(posList);
+                allPositions.add(posList);
+                pq.offer(new Node(posList.get(0), 0, allPositions.size() - 1));
+
+                // 更新全局最小位置
+                globalMinPos = Math.min(globalMinPos, posList.get(0));
+            } else {
+                return new ArrayList<>(); // 如果某个单词没有位置，返回空
+            }
+        }
+
+        int minDistance = Integer.MAX_VALUE;
+        int maxPos = globalMinPos; // 从全局最小位置开始
+        List<Integer> result = new ArrayList<>();
+
+        // 初始化最大位置
+        for (List<Integer> posList : allPositions) {
+            maxPos = Math.max(maxPos, posList.get(0));
+        }
+
+        while (!pq.isEmpty()) {
+            Node minNode = pq.poll(); // 获取当前最小位置
+            int minPos = minNode.value;
+
+            // 更新最小距离和结果
+            int currentDistance = maxPos - minPos;
+            if (currentDistance < minDistance) {
+                minDistance = currentDistance;
+                result.clear();
+                for (Node node : pq) {
+                    result.add(allPositions.get(node.listIndex).get(node.index));
+                }
+                result.add(minPos); // 加入当前最小值
+            }
+
+            // 提前终止条件：如果最小跨度满足要求
             if (currentDistance <= maxSpan) {
                 return result;
             }
@@ -342,6 +566,7 @@ public class SearchService implements IService {
 
         return result;
     }
+
 
     public List<Integer> getBestPosition(List<String> words, Map<String, Set<Integer>> positions){
         List<Integer> result = new ArrayList<>();
@@ -401,57 +626,102 @@ public class SearchService implements IService {
 
     }
 
-    public Map<String, List<Integer>> calculateSortedPosition(List<String> words) {
-        // Map of URL -> word -> positions
-        Map<String, Map<String, Set<Integer>>> urlsForWordMap = new HashMap<>();
+    public Map<String, List<Integer>> calculateSortedPosition(List<String> words) throws IOException {
 
-// Populate urlsForWordMap in parallel
-        words.parallelStream().forEach(word -> {
-            try {
-                // Get all URLs for this word
-                Map<String, Set<Integer>> urlsForWord = searchByKeyword(word);
+        System.out.println("words: " + words);
 
-                // Process URLs and positions for this word
-                synchronized (urlsForWordMap) {
-                    urlsForWord.forEach((url, positions) -> {
-                        urlsForWordMap
-                                .computeIfAbsent(url, k -> new HashMap<>())
-                                .put(word, positions);
-                    });
-                }
-            } catch (IOException e) {
-                log.error("[search] Error searching by keyword: " + word, e);
-            }
-        });        // Find valid URLs, calculate best positions and their spans
+        Map<String, List<Integer>> result = new HashMap<>();
         Map<String, Integer> urlToSpan = new HashMap<>();
-        Map<String, List<Integer>> urlToPositions = new HashMap<>();
+        if (words == null || words.isEmpty()) {
+            return new HashMap<>();
+        }
 
-        urlsForWordMap.entrySet().stream()
-                .filter(entry -> entry.getValue().keySet().containsAll(words)) // Filter URLs containing all words
-                .forEach(entry -> {
-                    String url = entry.getKey();
-                    Map<String, Set<Integer>> valid = entry.getValue();
-                    List<Integer> best = getBestPosition(words, valid, words.size() + 2);
+        // url -> word -> positions
+        Map<String, Map<String, List<Integer>>> results = searchByKeywordsIntersection(words);
+        if (results == null || results.isEmpty()) {
+            return new HashMap<>();
+        }
 
-                    // Calculate span
-                    int span = best.isEmpty() ? Integer.MAX_VALUE : Collections.max(best) - Collections.min(best);
+        for (String url : results.keySet()) {
+            Map<String, List<Integer>> wordPositionPair = results.get(url);
+            if (wordPositionPair == null || wordPositionPair.isEmpty()) {
+                continue;
+            }
 
-                    urlToSpan.put(url, span);
-                    urlToPositions.put(url, best);
-                });
+            List<Integer> best = getBestPositionWithSorted(words, wordPositionPair, words.size() + 4, 20);
 
-        // Sort the map by span and return a LinkedHashMap to preserve the order
+            if(best.isEmpty()){
+                continue;
+            }
+
+            int span = Collections.max(best) - Collections.min(best);
+            System.out.println("best: " + best + ", span: " + span);
+
+            result.put(url, best);
+            urlToSpan.put(url, span);
+
+            result.put(url, best);
+        }
+
         return urlToSpan.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue()) // Sort by span
+                .sorted(Map.Entry.comparingByValue()) // 按 span 值排序
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        entry -> urlToPositions.get(entry.getKey()),
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new // Maintain insertion order
+                        entry -> result.get(entry.getKey()), // 获取对应的最佳位置
+                        (e1, e2) -> e1, // 合并策略
+                        LinkedHashMap::new // 使用 LinkedHashMap 保持排序后的顺序
                 ));
     }
 
     /*
+=======
+
+        //List<Integer> best = getBestPosition(words, results.get(words.get(0)), words.size() + 2);
+
+
+
+//        for(String word : results.keySet()){
+//            Map<String, Set<Integer>> urlsForWord = results.get(word);
+//            if(urlsForWord == null || urlsForWord.isEmpty()){
+//                continue;
+//            }
+//
+//            List<Integer> best = getBestPosition(words, urlsForWord, words.size() + 2);
+//
+//        }
+
+//        Map<String, Integer> urlToSpan = new HashMap<>();
+//        Map<String, List<Integer>> urlToPositions = new HashMap<>();
+
+//        urlsForWordMap.entrySet().parallelStream()
+//                .filter(entry -> entry.getValue().keySet().containsAll(words)) // Filter URLs containing all words
+//                .forEach(entry -> {
+//                    String url = entry.getKey();
+//                    Map<String, Set<Integer>> valid = entry.getValue();
+//                    List<Integer> best = getBestPosition(words, valid, words.size() + 2);
+//
+//                    // Calculate span
+//                    int span = best.isEmpty() ? Integer.MAX_VALUE : Collections.max(best) - Collections.min(best);
+//
+//                    // Use thread-safe collections
+//                    urlToSpan.put(url, span);
+//                    urlToPositions.put(url, best);
+//                });
+
+//        // Sort the map by span and return a LinkedHashMap to preserve the order
+//        return urlToSpan.entrySet().stream()
+//                .filter(entry -> urlToPositions.containsKey(entry.getKey())) // 确保 key 存在
+//                .filter(entry -> urlToPositions.get(entry.getKey()) != null) // 确保值非空
+//                .filter(entry -> !urlToPositions.get(entry.getKey()).isEmpty()) // 确保列表非空
+//                .sorted(Map.Entry.comparingByValue()) // 按跨度排序
+//                .collect(Collectors.toMap(
+//                        Map.Entry::getKey,
+//                        entry -> urlToPositions.get(entry.getKey()), // 安全获取值
+//                        (e1, e2) -> e1,
+//                        LinkedHashMap::new // 保持顺序
+//                ));
+//    }
+>>>>>>> 3bbdb4acc (make position better)
 //    public Map<String, List<Integer>> calculatePosition(List<String> words) {
 //        // Final result: URL -> best positions
 //        Map<String, List<Integer>> urlToPositions = new HashMap<>();
