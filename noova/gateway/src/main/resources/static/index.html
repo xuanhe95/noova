@@ -121,6 +121,7 @@
 
         #results {
             margin-top: 70px;
+            margin-bottom: 70px;
         }
 
         .suggestions-box {
@@ -276,6 +277,113 @@
             box-shadow: 0 1px 6px rgba(13, 71, 161, 0.4); /* Blue shadow */
         }
 
+        .image-wrapper {
+            display: flex;
+            flex-direction: column; /* Align text below the image */
+            align-items: center; /* Center-align content */
+            text-align: center;
+            max-width: 500px; /* Optional: limit width of each image + text container */
+        }
+
+        .fixed-size-img {
+            width: 400px;
+            height: 400px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .caption {
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333; /* Adjust color as needed */
+        }
+
+        .text-result-section {
+            margin: 10px 0; /* Reduce margin between sections */
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px; /* Adjust padding to make the box smaller */
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            background-color: #fff;
+            width: 800px; /* Optional: Set a max width for the section */
+            display: inline-block; /* Ensures sections don’t span the full width */
+        }
+
+        .image-result-section {
+            margin: 10px 0; /* Reduce margin between sections */
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px; /* Adjust padding to make the box smaller */
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            background-color: #fff;
+            width: 500px; /* Optional: Set a max width for the section */
+            display: inline-block; /* Ensures sections don’t span the full width */
+        }
+
+        /* Styling specifically for the image section */
+        .image-section {
+            text-align: center;
+        }
+
+        /* Image styles */
+        .fixed-size-img {
+            width: 300px;
+            height: 300px;
+            object-fit: cover;
+            margin: 0 auto;
+        }
+
+        /* Caption below the image */
+        .caption {
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* Styling specifically for the text section */
+        .text-section {
+            text-align: left;
+        }
+
+        /* Text content styles */
+        .text-content h5 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .text-content p {
+            font-size: 14px;
+            color: #666;
+        }
+        #loading-spinner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
     </style>
 </head>
 <body>
@@ -300,7 +408,13 @@
             </div>
         </form>
     </div>
-    <div id="results"></div>
+    <div id="loading-spinner" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+    <div id="results">
+    </div>
+    <div id="loading-indicator" style="display: none; text-align: center; margin-top: 20px;">Loading...</div>
+
     <div id="pagination-controls" class="text-center mt-3"></div>
 </div>
 
@@ -364,6 +478,10 @@
 
     $(document).ready(function () {
         let searchMode = 'Text';
+        let isFetchingMoreResults = false; // Prevents multiple fetches at once
+        let hasMoreResults = true; // Flag to indicate if more results are available
+        let offset = 0; // Starting offset
+        const limit = 10;
 
         $('#search-mode').on('change', function () {
             searchMode = $(this).val();
@@ -437,8 +555,9 @@
         $('#searchForm').submit(function (event) {
             event.preventDefault();
             let query = $('#search-query').val();
-            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').trim();
             console.log(`Processed Query: "${query}"`);
+            showLoadingSpinner();
 
             if (!query) {
                 alert("Please enter a search keyword.");
@@ -451,7 +570,7 @@
             $('.search-buttons').addClass('no-margin');
             $('#searchForm').removeClass('vertical-layout').addClass('horizontal-layout');            // Perform AJAX request to fetch results
 
-            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search';
+            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v4';
 
             $.ajax({
                 url: route,
@@ -460,10 +579,12 @@
                 success: function (response) {
                     resultsData = response;
                     currentPage = 1;
+                    hideLoadingSpinner();
                     displayResults();
                     displayPaginationControls();
                 },
                 error: function (xhr, status, error) {
+                    hideLoadingSpinner();
                     console.error("Error performing search:", error);
                     $('#results').html(`
                         <p style="margin-top: 10%;">An error occurred while fetching results.</p>
@@ -472,31 +593,275 @@
             });
         });
 
+        function handleScroll() {
+            const scrollableHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = document.documentElement.scrollTop;
+
+            // Trigger loading more results when scrolled to 90% of the page
+            if (scrolled / scrollableHeight > 0.9 && !isFetchingMoreResults && hasMoreResults) {
+                loadMoreResults();
+            }
+        }
+
+        function loadMoreResults() {
+            isFetchingMoreResults = true;
+            showLoadingSpinner();
+
+            document.getElementById('loading-indicator').style.display = 'block'; // Show loading indicator
+
+            // Perform AJAX request to fetch the next set of results
+            const query = $('#search-query').val();
+            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v4';
+            if (offset === 0) {
+                offset += limit; // Ensure the first batch is correctly set to the limit
+            }
+            $.ajax({
+                url: route,
+                method: 'GET',
+                data: {
+                    query: query,
+                    offset: offset,
+                    limit: limit
+                },
+                success: function (response) {
+                    hideLoadingSpinner();
+
+                    // Check if new results are available
+                    if (response.length < limit) {
+                        hasMoreResults = false; // No more results to fetch
+                    }
+
+                    // Append new results
+                    if (searchMode === "Image") {
+                        appendImageResults(response);
+                    } else {
+                        appendTextResults(response);
+                    }
+
+                    // Update offset
+                    offset += limit;
+                },
+                error: function (xhr, status, error) {
+                    hideLoadingSpinner();
+
+                    console.error("Error fetching additional results:", error);
+                },
+                complete: function () {
+                    isFetchingMoreResults = false;
+                    document.getElementById('loading-indicator').style.display = 'none'; // Hide loading indicator
+                }
+            });
+        }
+
+        function appendImageResults(newResults) {
+            const resultsContainer = $('#results');
+            newResults.forEach(imageResult => {
+                // Your logic to append image results
+                const resultItem = $('<div>').addClass('image-result-section image-section');
+                resultItem.html(`
+                                <div class="image-wrapper">
+                                    <a href="${url}" target="_blank">
+                                        <img src="${url}" alt="${key}" class="fixed-size-img">
+                                    </a>
+                                    <div class="caption">
+                                        <a href="#" class="dynamic-link" data-key="${key}">Page</a>
+                                    </div>
+                                </div>
+                            `);
+                resultsContainer.append(resultItem);
+            });
+        }
+
+        function appendTextResults(newResults) {
+            const resultsContainer = $('#results');
+            newResults.forEach(textResult => {
+                // Your logic to append text results
+                const resultItem = $('<div>').addClass('text-result-section result-item');
+                resultItem.html(`
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                            <!-- Icon -->
+                            <div style="margin-right: 10px;">
+                                ${renderIcon(textResult.icon,textResult.host)}
+                            </div>
+
+                            <!-- Content -->
+                            <div>
+                                <!-- Host name (clickable) -->
+                                <p style="margin: 0; color: #555; font-size: 14px;">
+                                    <a href="https://${textResult.host}" target="_blank" style="text-decoration: none; color: #555;">${textResult.host}</a>
+                                </p>
+
+                                <!-- Title as clickable link -->
+                                <h5 style="margin: 0; font-size: 18px;">
+                                    <a href="${textResult.url}" target="_blank" style="text-decoration: none; color: #1a0dab;">${textResult.title}</a>
+                                </h5>
+
+                                <!-- URL -->
+                                <p style="margin: 0; font-size: 14px; color: #006621;">
+                                    ${textResult.url.length > 50 ? textResult.url.substring(0, 50) + '...' : textResult.url}
+                                </p>
+
+                                <!-- Context or Description -->
+                                ${textResult.context ? `<p style="margin: 5px 0; font-size: 14px; color: #545454;">${textResult.context}</p>` : ''}
+
+                                <!-- Optional Score (if needed) -->
+                                <p style="margin: 0; font-size: 12px; color: #545454;">
+                                    <strong>Score:</strong> ${textResult.combinedScore.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+                    `);
+                resultsContainer.append(resultItem);
+            });
+        }
+
+        window.addEventListener('scroll', handleScroll);
+
+
         function displayResults() {
             const resultsContainer = $('#results');
             resultsContainer.empty();
 
-            const start = (currentPage - 1) * resultsPerPage;
-            const end = Math.min(start + resultsPerPage, resultsData.length);
+            if (searchMode === "Image"){
 
-            for (let i = start; i < end; i++) {
-                const result = resultsData[i];
-                const resultItem = $('<div>').addClass('result-section result-item');
-                if (searchMode === 'Image') {
-                    resultItem.html(`
-                <h5>${result.title}</h5>
-                <a href="${result.url}" target="_blank"><img src="${result.imageUrl}" alt="${result.title}" style="max-width: 100%;"></a>
-                    `);
-                } else {
-                    resultItem.html(`
-                <h5>${result.title}</h5>
-                <b><a href="${result.url}" target="_blank">${result.url.length > 50 ? result.url.substring(0, 50) + '...' : result.url}</a></b>
-                <p><strong>Score:</strong> ${result.combinedScore.toFixed(2)}</p>
-                <p>${result.context}...</p>
-                    `);
+                //console.log("Image");
+                const keys = Object.keys(resultsData);
+                //console.log("keys: " + keys);
+                const start = (currentPage - 1) * resultsPerPage;
+                const end = Math.min(start + resultsPerPage, keys.length);
+
+
+                for (let i = start; i < end; i++) {
+                    const key = keys[i];
+                    const imageUrls = resultsData[key];
+
+                    imageUrls.forEach((url) => {
+                        if (!url.includes("http")) {
+                            console.warn(`Skipping invalid URL: ${url}`);
+                            return; // Skip to the next URL
+                        }
+                        const img = new Image();
+                        img.onload = function () {
+                            // If the image loads successfully, display it
+                            const resultItem = $('<div>').addClass('image-result-section image-section');
+                            resultItem.html(`
+                                <div class="image-wrapper">
+                                    <a href="${url}" target="_blank">
+                                        <img src="${url}" alt="${key}" class="fixed-size-img">
+                                    </a>
+                                    <div class="caption">
+                                        <a href="#" class="dynamic-link" data-key="${key}">Page</a>
+                                    </div>
+                                </div>
+                            `);
+                            resultsContainer.append(resultItem);
+                        };
+                        img.onerror = function () {
+                            console.warn(`Image URL not reachable: ${url}`);
+                        };
+                        img.src = url; // Trigger the load/error events
+                    });
                 }
-                resultsContainer.append(resultItem);
+
+                resultsContainer.on('click', '.dynamic-link', function (e) {
+                    e.preventDefault();
+                    const key = $(this).data('key');
+
+                    // Send GET request to fetch the dynamic URL
+                    $.ajax({
+                        url: '/search/pagelink',
+                        method: 'GET',
+                        data: { query: key },
+                        success: function (response) {
+                            if (response && typeof response === 'string' && response.trim() !== '') {
+                                window.location.href = response.trim(); // Redirect to the URL
+                            } else {
+                                // Show a popup if the URL is not found
+                                alert('No URL found for this link.');
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            console.error(`Error fetching URL for ${key}:`, error);
+                            alert('An error occurred while fetching the URL.');
+                        }
+                    });
+                });
+            }else{
+                const start = (currentPage - 1) * resultsPerPage;
+                const end = Math.min(start + resultsPerPage, resultsData.length);
+                console.log("Text");
+
+                for (let i = start; i < end; i++) {
+                    const result = resultsData[i];
+                    const resultItem = $('<div>').addClass('text-result-section result-item');
+                    console.log(`Result at index ${i}:`, result);
+
+                    resultItem.html(`
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+                            <!-- Icon -->
+                            <div style="margin-right: 10px;">
+                                ${renderIcon(result.icon,result.host)}
+                            </div>
+
+                            <!-- Content -->
+                            <div>
+                                <!-- Host name (clickable) -->
+                                <p style="margin: 0; color: #555; font-size: 14px;">
+                                    <a href="https://${result.host}" target="_blank" style="text-decoration: none; color: #555;">${result.host}</a>
+                                </p>
+
+                                <!-- Title as clickable link -->
+                                <h5 style="margin: 0; font-size: 18px;">
+                                    <a href="${result.url}" target="_blank" style="text-decoration: none; color: #1a0dab;">${result.title}</a>
+                                </h5>
+
+                                <!-- URL -->
+                                <p style="margin: 0; font-size: 14px; color: #006621;">
+                                    ${result.url.length > 50 ? result.url.substring(0, 50) + '...' : result.url}
+                                </p>
+
+                                <!-- Context or Description -->
+                                ${result.context ? `<p style="margin: 5px 0; font-size: 14px; color: #545454;">${result.context}</p>` : ''}
+
+                                <!-- Optional Score (if needed) -->
+                                <p style="margin: 0; font-size: 12px; color: #545454;">
+                                    <strong>Score:</strong> ${result.combinedScore.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+                    `);
+                    resultsContainer.append(resultItem);
+                }
             }
+        }
+        function renderIcon(iconHtml, host) {
+            // Create a temporary DOM element to parse the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = iconHtml;
+
+            // Extract the `src` attribute from the <img> tag
+            const imgElement = tempDiv.querySelector('img');
+            let iconSrc = imgElement ? imgElement.src : '';
+
+            // Check if the `src` URL exists and display the image or fallback
+            if (host === "Pcgamingwiki.com") {
+                iconSrc = "https://pcgamingwiki.com/images/0/04/PCGamingWiki_notext.svg";
+            }
+
+            if (iconSrc) {
+                return `<img src="${iconSrc}" alt="icon" style="width: 20px; height: 20px;">`;
+            } else {
+                // Fallback to a placeholder if the `src` is missing
+                return `<img src="https://i.ibb.co/BBPHLJP/logo.png" alt="No Icon" style="width: 16px; height: 16px;">`;
+            }
+        }
+
+        function showLoadingSpinner() {
+            document.getElementById('loading-spinner').style.display = 'flex';
+        }
+
+        function hideLoadingSpinner() {
+            document.getElementById('loading-spinner').style.display = 'none';
         }
 
         function displayPaginationControls() {
