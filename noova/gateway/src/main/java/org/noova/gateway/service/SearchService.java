@@ -13,6 +13,7 @@ import org.noova.tools.*;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -39,6 +40,8 @@ public class SearchService implements IService {
     private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
     private static final String PROCESSED_TABLE = PropertyLoader.getProperty("table.processed");
     private static final String ID_URL_TABLE = PropertyLoader.getProperty("table.id-url");
+    private static final Map<String, String> ID_URL_CACHE = new ConcurrentHashMap<>();
+
     private static final KVS KVS = storageStrategy.getKVS();
 
     private static final int totalDocuments = 8692; // TBD, hardcoded for now
@@ -80,6 +83,19 @@ public class SearchService implements IService {
             instance = new SearchService();
         }
         return instance;
+    }
+
+    public void preloadIDUrlCache() throws IOException {
+        Iterator<Row> rows = KVS.scan(ID_URL_TABLE, null, null);
+        while (rows.hasNext()) {
+            Row row = rows.next();
+            String fromUrlId = row.key();
+            String hashedUrl = row.get("value");
+            if (fromUrlId != null && hashedUrl != null) {
+                ID_URL_CACHE.put(fromUrlId, hashedUrl);
+            }
+        }
+        log.info("[cache] Preloaded ID_URL_TABLE with " + ID_URL_CACHE.size() + " entries.");
     }
 
     public List<String> searchByKeyword(String keyword, String startRow, String endRowExclusive) throws IOException {
@@ -162,6 +178,8 @@ public class SearchService implements IService {
     public Map<String, Set<Integer>> searchByKeyword(String keyword) throws IOException {
         // uses HASHED_URL as key
 
+        preloadIDUrlCache(); // preload url id cache in mem
+
         if (keyword == null || keyword.isEmpty()) {
             log.warn("[search] Empty keyword");
             return new HashMap<>();
@@ -191,7 +209,8 @@ public class SearchService implements IService {
 
         for (String fromUrlId : fromIds) {
             String texts = row.get(fromUrlId);
-            String hashedUrl = KVS.getRow(ID_URL_TABLE, fromUrlId).get("value");
+//            String hashedUrl = KVS.getRow(ID_URL_TABLE, fromUrlId).get("value");
+            String hashedUrl = ID_URL_CACHE.get(fromUrlId);
             if(texts.isEmpty()){
                 continue;
             }
@@ -407,6 +426,7 @@ public class SearchService implements IService {
             return 0;
         }
 
+        System.out.println("term's row size: "+row.columns().size());
         return row.columns().size(); // number of cols (url)
     }
 
@@ -420,9 +440,9 @@ public class SearchService implements IService {
             if(df <= 0) {
                 queryTf.put(term , 0.0);
             } else {
-                double idf = Math.log((double) totalDocuments / df); // inverse N/n_i
+                double idf = Math.log10((double) totalDocuments / df); // inverse N/n_i
                 double tf = Collections.frequency(queryTokens, term); // freq of a word in query, no need norm
-//                log.info("[search] tf: "+ tf + " idf: " +idf + " df: "+ df);
+                System.out.println("[search] tf: "+ tf + " idf: " +idf + " df: "+ df);
                 queryTf.put(term, tf * idf);
             }
         }
@@ -435,73 +455,110 @@ public class SearchService implements IService {
         Map<String, Double> docTf = new HashMap<>(); // doc_term:norm_tf
         List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
 
+        // convert hashurl to id
+        String urlID = KVS.getRow("pt-urltoid", hashedUrl).get("value");
+        if (urlID == null) {
+            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
+            return docTf;
+        }
+        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
+
 //        String hashedUrl = Hasher.hash(url); // col
-        double maxFrequency = 0.0;
+        double tfSquareSum = 0.0;
 
         // 1. scan index row once to update maxFreq and corr query_term freq
-//        for (String queryTerm : queryTokens) {
-//            Row row = KVS.getRow(INDEX_TABLE, queryTerm);
-//            if (row == null) continue;
-//
-//            String cellValue = row.get(hashedUrl);
-//            if (cellValue == null) continue;
-//
-//            String[] parts = cellValue.split(":");
-//            if (parts.length < 2) continue;
-//
-//            String[] freqParts = parts[1].split("/");
-//            if (freqParts.length < 2) continue;
-//
-//            double frequency = Double.parseDouble(freqParts[0]);
-//            maxFrequency = Math.max(maxFrequency, frequency);
-//            docTf.put(queryTerm, frequency);
-//        }
+        for (String queryTerm : queryTokens) {
+            Row row = KVS.getRow(INDEX_TABLE, queryTerm);
+            if (row == null) continue;
+
+            String cellValue = row.get(urlID);
+            if (cellValue == null) continue;
+
+            String[] parts = cellValue.split(":");
+            if (parts.length < 2) continue;
+
+            String[] freqParts = parts[1].split("/");
+            if (freqParts.length < 2) continue;
+
+            double frequency = Double.parseDouble(freqParts[0]);
+            tfSquareSum += Math.pow(frequency, 2);
+        }
+
+        double normalizationFactor = Math.sqrt(tfSquareSum);
+        log.info("[calculateDocumentTF] Normalization factor for URL ID: " + urlID + " is: " + normalizationFactor);
+
+        // normalize freq
+        for (String queryTerm : queryTokens) {
+            Row row = KVS.getRow(INDEX_TABLE, queryTerm);
+            if (row == null) continue;
+
+            String cellValue = row.get(urlID);
+            if (cellValue == null) continue;
+
+            String[] parts = cellValue.split(":");
+            if (parts.length < 2) continue;
+
+            String[] freqParts = parts[1].split("/");
+            if (freqParts.length < 2) continue;
+
+            double frequency = Double.parseDouble(freqParts[0]);
+            double normalizedTf = frequency / normalizationFactor;
+            docTf.put(queryTerm, normalizedTf);
+        }
+        return docTf;
 
 
         // 2. parallel?
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-        List<Future<Map.Entry<String, Double>>> futures = new ArrayList<>();
-
-        for (String queryTerm : queryTokens) {
-            futures.add(executor.submit(() -> {
-                Row row = KVS.getRow(INDEX_TABLE, queryTerm);
-                if (row == null) return null;
-
-                String cellValue = row.get(hashedUrl);
-                if (cellValue == null) return null;
-
-                String[] parts = cellValue.split(":");
-                if (parts.length < 2) return null;
-
-                String[] freqParts = parts[1].split("/");
-                if (freqParts.length < 2) return null;
-
-                double frequency = Double.parseDouble(freqParts[0]);
-                return Map.entry(queryTerm, frequency);
-            }));
-        }
-
-        executor.shutdown();
-        Map<String, Double> termFrequencies = new HashMap<>();
-        for (Future<Map.Entry<String, Double>> future : futures) {
-            try {
-                Map.Entry<String, Double> result = future.get();
-                if (result != null) {
-                    termFrequencies.put(result.getKey(), result.getValue());
-                    maxFrequency = Math.max(maxFrequency, result.getValue());
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        // normalize freq
-        for(Map.Entry<String, Double> entry: docTf.entrySet()){
-            double rawTf = entry.getValue();
-            double normalizedTf = DOC_TF_NORMALIZE_FACTOR+(1-DOC_TF_NORMALIZE_FACTOR) *(rawTf/maxFrequency);
-            docTf.put(entry.getKey(), normalizedTf);
-        }
-        return docTf;
+//        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+//        List<Future<Map.Entry<String, Double>>> futures = new ArrayList<>();
+//
+//        for (String queryTerm : queryTokens) {
+//            futures.add(executor.submit(() -> {
+//                Row row = KVS.getRow(INDEX_TABLE, queryTerm);
+//                if (row == null) return null;
+//
+//                String cellValue = row.get(urlID); // col is url id
+//                log.info("[calculateDocumentTF] Cell value for term: " + queryTerm + " in URL ID: " + urlID + " is: " + cellValue);
+//
+//                if (cellValue == null) return null;
+//
+//                String[] parts = cellValue.split(":");
+//                if (parts.length < 2) {
+//                    log.error("[calculateDocumentTF] Invalid cell value format: " + cellValue);
+//                    return null;
+//                }
+//
+//                String[] freqParts = parts[1].split("/");
+//                if (freqParts.length < 2) {
+//                    log.error("[calculateDocumentTF] Invalid frequency format: " + parts[1]);
+//                    return null;
+//                }
+//
+//                double frequency = Double.parseDouble(freqParts[0]);
+//                System.out.println("frequency: "+frequency);
+//                return Map.entry(queryTerm, frequency);
+//            }));
+//        }
+//
+//        executor.shutdown();
+//        for (Future<Map.Entry<String, Double>> future : futures) {
+//            try {
+//                Map.Entry<String, Double> result = future.get();
+//                if (result != null) {
+//                    docTf.put(result.getKey(), result.getValue());
+//                    maxFrequency = Math.max(maxFrequency, result.getValue());
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//        if (maxFrequency == 0.0) {
+//            log.warn("[calculateDocumentTF] Max frequency is zero for URL ID: " + urlID);
+//            return docTf;
+//        }
+//
+//        log.info("[calculateDocumentTF] Max frequency for URL ID: " + urlID + " is: " + maxFrequency);
     }
 
     public double calculateTFIDF(Map<String, Double> queryTF, Map<String, Double> docTf){
@@ -512,12 +569,16 @@ public class SearchService implements IService {
             String term = entry.getKey();
             double queryWeight = entry.getValue();
 
+            log.info("[calculateTFIDF] term: " + term + " doc tf is: " + queryWeight);
+
 
             if (docTf.containsKey(term)) {
                 double docWeight = docTf.get(term);
                 tfidfScore += queryWeight * docWeight;
             }
         }
+
+        log.info("[calculateTFIDF] tfidfScore: " + tfidfScore );
         return tfidfScore;
     }
 
