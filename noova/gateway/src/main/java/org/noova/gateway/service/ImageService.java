@@ -64,8 +64,12 @@ public class ImageService implements IService{
         return instance;
     }
 
-    public Map<String, Set<String>> searchByKeyword(String keyword) throws IOException {
+
+
+
+    public Map<String, Set<String>> searchByKeyword(String keyword, int start, int limit) throws IOException {
         Row row = KVS_CLIENT.getRow(IMAGE_TABLE, keyword);
+
         if (row == null) {
             return new HashMap<>();
         }
@@ -77,7 +81,11 @@ public class ImageService implements IService{
             String images = row.get(fromUrlId);
             String[] hashedImages = images.split("\n");
 
-            for(String hashedImage : hashedImages){
+
+            for(int i = start; i < Math.min(hashedImages.length, start + limit); i++){
+
+                String hashedImage = hashedImages[i];
+
                 if(hashedImage.isEmpty()){
                     continue;
                 }
