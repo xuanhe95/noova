@@ -196,9 +196,6 @@ public class SearchService implements IService {
 
     public Map<String, Map<String, List<Integer>>> searchByKeywordsIntersection(List<String> keywords) throws IOException {
         // uses HASHED_URL as key
-
-
-
         if (keywords == null || keywords.isEmpty()) {
             log.warn("[search] Empty keyword");
             return new HashMap<>();
@@ -237,7 +234,11 @@ public class SearchService implements IService {
 
             Map<String, List<Integer>> result = new HashMap<>();
             for (String keyword : keywords) {
-                Row row = cache.get(keyword);
+                Row row = cache.getOrDefault(keyword, null);
+
+                if(row == null){
+                    continue;
+                }
 
                 String texts = row.get(fromUrlId);
                 if (texts.isEmpty()) {
