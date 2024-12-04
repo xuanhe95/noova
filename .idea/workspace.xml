@@ -6,7 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="8f6aa40d-a9ab-49b4-b825-cb81f8e3d12c" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/FastIndexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/FastIndexer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -125,7 +126,7 @@
       <recent name="org.noova.flame.operation" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.BuildProcessedTable">
+  <component name="RunManager" selected="Application.FastIndexer">
     <configuration name="BuildProcessedTable" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.crawler.BuildProcessedTable" />
       <module name="crawler" />
@@ -178,6 +179,21 @@
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="org.noova.pagerank.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="FastIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.FastIndexer" />
+      <module name="indexer" />
+      <option name="PROGRAM_PARAMETERS" value="a b" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.indexer.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -309,6 +325,7 @@
       </method>
     </configuration>
     <list>
+      <item itemvalue="Application.FastIndexer" />
       <item itemvalue="Application.FlameCoordinator" />
       <item itemvalue="Application.FlameWorker1" />
       <item itemvalue="Application.FlameWorker2" />
@@ -381,6 +398,17 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/FastIndexer.java</url>
+          <line>18</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

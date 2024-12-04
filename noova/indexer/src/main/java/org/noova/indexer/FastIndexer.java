@@ -156,53 +156,60 @@ public class FastIndexer {
         Map<String, Integer> wordCountInPage = new HashMap<>();
         // populate wordMap for single index using cleanText from pt-processed
 
+
+
         Map<String, StringBuilder> suffixMap = new HashMap<>();
-            for(int i = 0; i < words.length; i++){
-                String word = words[i];
-                //word = Parser.processWord(word);
-                word = Parser.removeAfterFirstPunctuation(word);
-                String lemma = LemmaLoader.getLemma(word);
-                //String lemma = LemmaLoader.getLemma(word);
+        for(int i = 0; i < words.length; i++){
+            String word = words[i];
+            //word = Parser.processWord(word);
+            word = Parser.removeAfterFirstPunctuation(word);
+            String lemma = LemmaLoader.getLemma(word);
+            //String lemma = LemmaLoader.getLemma(word);
 //                if(lemma == null || lemma.isEmpty()){
 //                    continue;
 //                }
-                if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
-                    continue;
-                }
+            if(lemma == null || lemma.isEmpty() || StopWordsLoader.isStopWord(lemma)){
+                continue;
+            }
 
 
-                wordCountInPage.compute(lemma, (k, v) -> v == null ? 1 : v + 1);
-                if(wordCountInPage.getOrDefault(lemma, 0) < PARSE_POSITION_LIMIT){
-                    //Row wordRow = getWordRow(lemma);
+            wordCountInPage.compute(lemma, (k, v) -> v == null ? 1 : v + 1);
+            if(wordCountInPage.getOrDefault(lemma, 0) < PARSE_POSITION_LIMIT){
+                //Row wordRow = getWordRow(lemma);
 
 
-                        StringBuilder builder = suffixMap.computeIfAbsent(lemma, k -> new StringBuilder());
+                StringBuilder builder = suffixMap.computeIfAbsent(lemma, k -> new StringBuilder());
 
 //                        if(builder.length() > MAX_SUFFIX_LENGTH){
 //                            continue;
 //                        }
-                        // word position in page
+                // word position in page
 
-                        // automatically append to buffer
-                        // position,word1,word2.. e.g. 1,word1,word2,word3,
-                            // append location
-                            builder.append(i);
-                            // append suffix words
-                            for(int j = 1; j <= SUFFIX_LENGTH; j++){
-                                int pos = i+j;
-                                if(pos < words.length){
-                                    String nextWord = Parser.processSingleWord(words[pos]);
-                                    nextWord = LemmaLoader.getLemma(nextWord);
-                                    if(nextWord == null || nextWord.isEmpty() || StopWordsLoader.isStopWord(lemma)){
-                                        continue;
-                                    }
-                                    builder.append(COMMA_DELIMITER).append(nextWord);
-                                }
+                // automatically append to buffer
+                // position,word1,word2.. e.g. 1,word1,word2,word3,
+                    // append location
+                    builder.append(i);
+                    // append suffix words
+                    for(int j = 1; j <= SUFFIX_LENGTH; j++){
+                        int pos = i+j;
+                        if(pos < words.length){
+                            String nextWord = Parser.processSingleWord(words[pos]);
+                            nextWord = LemmaLoader.getLemma(nextWord);
+                            if(nextWord == null || nextWord.isEmpty() || StopWordsLoader.isStopWord(lemma)){
+                                continue;
                             }
-                            builder.append(DEFAULT_DELIMITER);
-                }
+                            builder.append(COMMA_DELIMITER).append(nextWord);
+                        }
+                    }
+                    builder.append(DEFAULT_DELIMITER);
             }
+        }
 
+
+
+        // max freq for tf
+        int maxFrequency = wordCountInPage.values().stream().max(Integer::compare).orElse(1);
+//        System.out.println("maxFrequency: "+maxFrequency);
 
         wordCountInPage.forEach((word, count) -> {
             // Row wordRow = getWordRow(word);
@@ -210,9 +217,17 @@ public class FastIndexer {
             // final result:
             // 0,word1,word2,word3 /n 1,word1,word2,word3,word4 /n :0.4
 
-
+            // !!latest ver: position:normalized doctf
+//            StringBuilder builder = suffixMap.get(word);
+//            if(builder!=null){
+//                double docTF = 0.4+(1-0.4) * (double) count/maxFrequency; // precompute doc tf
+//                builder.append(COLON_DELIMITER).append(docTF).append(DEFAULT_DELIMITER);
+//            }
             StringBuilder builder = suffixMap.getOrDefault(word, new StringBuilder());
-            builder.append(COLON_DELIMITER).append(count).append("/").append(totalWordsCountInPage).append(DEFAULT_DELIMITER);
+            double docTF = 0.4+(1-0.4) * (double) count/maxFrequency; // precompute doc tf
+            builder.append(COLON_DELIMITER).append(docTF).append(DEFAULT_DELIMITER);
+//            StringBuilder builder = suffixMap.getOrDefault(word, new StringBuilder());
+//            builder.append(COLON_DELIMITER).append(count).append("/").append(totalWordsCountInPage).append(DEFAULT_DELIMITER);
             //wordRow.put(urlId, builder.toString());
         });
 
