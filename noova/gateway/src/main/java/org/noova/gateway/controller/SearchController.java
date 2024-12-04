@@ -5,15 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.noova.gateway.service.SearchService;
 import org.noova.gateway.service.Service;
 import org.noova.gateway.service.WeatherService;
+import org.noova.kvs.KVS;
+import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
 import org.noova.tools.Logger;
 import org.noova.tools.Parser;
+import org.noova.tools.PropertyLoader;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
 
 import java.io.IOException;
 import java.util.*;
-
+import java.util.concurrent.*;
 
 
 /**
@@ -110,25 +113,19 @@ public class SearchController implements IController {
     }
 
 
-    @Route(path = "/best", method = "GET")
-    private void getBest(Request req, Response res) throws IOException {
+    @Route(path = "/phrase", method = "GET")
+    private void getPhrase(Request req, Response res) throws IOException {
         log.info("[search] Getting best");
         String keyword = req.queryParams("keyword");
         String limit = req.queryParams("limit") == null ? "10" : req.queryParams("limit");
 
         List<String> lammatized = Parser.getLammelizedWords(keyword);
 
-//        System.out.println("Lammatized: " + lammatized);
-
         if(lammatized.size() > 5){
             lammatized = lammatized.subList(0, 5);
         }
 
         Map<String, List<Integer>> sortedUrlWithPositions = SEARCH_SERVICE.calculateSortedPosition(lammatized);
-
-        sortedUrlWithPositions.forEach((url, position) -> {
-            System.out.println("URL: " + url + " | Positions: " + position);
-        });
 
         String json = OBJECT_MAPPER.writeValueAsString(sortedUrlWithPositions);
         res.body(json);
@@ -168,7 +165,7 @@ public class SearchController implements IController {
         });
 
         // use best position
-        List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
+        List<String> queryTokens = Parser.getLammelizedWords(query);
         Map<String, List<Integer>> bestPositions = SEARCH_SERVICE.calculateSortedPosition(queryTokens);
         double phraseMatchScore = SEARCH_SERVICE.calculatePhraseMatchScore(queryTokens, bestPositions);
 
@@ -254,4 +251,215 @@ public class SearchController implements IController {
         log.info("[search] Returning " + imageUrls.size() + " images for keyword: " + keyword);
     }
 
+
+    private static final ExecutorService executor = Executors.newFixedThreadPool(20);
+    private static final int TIMEOUT_SECONDS = 5;
+
+    static final KVS KVS_CLIENT = new KVSClient(PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port"));
+
+    @Route(path = "/search/v2", method = "GET")
+    private void searchByKeywordsV2(Request req, Response res) throws IOException {
+        log.info("[search] Searching by query");
+        String query = req.queryParams("query");
+        int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
+        int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
+        List<String> queryTokens = Parser.getLammelizedWords(query);
+
+        log.info("[search] Searching by query: " + query);
+
+        // Check weather
+        if (query.toLowerCase().contains("weather")) {
+            try {
+                Map<String, Object> weatherData = WeatherService.getInstance().getWeatherInfo();
+                String json = OBJECT_MAPPER.writeValueAsString(weatherData);
+                res.body(json);
+                res.type("application/json");
+                return;
+            } catch (IOException e) {
+                log.error("[search] Error fetching weather data", e);
+            }
+        }
+
+        // Calculate query TF-IDF
+        CompletableFuture<Map<String, Double>> queryTfidfFuture = CompletableFuture.supplyAsync(
+                () -> {
+                    try {
+                        return SEARCH_SERVICE.calculateQueryTF(query);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }, executor);
+
+//        // Search by keyword
+//        CompletableFuture<Map<String, Map<String, List<Integer>>>> urlsWithPositionsFuture = CompletableFuture.supplyAsync(
+//                () -> {
+//                    try {
+//                        return SEARCH_SERVICE.searchByKeywordsIntersection(queryTokens);
+//                    } catch (IOException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }, executor);
+//
+//        // Calculate best positions
+//        CompletableFuture<Map<String, List<Integer>>> bestPositionsFuture = queryTfidfFuture.thenApplyAsync(queryTfidf -> {
+//            try {
+//                return SEARCH_SERVICE.calculateSortedPosition(queryTokens);
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+//        }, executor);
+
+
+        // Step 1: Search by keywords
+        CompletableFuture<Map<String, Map<String, List<Integer>>>> urlsWithPositionsFuture =
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return SEARCH_SERVICE.searchByKeywordsIntersection(queryTokens, 200);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }, executor);
+
+// Step 2: Use the results of queryTfidfFuture and urlsWithPositionsFuture
+        CompletableFuture<Map<String, List<Integer>>> bestPositionsFuture = urlsWithPositionsFuture.thenCompose(urlsWithPositions -> {
+            return queryTfidfFuture.thenApplyAsync(queryTfidf -> {
+                try {
+                    return SEARCH_SERVICE.calculateSortedPosition(queryTokens, urlsWithPositions);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }, executor);
+        });
+
+        // Wait for all futures to complete with a timeout
+        Map<String, Double> queryTfidf = getWithTimeout(queryTfidfFuture, new HashMap<>());
+        Map<String, Map<String,List<Integer>>> urlsWithPositions = getWithTimeout(urlsWithPositionsFuture, new HashMap<>());
+        Map<String, List<Integer>> bestPositions = getWithTimeout(bestPositionsFuture, new HashMap<>());
+
+
+        List<Map<String, Object>> results = new ArrayList<>();
+
+        // Process each URL in parallel
+        urlsWithPositions.entrySet().parallelStream().forEach(entry -> {
+            String hashedUrl = entry.getKey();
+
+            try {
+                // Fetch page details
+
+                //System.out.println("pageContent: " + pageContent + " hashedUrl: " + hashedUrl);
+
+//                Map<String, String> pageDetails = getWithTimeout(pageDetailsFuture, new HashMap<>());
+//                String pageContent = pageDetails.getOrDefault("pageContent", "");
+//                String icon = pageDetails.getOrDefault("icon", "");
+//                String url = pageDetails.getOrDefault("url", "");
+//                String host = SEARCH_SERVICE.extractHostName(url);
+//                String title = pageDetails.getOrDefault("title", "");
+
+                // Calculate scores in parallel
+                //String snippet = SEARCH_SERVICE.generateSnippetFromPositions(pageContent, bestPositions.get(hashedUrl), 60);
+
+
+
+                Row row = KVS_CLIENT.getRow(PropertyLoader.getProperty("table.processed"), hashedUrl);
+
+                CompletableFuture<Double> titleOGMatchScoreFuture = CompletableFuture.supplyAsync(() ->
+                {
+                    try {
+                        return SEARCH_SERVICE.calculateTitleAndOGMatchScore(row, queryTokens);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }, executor);
+
+                CompletableFuture<Map<String, Double>> docTfidfFuture = CompletableFuture.supplyAsync(() ->
+                {
+                    try {
+                        return SEARCH_SERVICE.calculateDocumentTF(hashedUrl, queryTokens);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }, executor);
+
+                CompletableFuture<Double> pageRankFuture = CompletableFuture.supplyAsync(() ->
+                {
+                    try {
+                        return SEARCH_SERVICE.getPagerank(hashedUrl);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }, executor);
+
+                // Get results with timeout
+                double titleOGMatchScore = getWithTimeout(titleOGMatchScoreFuture, 0.0);
+                Map<String, Double> docTfidf = getWithTimeout(docTfidfFuture, new HashMap<>());
+                double pageRank = getWithTimeout(pageRankFuture, 0.0);
+
+                //System.out.println("contextSnippet: " + snippet + " titleOGMatchScore: " + titleOGMatchScore + " pageRank: " + pageRank);
+
+                // Calculate TF-IDF similarity
+                double tfidfSimilarity = SEARCH_SERVICE.calculateTFIDF(queryTfidf, docTfidf);
+
+                // Combine scores
+                double combinedScore = tfIDFWeight * tfidfSimilarity +
+                        pgrkWeight * pageRank +
+                        titleDespMatchWeight * titleOGMatchScore +
+                        phraseMatchWeight * SEARCH_SERVICE.calculatePhraseMatchScore(Arrays.asList(query.split("\\s+")), entry.getValue());
+
+                // Add result
+                Map<String, Object> result = new HashMap<>();
+//                result.put("title", title);
+//                result.put("url", url);
+                result.put("combinedScore", combinedScore);
+//                result.put("host", host);
+//                result.put("icon", icon);
+                //result.put("context", snippet);
+                result.put("hashed", hashedUrl);
+
+
+                //synchronized (results) {
+                    results.add(result);
+                //}
+
+                log.info("[search] URL: " + hashedUrl + ", Combined Score: " + combinedScore);
+            } catch (Exception e) {
+                log.error("[search] Error processing URL: " + hashedUrl, e);
+            }
+        });
+
+        // Sort results by combined score
+        results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
+
+
+        List<Map<String, Object>> view = results.subList(offset, Math.min(offset + limit, results.size()));
+
+        view.forEach(result -> {
+            log.info("[search] URL: " + result.get("hashed") + ", Combined Score: " + result.get("combinedScore"));
+            String hashedUrl = (String) result.get("hashed");
+            try {
+                String content = SEARCH_SERVICE.getPageContent(hashedUrl);
+                String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, bestPositions.get(hashedUrl), context_view);
+                result.put("context", snippet);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+
+        });
+
+        // Return JSON response
+        String json = OBJECT_MAPPER.writeValueAsString(view);
+        res.body(json);
+        res.type("application/json");
+    }
+
+    // Helper method to handle timeout
+    private <T> T getWithTimeout(CompletableFuture<T> future, T defaultValue) {
+        try {
+            return future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Task timed out, returning default value");
+            return defaultValue;
+        }
+    }
 }
+
