@@ -116,7 +116,7 @@ public class SearchController implements IController {
 
         List<String> lammatized = Parser.getLammelizedWords(keyword);
 
-        System.out.println("Lammatized: " + lammatized);
+//        System.out.println("Lammatized: " + lammatized);
 
         if(lammatized.size() > 5){
             lammatized = lammatized.subList(0, 5);
@@ -165,10 +165,14 @@ public class SearchController implements IController {
             log.info("[search] URL: " + url + " | Positions: " + positions);
         });
 
+        // use best position
+        List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
+        Map<String, List<Integer>> bestPositionsForUrls = SearchService.getInstance().calculateSortedPosition(queryTokens);
+
         List<Map<String, Object>> results = new ArrayList<>();
         for (Map.Entry<String, Set<Integer>> entry : urlsWithPositions.entrySet()) {
             String hashedUrl = entry.getKey();
-            Set<Integer> positions = entry.getValue();
+//            Set<Integer> positions = entry.getValue();
 
             // Calculate title weight
             String title = SearchService.getInstance().getTitle(hashedUrl);
@@ -194,12 +198,16 @@ public class SearchController implements IController {
                     (1 - alpha - titleDespMatchWeight) * pageRank +
                     titleDespMatchWeight * (titleMatchScore+despMatchScore);
 
-
+            // get page content
             String pageContent = SearchService.getInstance().getPageContent(hashedUrl);
             log.info("[search] page content: " + pageContent);
 
-            String contextSnippet = SearchService.getInstance().ExtractContextSnippet(pageContent, positions, 60); // TBD, hardcoded
-            log.info("[search] page contextSnippet: " + contextSnippet);
+            // get best positions
+            List<Integer> bestPositions = bestPositionsForUrls.get(hashedUrl);
+            String contextSnippet = SearchService.getInstance().generateSnippetFromPositions(pageContent, bestPositions, 60);
+
+//            String contextSnippet = SearchService.getInstance().ExtractContextSnippet(pageContent, positions, 60); // TBD, hardcoded
+//            log.info("[search] page contextSnippet: " + contextSnippet);
 
             Map<String, Object> result = new HashMap<>();
             result.put("title", title);

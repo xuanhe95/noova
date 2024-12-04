@@ -42,9 +42,7 @@ public class SearchService implements IService {
 
     private static final KVS KVS = storageStrategy.getKVS();
 
-    private static final int totalDocuments = 8692; // TBD, hardcoded for now
-
-    private static final Double DOC_TF_NORMALIZE_FACTOR = 0.4; // either 0.4 or 0.5
+    private static final int totalDocuments = 8692; //! TBD, hardcoded for now
 
 
     private SearchService() {
@@ -452,6 +450,8 @@ public class SearchService implements IService {
                         LinkedHashMap::new // Maintain insertion order
                 ));
     }
+
+    /*
 //    public Map<String, List<Integer>> calculatePosition(List<String> words) {
 //        // Final result: URL -> best positions
 //        Map<String, List<Integer>> urlToPositions = new HashMap<>();
@@ -488,6 +488,34 @@ public class SearchService implements IService {
 //
 //        return urlToPositions;
 //    }
+    */
+
+    public String generateSnippetFromPositions(String content, List<Integer> positions, int wordLimit) {
+        // use best pos to get the snippet for highlight
+
+        if (content == null || content.isEmpty() || positions.isEmpty()) {
+            return "";
+        }
+
+        String[] words = content.split("\\s+");
+        if (positions.isEmpty()) {
+            return String.join(" ", Arrays.copyOfRange(words, 0, Math.min(words.length, wordLimit)));
+        }
+
+        StringBuilder snippet = new StringBuilder();
+        int start = Math.max(0, positions.get(0) - wordLimit / 2);
+        int end = Math.min(words.length, start + wordLimit);
+
+        for (int i = start; i < end; i++) {
+            if (positions.contains(i)) {
+                snippet.append("<b>").append(words[i]).append("</b>").append(" ");
+            } else {
+                snippet.append(words[i]).append(" ");
+            }
+        }
+
+        return snippet.toString().trim();
+    }
 
 
     private int documentFrequency(String term) throws IOException {
@@ -520,7 +548,7 @@ public class SearchService implements IService {
     }
 
     public Map<String, Double> calculateDocumentTF(String hashedUrl, String query) throws IOException {
-        // [Prof approach] - pick a doc to score, normalize tf in a doc [a + (1 - a) * (freq of term / max freq of a word in doc)]
+        // [Prof approach] - pick a doc to score, normalize tf in a doc freq/sqrt(w_i^2)
 
         Map<String, Double> docTf = new HashMap<>(); // doc_term:norm_tf
         List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
@@ -528,108 +556,122 @@ public class SearchService implements IService {
         // convert hashurl to id
         String urlID = KVS.getRow("pt-urltoid", hashedUrl).get("value");
         if (urlID == null) {
-            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
+//            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
             return docTf;
         }
-        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
+//        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
 
-//        String hashedUrl = Hasher.hash(url); // col
+        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        List<Future<Double>> tfFutures = new ArrayList<>();
+
+        // 1. parallize get row and norm factor calc
+        Map<String, Double> termFrequencies = new ConcurrentHashMap<>();
+        for (String queryTerm : queryTokens) {
+            tfFutures.add(executor.submit(() -> {
+                Row row = KVS.getRow(INDEX_TABLE, queryTerm);
+                if (row == null) return 0.0;
+
+                String cellValue = row.get(urlID);
+                if (cellValue == null) return 0.0;
+
+                String[] parts = cellValue.split(":");
+                if (parts.length < 2) return 0.0;
+
+                String[] freqParts = parts[1].split("/");
+                if (freqParts.length < 2) return 0.0;
+
+                double frequency = Double.parseDouble(freqParts[0]);
+                termFrequencies.put(queryTerm, frequency);
+                return frequency * frequency;
+            }));
+        }
+
         double tfSquareSum = 0.0;
-
-        // 1. scan index row once to update maxFreq and corr query_term freq
-        for (String queryTerm : queryTokens) {
-            Row row = KVS.getRow(INDEX_TABLE, queryTerm);
-            if (row == null) continue;
-
-            String cellValue = row.get(urlID);
-            if (cellValue == null) continue;
-
-            String[] parts = cellValue.split(":");
-            if (parts.length < 2) continue;
-
-            String[] freqParts = parts[1].split("/");
-            if (freqParts.length < 2) continue;
-
-            double frequency = Double.parseDouble(freqParts[0]);
-            tfSquareSum += Math.pow(frequency, 2);
+        for (Future<Double> future : tfFutures) {
+            try {
+                tfSquareSum += future.get();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
+        executor.shutdown();
+
+        // 2. calc norm factor
         double normalizationFactor = Math.sqrt(tfSquareSum);
-        log.info("[calculateDocumentTF] Normalization factor for URL ID: " + urlID + " is: " + normalizationFactor);
+//        log.info("[calculateDocumentTF] Normalization factor for URL ID: " + urlID + " is: " + normalizationFactor);
 
-        // normalize freq
-        for (String queryTerm : queryTokens) {
-            Row row = KVS.getRow(INDEX_TABLE, queryTerm);
-            if (row == null) continue;
+        // 3. parallel norm
+        ExecutorService normalizationExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        List<Future<Void>> normalizationFutures = new ArrayList<>();
 
-            String cellValue = row.get(urlID);
-            if (cellValue == null) continue;
-
-            String[] parts = cellValue.split(":");
-            if (parts.length < 2) continue;
-
-            String[] freqParts = parts[1].split("/");
-            if (freqParts.length < 2) continue;
-
-            double frequency = Double.parseDouble(freqParts[0]);
-            double normalizedTf = frequency / normalizationFactor;
-            docTf.put(queryTerm, normalizedTf);
+        for (Map.Entry<String, Double> entry : termFrequencies.entrySet()) {
+            normalizationFutures.add(normalizationExecutor.submit(() -> {
+                String queryTerm = entry.getKey();
+                double rawFrequency = entry.getValue();
+                double normalizedTf = rawFrequency / normalizationFactor;
+                docTf.put(queryTerm, normalizedTf);
+                return null;
+            }));
         }
+
+        for (Future<Void> future : normalizationFutures) {
+            try {
+                future.get();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        normalizationExecutor.shutdown();
         return docTf;
 
-
-        // 2. parallel?
-//        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-//        List<Future<Map.Entry<String, Double>>> futures = new ArrayList<>();
+        // sequential - command - to minimize
+        /*
+//        double tfSquareSum = 0.0;
 //
+//        // 1. scan index row once to update maxFreq and corr query_term freq
 //        for (String queryTerm : queryTokens) {
-//            futures.add(executor.submit(() -> {
-//                Row row = KVS.getRow(INDEX_TABLE, queryTerm);
-//                if (row == null) return null;
+//            Row row = KVS.getRow(INDEX_TABLE, queryTerm);
+//            if (row == null) continue;
 //
-//                String cellValue = row.get(urlID); // col is url id
-//                log.info("[calculateDocumentTF] Cell value for term: " + queryTerm + " in URL ID: " + urlID + " is: " + cellValue);
+//            String cellValue = row.get(urlID);
+//            if (cellValue == null) continue;
 //
-//                if (cellValue == null) return null;
+//            String[] parts = cellValue.split(":");
+//            if (parts.length < 2) continue;
 //
-//                String[] parts = cellValue.split(":");
-//                if (parts.length < 2) {
-//                    log.error("[calculateDocumentTF] Invalid cell value format: " + cellValue);
-//                    return null;
-//                }
+//            String[] freqParts = parts[1].split("/");
+//            if (freqParts.length < 2) continue;
 //
-//                String[] freqParts = parts[1].split("/");
-//                if (freqParts.length < 2) {
-//                    log.error("[calculateDocumentTF] Invalid frequency format: " + parts[1]);
-//                    return null;
-//                }
-//
-//                double frequency = Double.parseDouble(freqParts[0]);
-//                System.out.println("frequency: "+frequency);
-//                return Map.entry(queryTerm, frequency);
-//            }));
+//            double frequency = Double.parseDouble(freqParts[0]);
+//            tfSquareSum += Math.pow(frequency, 2);
 //        }
 //
-//        executor.shutdown();
-//        for (Future<Map.Entry<String, Double>> future : futures) {
-//            try {
-//                Map.Entry<String, Double> result = future.get();
-//                if (result != null) {
-//                    docTf.put(result.getKey(), result.getValue());
-//                    maxFrequency = Math.max(maxFrequency, result.getValue());
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//        }
+//        double normalizationFactor = Math.sqrt(tfSquareSum);
+//        log.info("[calculateDocumentTF] Normalization factor for URL ID: " + urlID + " is: " + normalizationFactor);
 //
-//        if (maxFrequency == 0.0) {
-//            log.warn("[calculateDocumentTF] Max frequency is zero for URL ID: " + urlID);
-//            return docTf;
-//        }
+//        // normalize freq
+//        for (String queryTerm : queryTokens) {
+//            Row row = KVS.getRow(INDEX_TABLE, queryTerm);
+//            if (row == null) continue;
 //
-//        log.info("[calculateDocumentTF] Max frequency for URL ID: " + urlID + " is: " + maxFrequency);
+//            String cellValue = row.get(urlID);
+//            if (cellValue == null) continue;
+//
+//            String[] parts = cellValue.split(":");
+//            if (parts.length < 2) continue;
+//
+//            String[] freqParts = parts[1].split("/");
+//            if (freqParts.length < 2) continue;
+//
+//            double frequency = Double.parseDouble(freqParts[0]);
+//            double normalizedTf = frequency / normalizationFactor;
+//            docTf.put(queryTerm, normalizedTf);
+//        }
+//        return docTf;*/
     }
+
 
     public double calculateTFIDF(Map<String, Double> queryTF, Map<String, Double> docTf){
         // [Prof approach] - final tf-idf is simply the dot product of query and doc tfidf
@@ -639,20 +681,18 @@ public class SearchService implements IService {
             String term = entry.getKey();
             double queryWeight = entry.getValue();
 
-            log.info("[calculateTFIDF] term: " + term + " doc tf is: " + queryWeight);
-
-
+//            log.info("[calculateTFIDF] term: " + term + " doc tf is: " + queryWeight);
             if (docTf.containsKey(term)) {
                 double docWeight = docTf.get(term);
                 tfidfScore += queryWeight * docWeight;
             }
         }
 
-        log.info("[calculateTFIDF] tfidfScore: " + tfidfScore );
+//        log.info("[calculateTFIDF] tfidfScore: " + tfidfScore );
         return tfidfScore;
     }
 
-
+/*
     public Map<String, Double> calculateQueryTFIDF(String query) throws IOException {
         List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
         Map<String, Double> queryTfidf = new HashMap<>();
@@ -725,17 +765,16 @@ public class SearchService implements IService {
         if (norm1 == 0 || norm2 == 0) return 0.0;
         return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
+*/
 
-
-    public String getPageContent(String url) throws IOException {
-        String hashedUrl = Hasher.hash(url);
-        Row row = KVS.getRow(PropertyLoader.getProperty("table.crawler"), hashedUrl);
-        log.info("[search] getPageContent: " + hashedUrl + " for URL: " + url + "row: " + row);
+    public String getPageContent(String hashedUrl) throws IOException {
+        Row row = KVS.getRow(PROCESSED_TABLE, hashedUrl);
+        log.info("[search] getPageContent: " + hashedUrl +  "row: " + row);
 
         if (row == null) {
             return "";
         }else{
-            return row.get("page");
+            return row.get("text");
         }
     }
 

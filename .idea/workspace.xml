@@ -4,16 +4,13 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
-<<<<<<< Updated upstream
-      <change beforePath="$PROJECT_DIR$/noova/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/all-jars/config.properties" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/config.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
-=======
+    <list default="true" id="8f6aa40d-a9ab-49b4-b825-cb81f8e3d12c" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/BuildProcessedTable.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/BuildProcessedTable.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" afterDir="false" />
->>>>>>> Stashed changes
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -104,7 +101,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Problems&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
     &quot;settings.build.tools.auto.reload&quot;: &quot;ALL&quot;,
@@ -316,10 +313,10 @@
       </method>
     </configuration>
     <list>
-      <item itemvalue="Application.BuildProcessedTable" />
       <item itemvalue="Application.FlameCoordinator" />
       <item itemvalue="Application.FlameWorker1" />
       <item itemvalue="Application.FlameWorker2" />
+      <item itemvalue="Application.BuildProcessedTable" />
       <item itemvalue="Application.test" />
       <item itemvalue="Application.StoreProcessed" />
       <item itemvalue="Application.DirectIndexer2" />
@@ -370,6 +367,8 @@
       <workItem from="1733103442015" duration="3337000" />
       <workItem from="1733120896599" duration="1620000" />
       <workItem from="1733258350787" duration="3595000" />
+      <workItem from="1733295158572" duration="26000" />
+      <workItem from="1733295197905" duration="3730000" />
     </task>
     <servers />
   </component>
@@ -386,17 +385,6 @@
         </entry>
       </map>
     </option>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java</url>
-          <line>119</line>
-          <option name="timeStamp" value="4" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
