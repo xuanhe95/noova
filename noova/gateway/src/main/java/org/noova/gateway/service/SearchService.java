@@ -956,23 +956,45 @@ public class SearchService implements IService {
 
 
     public Map<String, String> getPageDetails (String hashedUrl) throws IOException {
-        // helper to get title, host, icon, url, context for the FE
+        // helper to give host, icon, url, context for the FE
 
         Row row = getCachedRow(PROCESSED_TABLE, hashedUrl);
-//        Row row=KVS.getRow(PROCESSED_TABLE, hashedUrl);
+//        Row row = KVS.getRow(PROCESSED_TABLE, hashedUrl);
         log.info("[search] getPageDetails for: " + hashedUrl + ", row: " + row);
 
-        if (row == null) {
-            return Map.of("pageContent", "", "icon", "", "url", "", "title", "");
+        Map<String, String> details = new HashMap<>();
+        if (row != null) {
+            details.put("pageContent", row.get("text") != null ? row.get("text") : "");
+            details.put("icon", row.get("icon") != null ? row.get("icon") : "");
+            details.put("url", row.get("url") != null ? row.get("url") : "");
+            details.put("title", row.get("title")!= null ? CapitalizeTitle.toTitleCase(row.get("title")) : "");
+        } else {
+            details.put("pageContent", "");
+            details.put("icon", "");
+            details.put("url", "");
+            details.put("title","");
         }
 
-        return Map.of(
-                "pageContent", row.get("text") != null ? row.get("text") : "",
-                "icon", row.get("icon") != null ? row.get("icon") : "",
-                "url", row.get("url") != null ? row.get("url") : "",
-                "title", row.get("title") != null ? CapitalizeTitle.toTitleCase(row.get("title")) : ""
-        );
+        return details;
     }
+//    public Map<String, String> getPageDetails (String hashedUrl) throws IOException {
+//        // helper to get title, host, icon, url, context for the FE
+//
+//        Row row = getCachedRow(PROCESSED_TABLE, hashedUrl);
+////        Row row=KVS.getRow(PROCESSED_TABLE, hashedUrl);
+//        log.info("[search] getPageDetails for: " + hashedUrl + ", row: " + row);
+//
+//        if (row == null) {
+//            return Map.of("pageContent", "", "icon", "", "url", "", "title", "");
+//        }
+//
+//        return Map.of(
+//                "pageContent", row.get("text") != null ? row.get("text") : "",
+//                "icon", row.get("icon") != null ? row.get("icon") : "",
+//                "url", row.get("url") != null ? row.get("url") : "",
+//                "title", row.get("title") != null ? CapitalizeTitle.toTitleCase(row.get("title")) : ""
+//        );
+//    }
 
     public String extractHostName(String urlString) {
         try {

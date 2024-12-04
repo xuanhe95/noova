@@ -156,51 +156,51 @@ public class SearchController implements IController {
         }
 
 //        Map<String, Double> queryTfidf = SearchService.getInstance().calculateQueryTFIDF(query);
-        Map<String, Double> queryTfidf = SearchService.getInstance().calculateQueryTF(query);
+        Map<String, Double> queryTfidf = SEARCH_SERVICE.calculateQueryTF(query);
         queryTfidf.forEach((word,score)->{
             log.info("[search] queryTfidf in query: " + word + " score: " + score);
         });
 
         //! use searchByKeyword for now, should be searchByKeywords
-        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeyword(query);
+        Map<String, Set<Integer>> urlsWithPositions = SEARCH_SERVICE.searchByKeyword(query);
         urlsWithPositions.forEach((url,positions)->{
             log.info("[search] URL: " + url + " | Positions: " + positions);
         });
 
         // use best position
         List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
-        Map<String, List<Integer>> bestPositions = SearchService.getInstance().calculateSortedPosition(queryTokens);
-        double phraseMatchScore = SearchService.getInstance().calculatePhraseMatchScore(queryTokens, bestPositions);
+        Map<String, List<Integer>> bestPositions = SEARCH_SERVICE.calculateSortedPosition(queryTokens);
+        double phraseMatchScore = SEARCH_SERVICE.calculatePhraseMatchScore(queryTokens, bestPositions);
 
         List<Map<String, Object>> results = new ArrayList<>();
         for (Map.Entry<String, Set<Integer>> entry : urlsWithPositions.entrySet()) {
             String hashedUrl = entry.getKey();
 
             // get icon, context, title, host, url for the FE
-            Map<String, String> pageDetails = SearchService.getInstance().getPageDetails(hashedUrl);
+            Map<String, String> pageDetails = SEARCH_SERVICE.getPageDetails(hashedUrl);
             String pageContent = pageDetails.get("pageContent");
             String icon = pageDetails.get("icon");
             String url = pageDetails.get("url");
-            String host = SearchService.getInstance().extractHostName(url);
+            String host = SEARCH_SERVICE.extractHostName(url);
             String title =pageDetails.get("title");
 
             // get best positions
-            String contextSnippet = SearchService.getInstance().generateSnippetFromPositions(pageContent,
+            String contextSnippet = SEARCH_SERVICE.generateSnippetFromPositions(pageContent,
                     bestPositions.get(hashedUrl), 60);
 
             // Calculate title+og description weight
-            double titleOGMatchScore = SearchService.getInstance().calculateTitleAndOGMatchScore(hashedUrl, query);
+            double titleOGMatchScore = SEARCH_SERVICE.calculateTitleAndOGMatchScore(hashedUrl, query);
 
             // Calculate TF-IDF vector
 //            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTFIDF(url, entry.getValue());
-            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTF(hashedUrl, query);
+            Map<String, Double> docTfidf = SEARCH_SERVICE.calculateDocumentTF(hashedUrl, query);
 
             // Calculate cosine similarity between query and document TF-IDF vectors
 //            double tfidfSimilarity = SearchService.getInstance().cosineSimilarity(queryTfidf, docTfidf);
-            double tfidfSimilarity = SearchService.getInstance().calculateTFIDF(queryTfidf, docTfidf);
+            double tfidfSimilarity = SEARCH_SERVICE.calculateTFIDF(queryTfidf, docTfidf);
 
             // Get the PageRank score
-            double pageRank = SearchService.getInstance().getPagerank(hashedUrl);
+            double pageRank = SEARCH_SERVICE.getPagerank(hashedUrl);
 
             // Combine scores with weighting (alpha for TF-IDF similarity, (1 - alpha) for PageRank)
             double combinedScore = tfIDFWeight * tfidfSimilarity +
