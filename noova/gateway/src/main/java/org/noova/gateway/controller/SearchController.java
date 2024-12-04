@@ -4,6 +4,7 @@ package org.noova.gateway.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.noova.gateway.service.SearchService;
 import org.noova.gateway.service.Service;
+import org.noova.gateway.service.WeatherService;
 import org.noova.kvs.Row;
 import org.noova.tools.Logger;
 import org.noova.tools.Parser;
@@ -113,6 +114,19 @@ public class SearchController implements IController {
         log.info("[search] Searching by query");
         String query = req.queryParams("query");
         log.info("[search] Searching by query: " + query);
+
+        // check weather
+        if (query.toLowerCase().contains("weather")) {
+            try {
+                Map<String, Object> weatherData = WeatherService.getInstance().getWeatherInfo();
+                String json = OBJECT_MAPPER.writeValueAsString(weatherData);
+                res.body(json);
+                res.type("application/json");
+                return;
+            } catch (IOException e) {
+                log.error("[search] Error fetching weather data", e);
+            }
+        }
 
 //        Map<String, Double> queryTfidf = SearchService.getInstance().calculateQueryTFIDF(query);
         Map<String, Double> queryTfidf = SearchService.getInstance().calculateQueryTF(query);
