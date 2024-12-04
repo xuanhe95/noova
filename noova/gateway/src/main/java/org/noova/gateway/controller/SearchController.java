@@ -124,12 +124,14 @@ public class SearchController implements IController {
         String query = req.queryParams("query");
         log.info("[search] Searching by query: " + query);
 
-        Map<String, Double> queryTfidf = SearchService.getInstance().calculateQueryTFIDF(query);
+//        Map<String, Double> queryTfidf = SearchService.getInstance().calculateQueryTFIDF(query);
+        Map<String, Double> queryTfidf = SearchService.getInstance().calculateQueryTF(query);
         queryTfidf.forEach((word,score)->{
             log.info("[search] queryTfidf in query: " + word + " score: " + score);
         });
 
-        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeywords(query);
+        //! use searchByKeyword for now, should be searchByKeywords
+        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeywordTemp(query);
         urlsWithPositions.forEach((url,positions)->{
             log.info("[search] URL: " + url + " | Positions: " + positions);
         });
@@ -139,11 +141,16 @@ public class SearchController implements IController {
             String url = entry.getKey();
             Set<Integer> positions = entry.getValue();
 
+            // get title
+            String title = SearchService.getInstance().getTitle(url);
+
             // Calculate TF-IDF vector
-            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTFIDF(url, entry.getValue());
+//            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTFIDF(url, entry.getValue());
+            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTF(url, query);
 
             // Calculate cosine similarity between query and document TF-IDF vectors
-            double tfidfSimilarity = SearchService.getInstance().cosineSimilarity(queryTfidf, docTfidf);
+//            double tfidfSimilarity = SearchService.getInstance().cosineSimilarity(queryTfidf, docTfidf);
+            double tfidfSimilarity = SearchService.getInstance().calculateTFIDF(queryTfidf, docTfidf);
 
             // Get the PageRank score
             double pageRank = SearchService.getInstance().getPagerank(url);
@@ -158,7 +165,7 @@ public class SearchController implements IController {
             log.info("[search] page contextSnippet: " + contextSnippet);
 
             Map<String, Object> result = new HashMap<>();
-            result.put("title", "TBD");
+            result.put("title", title);
             result.put("url", url);
             result.put("combinedScore", combinedScore);
             result.put("context", contextSnippet);
