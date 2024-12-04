@@ -407,25 +407,24 @@ public class SearchService implements IService {
         // Map of URL -> word -> positions
         Map<String, Map<String, Set<Integer>>> urlsForWordMap = new HashMap<>();
 
-        // Populate urlsForWordMap
-        words.forEach(word -> {
+// Populate urlsForWordMap in parallel
+        words.parallelStream().forEach(word -> {
             try {
                 // Get all URLs for this word
                 Map<String, Set<Integer>> urlsForWord = searchByKeyword(word);
 
                 // Process URLs and positions for this word
-                urlsForWord.forEach((url, positions) -> {
-                    urlsForWordMap
-                            .computeIfAbsent(url, k -> new HashMap<>())
-                            .put(word, positions);
-                });
-
+                synchronized (urlsForWordMap) {
+                    urlsForWord.forEach((url, positions) -> {
+                        urlsForWordMap
+                                .computeIfAbsent(url, k -> new HashMap<>())
+                                .put(word, positions);
+                    });
+                }
             } catch (IOException e) {
                 log.error("[search] Error searching by keyword: " + word, e);
             }
-        });
-
-        // Find valid URLs, calculate best positions and their spans
+        });        // Find valid URLs, calculate best positions and their spans
         Map<String, Integer> urlToSpan = new HashMap<>();
         Map<String, List<Integer>> urlToPositions = new HashMap<>();
 
@@ -489,25 +488,7 @@ public class SearchService implements IService {
 //
 //        return urlToPositions;
 //    }
-    public Map<String, Set<Integer>> searchByKeywords(String keywords) throws IOException {
 
-        if(keywords == null || keywords.isEmpty()){
-            log.warn("[search] Empty keywords");
-            return new HashMap<>();
-        }
-
-        String[] terms = keywords.toLowerCase().split("\\s+"); //TBD: auto correction logic and security checks
-        Map<String, Set<Integer>> aggregatedResults = new HashMap<>();
-
-        for (String term : terms) {
-            Map<String, Set<Integer>> urlsForTerm = searchByKeyword(term);
-            urlsForTerm.forEach((url, positions) -> {
-                aggregatedResults.computeIfAbsent(url, k -> new HashSet<>()).addAll(positions);
-            });
-        }
-
-        return aggregatedResults;
-    }
 
     private int documentFrequency(String term) throws IOException {
         Row row = KVS.getRow(INDEX_TABLE, term);
@@ -793,13 +774,17 @@ public class SearchService implements IService {
 
     public String getSnapshot(String hashedUrl) throws IOException {
 //        String hashedUrl = Hasher.hash(url);
-        Row row = KVS.getRow(PropertyLoader.getProperty("table.crawler"), hashedUrl);
-        if (row == null) {
-            log.warn("[search] No row found for URL: " + hashedUrl);
-            return null;
+//        Row row = KVS.getRow(PropertyLoader.getProperty("table.craw"), hashedUrl);
+//        if (row == null) {
+//            log.warn("[search] No row found for URL: " + hashedUrl);
+//            return null;
+//        }
+
+        byte[] b = KVS.get(PropertyLoader.getProperty("table.processed"), hashedUrl, PropertyLoader.getProperty("table.processed.text"));
+        if(b == null){
+            return "";
         }
-        log.info("[search] Found row: " + hashedUrl);
-        return row.get(PropertyLoader.getProperty("table.crawler.page"));
+        return new String(b);
     }
 
     public List<String> getImages(String keyword) throws IOException {

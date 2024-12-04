@@ -116,8 +116,11 @@ public class SearchController implements IController {
 
         List<String> lammatized = Parser.getLammelizedWords(keyword);
 
-
         System.out.println("Lammatized: " + lammatized);
+
+        if(lammatized.size() > 5){
+            lammatized = lammatized.subList(0, 5);
+        }
 
         Map<String, List<Integer>> sortedUrlWithPositions = SEARCH_SERVICE.calculateSortedPosition(lammatized);
 
