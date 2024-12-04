@@ -131,7 +131,7 @@ public class SearchController implements IController {
         });
 
         //! use searchByKeyword for now, should be searchByKeywords
-        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeywordTemp(query);
+        Map<String, Set<Integer>> urlsWithPositions = SearchService.getInstance().searchByKeyword(query);
         urlsWithPositions.forEach((url,positions)->{
             log.info("[search] URL: " + url + " | Positions: " + positions);
         });

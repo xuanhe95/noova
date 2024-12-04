@@ -1,6 +1,6 @@
 package org.noova.gateway.service;
 
-import com.fasterxml.jackson.databind.annotation.JsonAppend;
+//import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import org.noova.gateway.markov.EfficientMarkovWord;
 import org.noova.gateway.storage.StorageStrategy;
 import org.noova.gateway.trie.Trie;
