@@ -1168,7 +1168,6 @@ public class SearchService implements IService {
         String imagesColumn = row.get("images");
         return Arrays.asList(imagesColumn.split(","));
     }
-=======
 */
->>>>>>> Stashed changes
+
 }
