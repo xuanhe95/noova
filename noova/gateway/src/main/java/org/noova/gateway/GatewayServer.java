@@ -23,13 +23,15 @@ public class GatewayServer {
     public static void main(String[] args) {
         System.out.println("Hello, World!");
         if(args.length < 2){
-            System.err.println("Syntax: ProxyServer <kvsAddr> <port>");
+            //System.out.println("Syntax: ProxyServer <kvsAddr> <port>");
             log.warn("[gateway] No arguments provided, using default values");
             coordinatorAddr = PropertyLoader.getProperty("kvs.host") + ":" + PropertyLoader.getProperty("kvs.port");
             String rawPort = PropertyLoader.getProperty("gateway.port");
             if(rawPort != null){
                 port = Integer.parseInt(rawPort);
             }
+            System.out.println("[gateway] No arguments provided, using default values coordinatorAddr:" + coordinatorAddr + " port:" + port);
+
         } else{
             coordinatorAddr = args[0];
             port = Integer.parseInt(args[1]);
