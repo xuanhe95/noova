@@ -1446,11 +1446,8 @@ public class SearchService implements IService {
 
 //        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
 
-        double tfSquareSum = 0.0;
 
-
-        Map<String, Double> termFrequencies = new HashMap<>();
-
+        // iterate keyword rows to get precomputed doc tf (indexer schema: position:doctf)
         for(Map.Entry<String, Row> entry : keywordRows.entrySet()){
             String queryTerm = entry.getKey();
             Row row = entry.getValue();
@@ -1462,118 +1459,19 @@ public class SearchService implements IService {
             if (cellValue == null) {
                 continue;
             }
+//            System.out.println("cellValue: "+cellValue);
 
             String[] parts = cellValue.split(":");
             if (parts.length < 2) {
                 continue;
             }
-
-            String[] freqParts = parts[1].split("/");
-            if (freqParts.length < 2) {
-                continue;
-            }
-
-            double frequency = Double.parseDouble(freqParts[0]);
-            termFrequencies.put(queryTerm, frequency);
-            tfSquareSum += frequency * frequency;
+//            System.out.println("Double.parseDouble(parts[1]): "+Double.parseDouble(parts[1]));
+            docTf.put(queryTerm, Double.parseDouble(parts[1]));
         }
 
-        // 2. calc norm factor
-        double normalizationFactor = Math.sqrt(tfSquareSum);
-//        log.info("[calculateDocumentTF] Normalization factor for URL ID: " + urlID + " is: " + normalizationFactor);
-
-
-        for(Map.Entry<String, Double> entry : termFrequencies.entrySet()){
-            String queryTerm = entry.getKey();
-            double rawFrequency = entry.getValue();
-            double normalizedTf = rawFrequency / normalizationFactor;
-            docTf.put(queryTerm, normalizedTf);
-        }
 
         return docTf;
     }
-
-//    public Map<String, Double> calculateDocumentTF(String hashedUrl, List<String> queryTokens) throws IOException {
-//        // [Prof approach] - pick a doc to score, normalize tf in a doc freq/sqrt(w_i^2)
-//
-//        Map<String, Double> docTf = new HashMap<>(); // doc_term:norm_tf
-//
-//        // convert hashurl to id
-//        byte[] urlIdBytes = KVS.get("pt-urltoid", hashedUrl, "value");
-//
-//        if (urlIdBytes == null) {
-////            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
-//            return docTf;
-//        }
-//        String urlID = new String(urlIdBytes);
-//
-////        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
-//
-//        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-//        List<Future<Double>> tfFutures = new ArrayList<>();
-//
-//        // 1. parallize get row and norm factor calc
-//        Map<String, Double> termFrequencies = new ConcurrentHashMap<>();
-//        for (String queryTerm : queryTokens) {
-//            tfFutures.add(executor.submit(() -> {
-//                Row row = KVS.getRow(INDEX_TABLE, queryTerm);
-//                if (row == null) return 0.0;
-//
-//                String cellValue = row.get(urlID);
-//                if (cellValue == null) return 0.0;
-//
-//                String[] parts = cellValue.split(":");
-//                if (parts.length < 2) return 0.0;
-//
-//                String[] freqParts = parts[1].split("/");
-//                if (freqParts.length < 2) return 0.0;
-//
-//                double frequency = Double.parseDouble(freqParts[0]);
-//                termFrequencies.put(queryTerm, frequency);
-//                return frequency * frequency;
-//            }));
-//        }
-//
-//        double tfSquareSum = 0.0;
-//        for (Future<Double> future : tfFutures) {
-//            try {
-//                tfSquareSum += future.get();
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//        }
-//
-//        executor.shutdown();
-//
-//        // 2. calc norm factor
-//        double normalizationFactor = Math.sqrt(tfSquareSum);
-////        log.info("[calculateDocumentTF] Normalization factor for URL ID: " + urlID + " is: " + normalizationFactor);
-//
-//        // 3. parallel norm
-//        ExecutorService normalizationExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-//        List<Future<Void>> normalizationFutures = new ArrayList<>();
-//
-//        for (Map.Entry<String, Double> entry : termFrequencies.entrySet()) {
-//            normalizationFutures.add(normalizationExecutor.submit(() -> {
-//                String queryTerm = entry.getKey();
-//                double rawFrequency = entry.getValue();
-//                double normalizedTf = rawFrequency / normalizationFactor;
-//                docTf.put(queryTerm, normalizedTf);
-//                return null;
-//            }));
-//        }
-//
-//        for (Future<Void> future : normalizationFutures) {
-//            try {
-//                future.get();
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//        }
-//
-//        normalizationExecutor.shutdown();
-//        return docTf;
-//    }
 
     public double calculateTFIDF(Map<String, Double> queryTF, Map<String, Double> docTf){
         // [Prof approach] - final tf-idf is simply the dot product of query and doc tfidf
