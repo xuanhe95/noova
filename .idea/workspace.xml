@@ -5,8 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/BuildProcessedTable.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/BuildProcessedTable.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/config.properties" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/config.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -362,6 +363,7 @@
       <workItem from="1732321449487" duration="224000" />
       <workItem from="1733103442015" duration="3337000" />
       <workItem from="1733120896599" duration="1620000" />
+      <workItem from="1733258350787" duration="3595000" />
     </task>
     <servers />
   </component>
@@ -384,7 +386,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/SearchController.java</url>
-          <line>100</line>
+          <line>119</line>
           <option name="timeStamp" value="4" />
         </line-breakpoint>
       </breakpoints>
