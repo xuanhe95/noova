@@ -446,6 +446,129 @@ public class SearchService implements IService {
 
     }
 
+    public Map<String, List<Integer>> getKeywordPositions(Map<String, String> idToUrlMap, Map<String, Row> keywordRows, String urlId){
+        Map<String, List<Integer>> result = new HashMap<>();
+
+        keywordRows.forEach((word, row) -> {
+            String rawPositions = row.get(urlId);
+            if (rawPositions != null && !rawPositions.isEmpty()) {
+                List<Integer> positions = parseUrlWithSortedPositions(rawPositions);
+                result.put(word, positions);
+            }
+        });
+        return result;
+    }
+
+
+    public Map<String, Map<String, List<Integer>>> searchByKeywordsIntersection(Map<String, Row> keywordRows, List<String> keywords, int pageLimit) throws IOException {
+        // uses HASHED_URL as key
+        if (keywords == null || keywords.isEmpty()) {
+            log.warn("[search] Empty keyword or too less");
+            return new HashMap<>();
+        }
+
+
+        Map<String, Map<String, List<Integer>>> allResults = new HashMap<>();
+
+        Map<String, Row> cache = new HashMap<>();
+
+        Set<String> allFromIds = null;
+
+
+        if(!WORD_TO_URLS_CACHE.isEmpty()){
+            System.out.println("Using cache");
+            for(String keyword : keywords){
+                if(WORD_TO_URLS_CACHE.containsKey(keyword)){
+                    System.out.println("Found in cache: " + keyword);
+                    Set<String> urls = new HashSet<>( WORD_TO_URLS_CACHE.get(keyword) );
+                    if(allFromIds == null){
+                        allFromIds = urls;
+                    } else{
+                        allFromIds.retainAll(urls);
+                    }
+                }
+            }
+
+
+        } else{
+            for (String keyword : keywords) {
+                Row row = keywordRows.get(keyword);
+                if (row == null) {
+                    log.warn("[search] No row found for keyword: " + keyword);
+                    continue;
+                }
+
+                cache.put(keyword, row);
+
+                if (row.columns() != null) {
+                    if (allFromIds == null) {
+                        allFromIds = row.columns();
+                    } else {
+                        allFromIds.retainAll(row.columns());
+                    }
+                }
+            }
+        }
+
+        if (allFromIds == null || allFromIds.isEmpty()) {
+            log.warn("[search] No row found for keyword: " + keywords);
+            return allResults;
+        }
+        for (String fromUrlId : allFromIds) {
+
+            Map<String, List<Integer>> result = new HashMap<>();
+
+            for (String keyword : keywords) {
+
+                String rawPositions = "";
+
+                if(!WORD_TO_URLS_CACHE.isEmpty()){
+
+                    byte[] b = KVS.get(INDEX_TABLE, keyword, fromUrlId);
+
+                    rawPositions = b == null ? "" : new String(b);
+
+                } else{
+                    Row row = cache.getOrDefault(keyword, null);
+
+                    if(row == null){
+                        continue;
+                    }
+
+                    rawPositions = row.get(fromUrlId);
+                }
+
+                if (rawPositions.isEmpty()) {
+                    continue;
+                }
+                List<Integer> positions = parseUrlWithSortedPositions(rawPositions);
+                result.put(keyword, positions);
+            }
+
+            String hashedUrl = null;
+
+            if(ID_URL_CACHE.containsKey(fromUrlId)){
+                hashedUrl = ID_URL_CACHE.get(fromUrlId);
+            }
+            else{
+                byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, fromUrlId, "value");
+                if(hashedUrlByte != null){
+                    hashedUrl = new String(hashedUrlByte);
+                }else{
+                    continue;
+                }
+            }
+
+            allResults.put(hashedUrl, result);
+
+            if(allResults.size() >= pageLimit){
+                break;
+            }
+        }
+        return allResults;
+
+    }
+
 
 
 
@@ -563,6 +686,41 @@ public class SearchService implements IService {
 
 
 
+
+
+
+    public SortedMap<String, Double> getPageRanks(Set<String> hashedUrls, int limit) throws IOException {
+        Map<String, Double> result = new HashMap<>();
+
+        for(String hashedUrl : hashedUrls){
+            byte[] rankByte = KVS.get(PGRK_TABLE, hashedUrl, "rank");
+            if(rankByte != null){
+                result.put(hashedUrl, Double.parseDouble(new String(rankByte)));
+            }
+        }
+
+        // 按值降序排序
+        var sortedEntries = result.entrySet().stream()
+                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // 倒序排序
+                .limit(limit) // 只保留前 limit 个
+                .toList();
+
+        // 创建一个有序的 TreeMap
+        var limitedMap = new TreeMap<String, Double>((a, b) -> {
+            int cmp = result.get(b).compareTo(result.get(a)); // 按值排序
+            return cmp == 0 ? a.compareTo(b) : cmp; // 如果值相同，按键排序
+        });
+
+        // 将排序结果放入 TreeMap
+        for (var entry : sortedEntries) {
+            limitedMap.put(entry.getKey(), entry.getValue());
+        }
+
+        return limitedMap;
+    }
+
+
+
     /*
      * TODO: predict the user's input based on the keyword
      * For example, if the user types "c", the system should predict "cat", "car",
@@ -591,7 +749,7 @@ public class SearchService implements IService {
         }
     }
 
-    public static List<Integer> getBestPositionWithSorted(List<String> words, Map<String, List<Integer>> positions, int spanTolerance, int spanLimit) {
+    public List<Integer> getBestPositionWithSorted(List<String> words, Map<String, List<Integer>> positions, int spanTolerance, int spanLimit) {
         List<List<Integer>> allPositions = new ArrayList<>();
         PriorityQueue<Node> pq = new PriorityQueue<>();
 
@@ -1081,6 +1239,31 @@ public class SearchService implements IService {
         return queryTf;
     }
 
+
+    public Map<String, Double> calculateQueryTF(Map<String, Row> keywordRows) throws IOException {
+        // [Prof approach] - apply idf to query, NOT to both query and doc; query does not need normalization
+        Map<String, Double> queryTf = new HashMap<>(); // term:tf
+
+        keywordRows.forEach((term, row) -> {
+            if (row == null) {
+                queryTf.put(term, 0.0);
+            } else {
+                int df = row.columns().size();
+                if (df == 0) {
+                    queryTf.put(term, 0.0);
+                } else {
+                    double idf = Math.log10((double) totalDocuments / df); // inverse N/n_i
+                    double tf = Collections.frequency(keywordRows.keySet(), term); // freq of a word in query, no need norm
+                    queryTf.put(term, tf * idf);
+                }
+            }
+        });
+
+
+        return queryTf;
+    }
+
+
     public Map<String, Double> calculateDocumentTF(String hashedUrl, String query) throws IOException {
         // [Prof approach] - pick a doc to score, normalize tf in a doc freq/sqrt(w_i^2)
 
@@ -1245,6 +1428,153 @@ public class SearchService implements IService {
         return docTf;
     }
 
+
+
+    public Map<String, Double> calculateDocumentTF(String hashedUrl, Map<String, Row> keywordRows) throws IOException {
+        // [Prof approach] - pick a doc to score, normalize tf in a doc freq/sqrt(w_i^2)
+
+        Map<String, Double> docTf = new HashMap<>(); // doc_term:norm_tf
+
+        // convert hashurl to id
+        byte[] urlIdBytes = KVS.get("pt-urltoid", hashedUrl, "value");
+
+        if (urlIdBytes == null) {
+//            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
+            return docTf;
+        }
+        String urlID = new String(urlIdBytes);
+
+//        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
+
+        double tfSquareSum = 0.0;
+
+
+        Map<String, Double> termFrequencies = new HashMap<>();
+
+        for(Map.Entry<String, Row> entry : keywordRows.entrySet()){
+            String queryTerm = entry.getKey();
+            Row row = entry.getValue();
+            if (row == null) {
+                continue;
+            }
+
+            String cellValue = row.get(urlID);
+            if (cellValue == null) {
+                continue;
+            }
+
+            String[] parts = cellValue.split(":");
+            if (parts.length < 2) {
+                continue;
+            }
+
+            String[] freqParts = parts[1].split("/");
+            if (freqParts.length < 2) {
+                continue;
+            }
+
+            double frequency = Double.parseDouble(freqParts[0]);
+            termFrequencies.put(queryTerm, frequency);
+            tfSquareSum += frequency * frequency;
+        }
+
+        // 2. calc norm factor
+        double normalizationFactor = Math.sqrt(tfSquareSum);
+//        log.info("[calculateDocumentTF] Normalization factor for URL ID: " + urlID + " is: " + normalizationFactor);
+
+
+        for(Map.Entry<String, Double> entry : termFrequencies.entrySet()){
+            String queryTerm = entry.getKey();
+            double rawFrequency = entry.getValue();
+            double normalizedTf = rawFrequency / normalizationFactor;
+            docTf.put(queryTerm, normalizedTf);
+        }
+
+        return docTf;
+    }
+
+//    public Map<String, Double> calculateDocumentTF(String hashedUrl, List<String> queryTokens) throws IOException {
+//        // [Prof approach] - pick a doc to score, normalize tf in a doc freq/sqrt(w_i^2)
+//
+//        Map<String, Double> docTf = new HashMap<>(); // doc_term:norm_tf
+//
+//        // convert hashurl to id
+//        byte[] urlIdBytes = KVS.get("pt-urltoid", hashedUrl, "value");
+//
+//        if (urlIdBytes == null) {
+////            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
+//            return docTf;
+//        }
+//        String urlID = new String(urlIdBytes);
+//
+////        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
+//
+//        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+//        List<Future<Double>> tfFutures = new ArrayList<>();
+//
+//        // 1. parallize get row and norm factor calc
+//        Map<String, Double> termFrequencies = new ConcurrentHashMap<>();
+//        for (String queryTerm : queryTokens) {
+//            tfFutures.add(executor.submit(() -> {
+//                Row row = KVS.getRow(INDEX_TABLE, queryTerm);
+//                if (row == null) return 0.0;
+//
+//                String cellValue = row.get(urlID);
+//                if (cellValue == null) return 0.0;
+//
+//                String[] parts = cellValue.split(":");
+//                if (parts.length < 2) return 0.0;
+//
+//                String[] freqParts = parts[1].split("/");
+//                if (freqParts.length < 2) return 0.0;
+//
+//                double frequency = Double.parseDouble(freqParts[0]);
+//                termFrequencies.put(queryTerm, frequency);
+//                return frequency * frequency;
+//            }));
+//        }
+//
+//        double tfSquareSum = 0.0;
+//        for (Future<Double> future : tfFutures) {
+//            try {
+//                tfSquareSum += future.get();
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//        executor.shutdown();
+//
+//        // 2. calc norm factor
+//        double normalizationFactor = Math.sqrt(tfSquareSum);
+////        log.info("[calculateDocumentTF] Normalization factor for URL ID: " + urlID + " is: " + normalizationFactor);
+//
+//        // 3. parallel norm
+//        ExecutorService normalizationExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+//        List<Future<Void>> normalizationFutures = new ArrayList<>();
+//
+//        for (Map.Entry<String, Double> entry : termFrequencies.entrySet()) {
+//            normalizationFutures.add(normalizationExecutor.submit(() -> {
+//                String queryTerm = entry.getKey();
+//                double rawFrequency = entry.getValue();
+//                double normalizedTf = rawFrequency / normalizationFactor;
+//                docTf.put(queryTerm, normalizedTf);
+//                return null;
+//            }));
+//        }
+//
+//        for (Future<Void> future : normalizationFutures) {
+//            try {
+//                future.get();
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
+//
+//        normalizationExecutor.shutdown();
+//        return docTf;
+//    }
+
     public double calculateTFIDF(Map<String, Double> queryTF, Map<String, Double> docTf){
         // [Prof approach] - final tf-idf is simply the dot product of query and doc tfidf
         double tfidfScore= 0.0;
@@ -1294,14 +1624,14 @@ public class SearchService implements IService {
     }
 
 
-    public Double calculateTitleAndOGMatchScore(Row row, List<String> words) throws IOException {
+    public Double calculateTitleAndOGMatchScore(Row pageRow, List<String> words) throws IOException {
         // helper - combine title and og desp weight calculation
 
 //        Row row=KVS.getRow(PROCESSED_TABLE, hashedUrl);
-        if (row == null) return 0.0;
+        if (pageRow == null) return 0.0;
 
-        String title = row.get("title");
-        String ogDescription = row.get("description");
+        String title = pageRow.get("title");
+        String ogDescription = pageRow.get("description");
 
         if ((title == null || title.isEmpty()) && (ogDescription == null || ogDescription.isEmpty())) return 0.0;
 
