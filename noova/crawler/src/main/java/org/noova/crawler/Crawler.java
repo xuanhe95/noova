@@ -753,7 +753,7 @@ public class Crawler implements Serializable {
             String ogTitle = ogTitleElement.attr("content");
             if (!ogTitle.isEmpty()) {
 //                normalizedHtml.append(ogTitle).append("\n");
-                return ogTitle.trim().toLowerCase();
+                return ogTitle.trim();
             }
         }
 
@@ -763,7 +763,7 @@ public class Crawler implements Serializable {
             String title = titleElement.text();
             if (!title.isEmpty()) {
 //                normalizedHtml.append(title).append("\n");
-                return title.trim().toLowerCase();
+                return title.trim();
             }
         }
 
@@ -773,7 +773,7 @@ public class Crawler implements Serializable {
             String description = descriptionElement.attr("content");
             if (!description.isEmpty()) {
 //                normalizedHtml.append(description).append("\n");
-                return description.trim().toLowerCase();
+                return description.trim();
             }
         }
 

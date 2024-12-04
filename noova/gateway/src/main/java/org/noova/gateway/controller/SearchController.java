@@ -29,8 +29,10 @@ public class SearchController implements IController {
 
     private static final SearchService SEARCH_SERVICE = SearchService.getInstance();
 
-    private static final double alpha = 0.5; // Need more analysis
-    private static final double titleDespMatchWeight = 0.3;
+    private static final double tfIDFWeight = 0.4; // Need more analysis
+    private static final double pgrkWeight = 0.14;
+    private static final double titleDespMatchWeight = 0.16;
+    private static final double phraseMatchWeight = 0.3;
 
     private static final int context_view = 30; // Can be in the config file
 
@@ -167,19 +169,27 @@ public class SearchController implements IController {
 
         // use best position
         List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
-        Map<String, List<Integer>> bestPositionsForUrls = SearchService.getInstance().calculateSortedPosition(queryTokens);
+        Map<String, List<Integer>> bestPositions = SearchService.getInstance().calculateSortedPosition(queryTokens);
+        double phraseMatchScore = SearchService.getInstance().calculatePhraseMatchScore(queryTokens, bestPositions);
 
         List<Map<String, Object>> results = new ArrayList<>();
         for (Map.Entry<String, Set<Integer>> entry : urlsWithPositions.entrySet()) {
             String hashedUrl = entry.getKey();
-//            Set<Integer> positions = entry.getValue();
 
-            // Calculate title weight
-            String title = SearchService.getInstance().getTitle(hashedUrl);
-            double titleMatchScore = SearchService.getInstance().calculateTitleMatchScore(query, title);
+            // get icon, context, title, host, url for the FE
+            Map<String, String> pageDetails = SearchService.getInstance().getPageDetails(hashedUrl);
+            String pageContent = pageDetails.get("pageContent");
+            String icon = pageDetails.get("icon");
+            String url = pageDetails.get("url");
+            String host = SearchService.getInstance().extractHostName(url);
+            String title =pageDetails.get("title");
 
-            // Calculate og description weight
-            double despMatchScore = SearchService.getInstance().calculateTitleMatchScore(hashedUrl, title);
+            // get best positions
+            String contextSnippet = SearchService.getInstance().generateSnippetFromPositions(pageContent,
+                    bestPositions.get(hashedUrl), 60);
+
+            // Calculate title+og description weight
+            double titleOGMatchScore = SearchService.getInstance().calculateTitleAndOGMatchScore(hashedUrl, query);
 
             // Calculate TF-IDF vector
 //            Map<String, Double> docTfidf = SearchService.getInstance().calculateDocumentTFIDF(url, entry.getValue());
@@ -193,31 +203,25 @@ public class SearchController implements IController {
             double pageRank = SearchService.getInstance().getPagerank(hashedUrl);
 
             // Combine scores with weighting (alpha for TF-IDF similarity, (1 - alpha) for PageRank)
-//            double combinedScore = alpha * tfidfSimilarity + (1-alpha) * pageRank;
-            double combinedScore = alpha * tfidfSimilarity +
-                    (1 - alpha - titleDespMatchWeight) * pageRank +
-                    titleDespMatchWeight * (titleMatchScore+despMatchScore);
+            double combinedScore = tfIDFWeight * tfidfSimilarity +
+                    pgrkWeight * pageRank +
+                    titleDespMatchWeight * (titleOGMatchScore) +
+                    phraseMatchWeight * (phraseMatchScore);
 
-            // get page content
-            String pageContent = SearchService.getInstance().getPageContent(hashedUrl);
-            log.info("[search] page content: " + pageContent);
-
-            // get best positions
-            List<Integer> bestPositions = bestPositionsForUrls.get(hashedUrl);
-            String contextSnippet = SearchService.getInstance().generateSnippetFromPositions(pageContent, bestPositions, 60);
-
-//            String contextSnippet = SearchService.getInstance().ExtractContextSnippet(pageContent, positions, 60); // TBD, hardcoded
-//            log.info("[search] page contextSnippet: " + contextSnippet);
 
             Map<String, Object> result = new HashMap<>();
             result.put("title", title);
-            result.put("url", hashedUrl);
+            result.put("url", url);
             result.put("combinedScore", combinedScore);
+            result.put("host", host);
+            result.put("icon", icon);
             result.put("context", contextSnippet);
 
             results.add(result);
 
-            log.info("[search] URL: " + hashedUrl + ", TF-IDF Similarity: " + tfidfSimilarity + ", PageRank: " + pageRank + ", Combined Score: " + combinedScore);
+            log.info("[search] URL: " + hashedUrl + ", TF-IDF: " + tfidfSimilarity +
+                    ", PageRank: " + pageRank + ", phraseMatchScore: " + phraseMatchScore +
+                    ", titleOGMatchScore: " + titleOGMatchScore + ", Combined Score: " + combinedScore);
         }
 
         results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
