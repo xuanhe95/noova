@@ -34,7 +34,7 @@ public class AutocompleteController implements IController {
 
         String prefix = req.queryParams("prefix");
         String limitParam = "10"; //TBD hardcoded 10
-        int limit = (limitParam != null) ? Integer.parseInt(limitParam) : 10; //TBD hardcoded 10
+        int limit = Integer.parseInt(limitParam); //TBD hardcoded 10
 
         if (prefix == null || prefix.isEmpty()) {
             log.warn("[autocomplete] Empty prefix received");

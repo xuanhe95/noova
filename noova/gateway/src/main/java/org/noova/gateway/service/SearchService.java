@@ -1078,7 +1078,14 @@ public class SearchService implements IService {
     }
 
     public List<String> getAutocompleteSuggestions(String inputWords, int limit) {
-        return trie.getWordsWithPrefix(inputWords,10);
+        if(inputWords == null || inputWords.isEmpty()){
+            return Collections.emptyList();
+        }
+
+        String[] words = inputWords.split("-+");
+        String lastWord = words[words.length - 1];
+
+        return trie.getWordsWithPrefix(lastWord,10);
     }
 
 

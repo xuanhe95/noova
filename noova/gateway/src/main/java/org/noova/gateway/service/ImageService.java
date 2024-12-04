@@ -7,10 +7,7 @@ import org.noova.kvs.Row;
 import org.noova.tools.PropertyLoader;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ImageService implements IService{
     private static final StorageStrategy STORAGE_STRATEGY = StorageStrategy.getInstance();
@@ -65,11 +62,78 @@ public class ImageService implements IService{
     }
 
 
+    public Map<String, Set<String>> searchByKeywordsIntersection(List<String> keywords, int start, int limit) throws IOException {
+
+        Map<String, Set<String>> result = new HashMap<>();
+        Map<String, Row> localCache = new HashMap<>();
+
+        Set<String> fromIds = null;
+
+        for (String keyword : keywords) {
+            Row row = KVS_CLIENT.getRow(IMAGE_TABLE, keyword);
+            if (row == null) {
+                return new HashMap<>();
+            }
+            localCache.put(keyword, row);
+            if (fromIds == null) {
+                fromIds = row.columns() == null ? new HashSet<>() : row.columns();
+            } else {
+                fromIds.retainAll(row.columns());
+            }
+        }
+
+        if(fromIds == null){
+            return new HashMap<>();
+        }
+
+
+        for (String fromUrlId : fromIds) {
+            for(String keyword : keywords){
+                processImage(result, localCache.get(keyword), fromUrlId, start, limit);
+            }
+        }
+        return result;
+    }
+
+
+    public void processImage(Map<String, Set<String>> result, Row row, String fromUrlId, int start, int limit) throws IOException {
+        String images = row.get(fromUrlId);
+        String[] hashedImages = images.split("\n");
+
+
+        for (int i = start; i < Math.min(hashedImages.length, start + limit); i++) {
+            String hashedImage = hashedImages[i];
+            if (hashedImage.isEmpty()) {
+                continue;
+            }
+
+            String imageUrl;
+            if (IMAGE_MAP.containsKey(hashedImage)) {
+                imageUrl = IMAGE_MAP.get(hashedImage);
+            } else {
+                byte[] b = KVS_CLIENT.get(IMAGE_MAPPING_TABLE, hashedImage, PropertyLoader.getProperty("table.default.value"));
+                if (b != null) {
+                    imageUrl = new String(b);
+                    IMAGE_MAP.put(hashedImage, imageUrl);
+                } else {
+                    continue;
+                }
+            }
+
+            if (result.containsKey(fromUrlId)) {
+                result.get(fromUrlId).add(imageUrl);
+            } else {
+                Set<String> urls = new HashSet<>();
+                urls.add(imageUrl);
+                result.put(fromUrlId, urls);
+            }
+        }
+    }
+
 
 
     public Map<String, Set<String>> searchByKeyword(String keyword, int start, int limit) throws IOException {
         Row row = KVS_CLIENT.getRow(IMAGE_TABLE, keyword);
-
         if (row == null) {
             return new HashMap<>();
         }
@@ -115,6 +179,8 @@ public class ImageService implements IService{
         }
         return result;
     }
+
+
 
 
 
