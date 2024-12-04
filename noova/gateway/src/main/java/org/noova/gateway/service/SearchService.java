@@ -59,7 +59,7 @@ public class SearchService implements IService {
                 if(storageStrategy.containsKey(
                         PropertyLoader.getProperty("table.trie"),
                         trieName,
-                        "test"
+                        PropertyLoader.getProperty("table.default.value")
                 )){
                     log.info("[search] Trie found");
                     trie = trieManager.loadTrie(trieName);
