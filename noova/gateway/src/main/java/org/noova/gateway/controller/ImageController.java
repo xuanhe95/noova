@@ -53,8 +53,7 @@ public class ImageController implements IController{
     @Route(path = "/image/keys", method = "GET")
     private void searchByKeywords(Request req, Response res) throws IOException {
         log.info("[search] Searching by keywords");
-        String keyword = req.queryParams("keyword");
-
+        String keyword = req.queryParams("query");
 
         int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
         int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));

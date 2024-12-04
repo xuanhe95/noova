@@ -217,7 +217,7 @@ public class SearchController implements IController {
 
     @Route(path = "/search/image", method = "GET")
     private void searchImage(Request req, Response res) throws IOException {
-        String keyword = req.queryParams("keyword");
+        String keyword = req.queryParams("query");
         log.info("[search] Searching images for keyword: " + keyword);
 
         if (keyword == null || keyword.isEmpty()) {

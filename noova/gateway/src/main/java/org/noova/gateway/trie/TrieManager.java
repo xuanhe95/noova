@@ -69,6 +69,8 @@ public class TrieManager {
                 PropertyLoader.getProperty("table.default.value"),
                 json
         );
+
+
     }
 
 
@@ -78,8 +80,6 @@ public class TrieManager {
             log.info("[trie] Trie found in cache");
             return TRIE_MAP.get(rowName);
         }
-
-
 
         String json = STORAGE_STRATEGY.get(
                 PropertyLoader.getProperty("table.trie"),

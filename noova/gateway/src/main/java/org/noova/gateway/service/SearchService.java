@@ -35,6 +35,7 @@ public class SearchService implements IService {
 
     private static final String PGRK_TABLE = PropertyLoader.getProperty("table.pagerank");
     private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
+    private static final String INDEX_IMAGE_TABLE = PropertyLoader.getProperty("table.image");
     private static final String PROCESSED_TABLE = PropertyLoader.getProperty("table.processed");
     private static final String ID_URL_TABLE = PropertyLoader.getProperty("table.id-url");
     private static final Map<String, String> ID_URL_CACHE = new ConcurrentHashMap<>();
@@ -802,8 +803,7 @@ public class SearchService implements IService {
     }
 
     public List<String> getImages(String keyword) throws IOException {
-        Row row = KVS.getRow(INDEX_TABLE, keyword);
-
+        Row row = KVS.getRow(INDEX_IMAGE_TABLE, keyword);
         if (row == null || row.get("images") == null || row.get("images").isEmpty()) {
             log.warn("[search] No images found for keyword: " + keyword);
             return Collections.emptyList();
