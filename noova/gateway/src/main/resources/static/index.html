@@ -120,7 +120,7 @@
         }
 
         #results {
-            margin-top: 70px;
+            margin-top: 60px;
             margin-bottom: 70px;
         }
 
@@ -384,6 +384,23 @@
             100% { transform: rotate(360deg); }
         }
 
+        #dictionary-result h4 {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        #dictionary-toggle {
+            transform-origin: center; /* Sets rotation point */
+            transition: transform 0.3s ease; /* Smooth rotation transition */
+        }
+
+        #dictionary-toggle.expanded {
+            transform: rotate(180deg); /* Rotate the arrow when expanded */
+        }
+
     </style>
 </head>
 <body>
@@ -411,6 +428,15 @@
     <div id="loading-spinner" style="display: none;">
         <div class="spinner"></div>
     </div>
+
+    <div id="dictionary-result" style="margin-top: 50px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; display: none; position: relative;">
+        <h4 style="cursor: pointer; margin-bottom: 10px;" onclick="toggleDictionary()">Word Definition
+            <span id="dictionary-toggle" style="float: right; font-size: 18px;">&#9662;</span>
+        </h4>
+        <pre id="dictionary-highlight" style="margin-top: 10px;"></pre>
+        <pre id="dictionary-full" style="display: none; margin-top: 10px;"></pre>
+    </div>
+
     <div id="results">
     </div>
     <div id="loading-indicator" style="display: none; text-align: center; margin-top: 20px;">Loading...</div>
@@ -572,6 +598,11 @@
             $('#searchForm').removeClass('vertical-layout').addClass('horizontal-layout');            // Perform AJAX request to fetch results
 
             const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v4';
+            $('#dictionary-result').hide();
+            if (searchMode !== 'Image' && query.split('-').length === 1) {
+                // Fetch dictionary definition if it's a single word and not in Image mode
+                fetchDictionaryDefinition(query);
+            }
 
             $.ajax({
                 url: route,
@@ -580,6 +611,7 @@
                 success: function (response) {
                     resultsData = response;
                     currentPage = 1;
+
                     hideLoadingSpinner();
                     displayResults();
                     displayPaginationControls();
@@ -911,8 +943,76 @@
             }
             paginationContainer.append(nextButton);
         }
-
     });
+    async function fetchDictionaryDefinition(word) {
+        const resultContainer = $('#dictionary-result');
+        const highlightText = $('#dictionary-highlight');
+        const fullText = $('#dictionary-full');
+        const toggleButton = $('#dictionary-toggle');
+
+        try {
+            const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+            if (response.ok) {
+                const data = await response.json();
+                displayWordDefinition(data);
+                resultContainer.show();
+                toggleButton.text('(Show More)'); // Reset toggle text
+                highlightText.show(); // Ensure the highlight is visible initially
+                fullText.hide(); // Ensure the full definition is hidden initially
+            } else {
+                resultContainer.show();
+                highlightText.text('Word not found.');
+                fullText.hide();
+            }
+        } catch (error) {
+            console.error('Error fetching word definition:', error);
+            resultContainer.show();
+            highlightText.text('An error occurred while fetching the definition.');
+            fullText.hide();
+        }
+    }
+
+    // Function to display dictionary definition
+    function displayWordDefinition(data) {
+        const highlightText = $('#dictionary-highlight');
+        const fullText = $('#dictionary-full');
+        const meanings = data[0].meanings;
+
+        // Prepare highlight and full details
+        let highlight = `Word: ${data[0].word}\n(${meanings[0].partOfSpeech}) ${meanings[0].definitions[0].definition}`;
+        let fullDefinition = `Word: ${data[0].word}\n\n`;
+
+        meanings.forEach((meaning, idx) => {
+            fullDefinition += `${idx + 1}. (${meaning.partOfSpeech})\n`;
+            meaning.definitions.forEach((definition, defIdx) => {
+                fullDefinition += `   ${defIdx + 1}. ${definition.definition}\n`;
+            });
+            fullDefinition += '\n';
+        });
+
+        // Update the UI
+        highlightText.text(highlight);
+        fullText.text(fullDefinition);
+    }
+
+    // Function to toggle dictionary display
+    function toggleDictionary() {
+        const fullText = $('#dictionary-full');
+        const highlightText = $('#dictionary-highlight');
+        const toggleButton = $('#dictionary-toggle');
+
+        if (fullText.is(':visible')) {
+            // Collapse to highlight view
+            fullText.hide();
+            highlightText.show();
+            toggleButton.text('(Show More)');
+        } else {
+            // Expand to full definition view
+            fullText.show();
+            highlightText.hide();
+            toggleButton.text('(Show Less)');
+        }
+    }
 </script>
 
 </html>
