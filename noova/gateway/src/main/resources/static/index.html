@@ -286,8 +286,8 @@
         }
 
         .fixed-size-img {
-            width: 400px;
-            height: 400px;
+            width: 250px;
+            height: 250px;
             object-fit: cover;
             display: block;
         }
@@ -317,7 +317,7 @@
             padding: 10px; /* Adjust padding to make the box smaller */
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow */
             background-color: #fff;
-            width: 500px; /* Optional: Set a max width for the section */
+            width: 260px; /* Optional: Set a max width for the section */
             display: inline-block; /* Ensures sections don’t span the full width */
         }
 
@@ -328,8 +328,8 @@
 
         /* Image styles */
         .fixed-size-img {
-            width: 300px;
-            height: 300px;
+            width: 230px;
+            height: 230px;
             object-fit: cover;
             margin: 0 auto;
         }
@@ -725,7 +725,8 @@
             const scrolled = document.documentElement.scrollTop;
 
             // Trigger loading more results when scrolled to 90% of the page
-            if (scrolled / scrollableHeight > 0.9 && !isFetchingMoreResults && hasMoreResults) {
+            if (scrolled >= scrollableHeight - 1 && !isFetchingMoreResults && hasMoreResults) {
+                console.log("trigger more");
                 loadMoreResults();
             }
         }
@@ -741,16 +742,19 @@
             query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').trim();
 
             const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v4';
+            const adjustedLimit = searchMode === 'Image' ? 50 : limit; // Set limit to 50 for image search
+
             if (offset === 0) {
-                offset += limit; // Ensure the first batch is correctly set to the limit
+                offset += adjustedLimit; // Ensure the first batch is correctly set to the limit
             }
+
             $.ajax({
                 url: route,
                 method: 'GET',
                 data: {
                     query: query,
                     offset: offset,
-                    limit: limit
+                    limit: adjustedLimit
                 },
                 success: function (response) {
                     hideLoadingSpinner();
@@ -768,7 +772,7 @@
                     }
 
                     // Update offset
-                    offset += limit;
+                    offset += adjustedLimit;
                 },
                 error: function (xhr, status, error) {
                     hideLoadingSpinner();
@@ -784,10 +788,26 @@
 
         function appendImageResults(newResults) {
             const resultsContainer = $('#results');
-            newResults.forEach(imageResult => {
-                // Your logic to append image results
-                const resultItem = $('<div>').addClass('image-result-section image-section');
-                resultItem.html(`
+            const keys = Object.keys(newResults);
+            //console.log("keys: " + keys);
+            const start = (currentPage - 1) * resultsPerPage;
+            const end = Math.min(start + resultsPerPage, keys.length);
+
+
+            for (let i = start; i < end; i++) {
+                const key = keys[i];
+                const imageUrls = newResults[key];
+
+                imageUrls.forEach((url) => {
+                    if (!url.includes("http")) {
+                        console.warn(`Skipping invalid URL: ${url}`);
+                        return; // Skip to the next URL
+                    }
+                    const img = new Image();
+                    img.onload = function () {
+                        // If the image loads successfully, display it
+                        const resultItem = $('<div>').addClass('image-result-section image-section');
+                        resultItem.html(`
                                 <div class="image-wrapper">
                                     <a href="${url}" target="_blank">
                                         <img src="${url}" alt="${key}" class="fixed-size-img">
@@ -797,7 +817,37 @@
                                     </div>
                                 </div>
                             `);
-                resultsContainer.append(resultItem);
+                        resultsContainer.append(resultItem);
+                    };
+                    img.onerror = function () {
+                        console.warn(`Image URL not reachable: ${url}`);
+                    };
+                    img.src = url; // Trigger the load/error events
+                });
+            }
+
+            resultsContainer.on('click', '.dynamic-link', function (e) {
+                e.preventDefault();
+                const key = $(this).data('key');
+
+                // Send GET request to fetch the dynamic URL
+                $.ajax({
+                    url: '/search/pagelink',
+                    method: 'GET',
+                    data: { query: key },
+                    success: function (response) {
+                        if (response && typeof response === 'string' && response.trim() !== '') {
+                            window.location.href = response.trim(); // Redirect to the URL
+                        } else {
+                            // Show a popup if the URL is not found
+                            alert('No URL found for this link.');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error(`Error fetching URL for ${key}:`, error);
+                        alert('An error occurred while fetching the URL.');
+                    }
+                });
             });
         }
 

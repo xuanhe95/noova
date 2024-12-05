@@ -89,12 +89,13 @@ public class ImageController implements IController{
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .toList();
 
+        List<Map.Entry<String, Integer>> view = sortedImages.subList(offset, Math.min(offset + limit, sortedImages.size()));
 
         SortedMap<String, Set<String>> result = new TreeMap<>();
 
-        for (int i = 0; i < Math.min(sortedImages.size(), limit); i++) {
-            result.put(sortedImages.get(i).getKey(), images.get(sortedImages.get(i).getKey()));
-        }
+        view.forEach(rest->{
+            result.put(rest.getKey(),images.get(rest.getKey()));
+        });
 
         String json = OBJECT_MAPPER.writeValueAsString(result);
         res.body(json);
@@ -106,8 +107,9 @@ public class ImageController implements IController{
         log.info("[search] Searching by images");
         String keyword = req.queryParams("query");
 
-        int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
+        int limit = (req.queryParams("limit") == null) ? 50 : Integer.parseInt(req.queryParams("limit"));
         int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
+        System.out.println( "limit: " + limit + " offset " + offset);
 
         if(keyword == null || keyword.isEmpty()){
             log.warn("[search] Empty image keyword received");
@@ -154,16 +156,29 @@ public class ImageController implements IController{
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .toList();
 
-        System.out.println("Sort value done. ");
         SortedMap<String, Set<String>> result = new TreeMap<>();
-
-        for (int i = 0; i < Math.min(sortedImages.size(), limit); i++) {
-            result.put(sortedImages.get(i).getKey(), images.get(sortedImages.get(i).getKey()));
+        if (offset>= sortedImages.size()) {
+            respondWithJson(res, result);
+            return;
         }
+        int toIndex = Math.min(offset + limit, sortedImages.size());
+        List<Map.Entry<String, Integer>> view = sortedImages.subList(offset, toIndex);
 
-        String json = OBJECT_MAPPER.writeValueAsString(result);
-        res.body(json);
-        res.type("application/json");
+        view.forEach(entry -> result.put(entry.getKey(), images.get(entry.getKey())));
+
+        respondWithJson(res, result);
+
+    }
+
+    private void respondWithJson(Response res, Object data) {
+        try {
+            String json = OBJECT_MAPPER.writeValueAsString(data);
+            res.body(json);
+            res.type("application/json");
+        } catch (Exception e) {
+            res.status(500,"Server Error");
+            res.body("{\"error\":\"Failed to generate JSON response\"}");
+        }
     }
 
 }
