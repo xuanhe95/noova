@@ -150,7 +150,8 @@ public class FastIPIndexer {
                     long currentTime = System.nanoTime();
                     double deltaTime = (currentTime - lastTime) / 1_000_000.0;
                     String formattedTime = LocalDateTime.now().format(formatter);
-                    System.out.printf("Count: %d, Time: %s, Delta Time: %.6f ms%n",
+                    System.out.printf("Count: %d, Time: %s, Delta Time: %" +
+                                    ".6f ms%n",
                             count, formattedTime, deltaTime);
                     lastTime = currentTime;
                 }

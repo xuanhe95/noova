@@ -60,7 +60,7 @@ public class IPLocation {
 
     public static void main(String[] args) {
 
-        String ip = "208.80.154.224"; // 示例 IP
+        String ip = "208.80.154.224";
         String zipCode = getZipFromIP(ip);
 
         if (zipCode != null) {
