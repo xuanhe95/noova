@@ -15,8 +15,10 @@ import org.noova.webserver.Request;
 import org.noova.webserver.Response;
 
 import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -871,7 +873,7 @@ public class SearchController implements IController {
     }
 
 
-
+    private static final Map<String, SoftReference<List<Map<String, Object>>>> QUERY_PAGE_CACHE = new HashMap<>();
 
     @Route(path = "/search/v5", method = "GET")
     private void searchByKeywordsV5(Request req, Response res) throws IOException {
@@ -879,11 +881,33 @@ public class SearchController implements IController {
         String query = req.queryParams("query");
         int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
         int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
+
+        int pageLimit = (req.queryParams("pageLimit") == null) ? 200 : Integer.parseInt(req.queryParams("pageLimit"));
+        int spanLimit = (req.queryParams("span") == null) ? 50 : Integer.parseInt(req.queryParams("context"));
+        int snippetLimit = (req.queryParams("snippet") == null) ? 60 : Integer.parseInt(req.queryParams("snippet"));
+
         double tfIDFWeight = (req.queryParams("tf") == null) ? 0.4 : Double.parseDouble(req.queryParams("tf"));
         double pgrkWeight = (req.queryParams("pr") == null) ? 0.14 : Double.parseDouble(req.queryParams("pg"));
         double titleDespMatchWeight = (req.queryParams("tt") == null) ? 0.16 : Double.parseDouble(req.queryParams("tt"));
 
         List<String> queryTokens = Parser.getLammelizedWords(query);
+        String token = String.join(" ", queryTokens);
+
+        while(QUERY_PAGE_CACHE.containsKey(token)){
+            System.out.println("Query token hits");
+            var cachedValue = QUERY_PAGE_CACHE.get(token).get();
+            if(cachedValue == null){
+                QUERY_PAGE_CACHE.remove(token);
+                break;
+            }
+            List<Map<String, Object>> view = cachedValue.subList(offset, Math.min(offset + limit, cachedValue.size()));
+            String json = OBJECT_MAPPER.writeValueAsString(view);
+            res.body(json);
+            res.type("application/json");
+            return;
+        }
+
+
         log.info("[search] Searching by query: " + query);
 
         Map<String, List<Integer>> bestPositions = SEARCH_SERVICE.calculateSortedPosition(queryTokens);
@@ -942,7 +966,7 @@ public class SearchController implements IController {
         long start = System.currentTimeMillis();
         System.out.println("Start fetching page rank");
 
-        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),2000);
+        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),pageLimit);
 
         System.out.println("sortedUrlsMap: " + sortedUrlsMap.size());
 
@@ -1048,6 +1072,9 @@ public class SearchController implements IController {
         results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
 
 
+
+        QUERY_PAGE_CACHE.put(token, new SoftReference<>(results));
+
         List<Map<String, Object>> view = results.subList(offset, Math.min(offset + limit, results.size()));
 
         view.forEach(result -> {
@@ -1069,8 +1096,8 @@ public class SearchController implements IController {
 
                 Map<String, List<Integer>> positions = SEARCH_SERVICE.getKeywordPositions(idToHashedUrl, keywordRows, hashedUrlToId.get(hashedUrl));
 
-                List<Integer> best = SEARCH_SERVICE.getBestPositionWithSorted(queryTokens, positions, queryTokens.size() + 5, 50);
-                String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, best, context_view);
+                List<Integer> best = SEARCH_SERVICE.getBestPositionWithSorted(queryTokens, positions, queryTokens.size() + 5, spanLimit);
+                String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, best, snippetLimit);
 
                 result.put("context", snippet);
                 //result.put("context", snippet);
