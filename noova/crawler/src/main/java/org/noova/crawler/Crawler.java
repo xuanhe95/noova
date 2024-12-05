@@ -1,13 +1,11 @@
 package org.noova.crawler;
 
+import org.apache.tika.metadata.Metadata;
 import org.noova.flame.FlameContext;
 import org.noova.flame.FlameRDD;
 import org.noova.flame.FlameRDDImpl;
 import org.noova.kvs.Row;
-import org.noova.tools.Hasher;
-import org.noova.tools.Logger;
-import org.noova.tools.PropertyLoader;
-import org.noova.tools.URLParser;
+import org.noova.tools.*;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -16,10 +14,7 @@ import org.jsoup.select.Elements;
 import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.*;
 import java.lang.ref.SoftReference;
 import java.net.*;
 import java.time.LocalDateTime;
@@ -68,7 +63,7 @@ public class Crawler implements Serializable {
     private static final long ITERATION_TIMEOUT = 1 * 60 * 1000; // 45 minutes
 
     private static final boolean ENABLE_URL_CACHE = true;
-
+    private static final boolean ENABLE_FILE_PARSER = true;
     private static final List<String> US_CITIES = List.of(
             "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose",
             "Austin", "Jacksonville", "Fort Worth", "Columbus", "Indianapolis", "Charlotte", "San Francisco", "Seattle", "Denver", "Washington",
@@ -549,34 +544,59 @@ public class Crawler implements Serializable {
         conn.connect();
         updateHostLastAccessTime(ctx, getTopLevelDomain(url.getProtocol(), url.getHost()));
         int responseCode = conn.getResponseCode();
+        String contentType = conn.getContentType();
         log.info("[crawler] get request response code: "+ responseCode);
 
-        if (responseCode == 200 && conn.getContentType() != null && conn.getContentType().contains("text/html")) {
+        if (responseCode == 200 && conn.getContentType() != null ) {
 
-            byte[] rawPage = conn.getInputStream().readAllBytes();
+            if (contentType.startsWith("application/")) {
+                log.info("[crawler] File detected at URL: " + normalizedUrl);
 
-            String page = new String(rawPage);
-            //String[] normalizedPages = normalizePage(page);
-            //String normalizedPage = String.join(" ", normalizedPages);
+                try (InputStream fileStream = conn.getInputStream()) {
+                    FileParser.ParsedFile parsedFile = FileParser.extractTextAndMetadata(fileStream , contentType);
+                    Metadata metadata = parsedFile.getMetadata();
+                    String iconUrl = FileParser.getIconHtml(contentType);
+                    String title = FileParser.getTitle(metadata , normalizedUrl, contentType);
+                    String text = parsedFile.getText();
 
-            Document doc = Jsoup.parse(page, normalizedUrl);
+//                    System.out.println("text: "+parsedFile.getText());
+                    row.put("text" , text);
+                    row.put("page" , text); // file text are usually clean enough to put in text column tho
+                    row.put("url" , normalizedUrl);
+                    row.put("icon" , iconUrl);
+                    row.put("title" , title);
+                    row.put(PropertyLoader.getProperty("table.crawler.timestamp") , String.valueOf(LocalDateTime.now()));
 
-            // filter non-eng page
-            if (!isEnglishPage(doc, page)) {
-                log.info("[crawler] Skipping non-English page: " + normalizedUrl);
-                return new ArrayList<>();
-            }
+                    ctx.getKVS().putRow(CRAWLER_TABLE , row);
+                    updateAccessedTable(ctx , normalizedUrl);
+
+                    return new ArrayList<>(); // Skip link parsing for non-HTML
+                }
+            } else if (contentType.contains("text/html")) {
+                byte[] rawPage = conn.getInputStream().readAllBytes();
+
+                String page = new String(rawPage);
+                //String[] normalizedPages = normalizePage(page);
+                //String normalizedPage = String.join(" ", normalizedPages);
+
+                Document doc = Jsoup.parse(page , normalizedUrl);
+
+                // filter non-eng page
+                if (!isEnglishPage(doc , page)) {
+                    log.info("[crawler] Skipping non-English page: " + normalizedUrl);
+                    return new ArrayList<>();
+                }
 
 
-            // remove script, style, popup, ad, banner, dialog
-            doc.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
-                    ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
+                // remove script, style, popup, ad, banner, dialog
+                doc.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
+                        ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
 //            String visibleText = doc.body().text();
 
-            String visibleText = sanitizeText(parseVisibleText(doc));
-          //  Elements linkElements = doc.select("a");
-           // Elements imgElements = doc.select("img");
-           // Elements addressElements = doc.select(".address, address");
+                String visibleText = sanitizeText(parseVisibleText(doc));
+                //  Elements linkElements = doc.select("a");
+                // Elements imgElements = doc.select("img");
+                // Elements addressElements = doc.select(".address, address");
 
 //            for (Element link : linkElements) {
 //                String linkHref = link.attr("href");
@@ -584,85 +604,89 @@ public class Crawler implements Serializable {
 //                log.info("[crawler] Link: " + linkHref + " Text: " + linkText);
 //            }
 
-            String images = parseImages(doc);
-            String addresses = sanitizeText(parseAddresses(doc));
-            String description = sanitizeText(parseDescription(doc));
-            String icon = parseIcon(doc, normalizedUrl);
-            String title = sanitizeText(parseTitles(doc));
-            //String location = parseLocation(doc);
-            //String zipcodes = parseZipCodes(doc);
-            //String keywords = parseKeywords(doc);
+                String images = parseImages(doc);
+                String addresses = sanitizeText(parseAddresses(doc));
+                String description = sanitizeText(parseDescription(doc));
+                String icon = parseIcon(doc , normalizedUrl);
+                String title = sanitizeText(parseTitles(doc));
+                //String location = parseLocation(doc);
+                //String zipcodes = parseZipCodes(doc);
+                //String keywords = parseKeywords(doc);
 
-            //String normalizedPageText = filterPage(page);
+                //String normalizedPageText = filterPage(page);
 
-            String hashedPage = Hasher.hash(page);
+                String hashedPage = Hasher.hash(page);
 
-            // put the page into the table
-            row.put(PropertyLoader.getProperty("table.crawler.images"), images);
-            // scrawled time
-            row.put(PropertyLoader.getProperty("table.crawler.timestamp"), String.valueOf(LocalDateTime.now()));
-            // put original page to the page column
-            row.put(PropertyLoader.getProperty("table.crawler.page"), page);
-            // put normalized page to the text column
-            row.put(PropertyLoader.getProperty("table.crawler.text"), visibleText);
-            ///row.put(PropertyLoader.getProperty("table.crawler.text"), normalizedPageText);
-            // parse titles and put them to the title column
-            //List<String> titles = parseTitles(page);
-            //row.put(PropertyLoader.getProperty("table.crawler.title"), String.join(" ", titles));
-            row.put(PropertyLoader.getProperty("table.crawler.title"), title);
+                // put the page into the table
+                row.put(PropertyLoader.getProperty("table.crawler.images") , images);
+                // scrawled time
+                row.put(PropertyLoader.getProperty("table.crawler.timestamp") , String.valueOf(LocalDateTime.now()));
+                // put original page to the page column
+                row.put(PropertyLoader.getProperty("table.crawler.page") , page);
+                // put normalized page to the text column
+                row.put(PropertyLoader.getProperty("table.crawler.text") , visibleText);
+                ///row.put(PropertyLoader.getProperty("table.crawler.text"), normalizedPageText);
+                // parse titles and put them to the title column
+                //List<String> titles = parseTitles(page);
+                //row.put(PropertyLoader.getProperty("table.crawler.title"), String.join(" ", titles));
+                row.put(PropertyLoader.getProperty("table.crawler.title") , title);
 
-            row.put(PropertyLoader.getProperty("table.crawler.addresses"), addresses);
+                row.put(PropertyLoader.getProperty("table.crawler.addresses") , addresses);
 
-            row.put(PropertyLoader.getProperty("table.crawler.description"), description);
+                row.put(PropertyLoader.getProperty("table.crawler.description") , description);
 
-            row.put(PropertyLoader.getProperty("table.crawler.icon"), icon);
+                row.put(PropertyLoader.getProperty("table.crawler.icon") , icon);
 
-            //row.put(PropertyLoader.getProperty("table.crawler.location"), location);
+                //row.put(PropertyLoader.getProperty("table.crawler.location"), location);
 
-            //row.put(PropertyLoader.getProperty("table.crawler.zipcodes"), zipcodes);
+                //row.put(PropertyLoader.getProperty("table.crawler.zipcodes"), zipcodes);
 
-            ctx.getKVS().putRow(CRAWLER_TABLE, row);
+                ctx.getKVS().putRow(CRAWLER_TABLE , row);
 
-            updateAccessedTable(ctx, normalizedUrl);
+                updateAccessedTable(ctx , normalizedUrl);
 
-            if(ENABLE_CANONICAL){
-                Row pageRow = ctx.getKVS().getRow(CANONICAL_PAGE_TABLE, hashedPage);
-                if (pageRow == null || pageRow.get("canonicalURL") == null || pageRow.get("canonicalURL").equals(normalizedUrl)) {
-                    log.info("[crawler] Creating new canonical URL: " + normalizedUrl);
+                if (ENABLE_CANONICAL) {
+                    Row pageRow = ctx.getKVS().getRow(CANONICAL_PAGE_TABLE , hashedPage);
+                    if (pageRow == null || pageRow.get("canonicalURL") == null || pageRow.get("canonicalURL").equals(normalizedUrl)) {
+                        log.info("[crawler] Creating new canonical URL: " + normalizedUrl);
 
-                    pageRow = new Row(hashedPage);
-                    pageRow.put("canonicalURL", normalizedUrl);
-                    pageRow.put("page", page);
+                        pageRow = new Row(hashedPage);
+                        pageRow.put("canonicalURL" , normalizedUrl);
+                        pageRow.put("page" , page);
 
 
-                    log.info("[crawler] kvs addr: " + ctx.getKVS().getCoordinator());
+                        log.info("[crawler] kvs addr: " + ctx.getKVS().getCoordinator());
 
-                    ctx.getKVS().putRow(CANONICAL_PAGE_TABLE, pageRow);
-                } else {
-                    String canonicalURL = pageRow.get("canonicalURL");
-                    log.warn("[crawler] Page is duplicated with + " + canonicalURL + ". Creating canonical URL: " + normalizedUrl);
+                        ctx.getKVS().putRow(CANONICAL_PAGE_TABLE , pageRow);
+                    } else {
+                        String canonicalURL = pageRow.get("canonicalURL");
+                        log.warn("[crawler] Page is duplicated with + " + canonicalURL + ". Creating canonical URL: " + normalizedUrl);
+                    }
                 }
-            }
 
 
-            if(checkTimeOut(iterationStartTime)){
-                log.warn("[crawler] Iteration timeout. Exiting.");
-                if(shouldRandomDropForAll()){
-                    log.warn("[crawler] Randomly dropping URL: " + normalizedUrl);
-                    return new ArrayList<>();
+                if (checkTimeOut(iterationStartTime)) {
+                    log.warn("[crawler] Iteration timeout. Exiting.");
+                    if (shouldRandomDropForAll()) {
+                        log.warn("[crawler] Randomly dropping URL: " + normalizedUrl);
+                        return new ArrayList<>();
+                    }
+                    return List.of(normalizedUrl);
                 }
-                return List.of(normalizedUrl);
+
+                List<String> links = parsePageLinks(ctx , page , normalizedUrl , blacklistTable , verticalSeedDomains);
+
+                ctx.getKVS().put(CRAWLER_TABLE , row.key() , PropertyLoader.getProperty("table.crawler.links") , String.join("\n" , links));
+
+                return links;
+
+                //String hashedUrl = Hasher.hash(normalizedUrl);
+                //URL_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
+
             }
-
-            List<String> links = parsePageLinks(ctx, page, normalizedUrl, blacklistTable, verticalSeedDomains);
-
-            ctx.getKVS().put(CRAWLER_TABLE, row.key(), PropertyLoader.getProperty("table.crawler.links"), String.join("\n", links));
-
-            return links;
-
-            //String hashedUrl = Hasher.hash(normalizedUrl);
-            //URL_CACHE.put(hashedUrl, new SoftReference<>(hashedUrl));
         }
+
+
         return new ArrayList<>();
     }
 

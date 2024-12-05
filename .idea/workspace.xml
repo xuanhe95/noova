@@ -1,11 +1,86 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="AutoImportSettings">
-    <option name="autoReloadType" value="ALL" />
+    <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8f6aa40d-a9ab-49b4-b825-cb81f8e3d12c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" afterDir="false" />
+    <list default="true" id="f80438ac-a322-413c-93eb-9ece9a0ba79f" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_annotations_2_11_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_annotations_2_13_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_annotations_2_18_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_core_2_11_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_core_2_13_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_core_2_18_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_databind_2_11_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_databind_2_13_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_jackson_core_jackson_databind_2_18_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_fasterxml_woodstox_woodstox_core_6_2_8.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_code_findbugs_jsr305_3_0_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_code_gson_gson_2_9_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_errorprone_error_prone_annotations_2_11_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_guava_failureaccess_1_0_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_guava_guava_31_1_jre.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_guava_listenablefuture_9999_0_empty_to_avoid_conflict_with_guava.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_j2objc_j2objc_annotations_1_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_intellij_annotations_12_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_maxmind_db_maxmind_db_2_0_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_maxmind_geoip2_geoip2_2_15_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_maxmind_geoip2_geoip2_3_0_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_optimaize_languagedetector_language_detector_0_6.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_sun_activation_jakarta_activation_1_2_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_sun_istack_istack_commons_runtime_3_0_12.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_sun_xml_messaging_saaj_saaj_impl_1_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__commons_codec_commons_codec_1_15.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__commons_io_commons_io_2_11_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__commons_logging_commons_logging_1_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_activation_jakarta_activation_api_1_2_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_annotation_jakarta_annotation_api_1_3_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_jws_jakarta_jws_api_2_1_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_ws_rs_jakarta_ws_rs_api_2_1_6.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_xml_bind_jakarta_xml_bind_api_2_3_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_xml_soap_jakarta_xml_soap_api_1_4_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__jakarta_xml_ws_jakarta_xml_ws_api_2_3_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__junit_junit_4_13_2.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__net_arnx_jsonic_1_2_11.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_core_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_rt_frontend_jaxrs_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_rt_rs_client_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_rt_security_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_cxf_cxf_rt_transports_http_3_5_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_geronimo_specs_geronimo_jta_1_1_spec_1_1_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_httpcomponents_httpclient_4_5_13.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_httpcomponents_httpcore_4_4_13.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_opennlp_opennlp_tools_2_3_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_tika_tika_core_1_28_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_tika_tika_langdetect_1_28_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_ws_xmlschema_xmlschema_core_2_3_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_checkerframework_checker_qual_3_12_0.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_codehaus_woodstox_stax2_api_4_2_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_glassfish_jaxb_jaxb_runtime_2_3_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_glassfish_jaxb_txw2_2_3_5.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_hamcrest_hamcrest_core_1_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_json_json_20231013.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_jsoup_jsoup_1_18_1.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_jvnet_staxex_stax_ex_1_8_3.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_slf4j_slf4j_api_1_7_36.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_slf4j_slf4j_simple_1_7_36.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/tools/src/main/java/org/noova/tools/FileParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/BuildProcessedTable.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/BuildProcessedTable.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler_url.properties" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler_url.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/gateway/dependency-reduced-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/dependency-reduced-pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/gateway/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/test/java/org/noova/kvs/GenericTest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/kvs/src/test/java/org/noova/kvs/HW4CoordinatorTest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/FastPageRank.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pagerank/src/main/java/org/noova/pagerank/FastPageRank.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/webserver/dependency-reduced-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/webserver/dependency-reduced-pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/webserver/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/noova/webserver/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -14,28 +89,6 @@
   </component>
   <component name="CodeStyleSettingsInfer">
     <option name="done" value="true" />
-  </component>
-  <component name="ExternalProjectsData">
-    <projectState path="$PROJECT_DIR$/project">
-      <ProjectState />
-    </projectState>
-  </component>
-  <component name="ExternalProjectsManager">
-    <system id="SBT">
-      <state>
-        <projects_view>
-          <tree_state>
-            <expand>
-              <path>
-                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
-                <item name="project" type="f1a62948:ProjectNode" />
-              </path>
-            </expand>
-            <select />
-          </tree_state>
-        </projects_view>
-      </state>
-    </system>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -47,13 +100,6 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/project/src/cis5550/kvs/Coordinator.java" root0="FORCE_HIGHLIGHTING" />
-  </component>
-  <component name="KubernetesApiPersistence">{}</component>
-  <component name="KubernetesApiProvider">{
-  &quot;isMigrated&quot;: true
-}</component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -67,68 +113,32 @@
   <component name="ProjectCodeStyleSettingsMigration">
     <option name="version" value="2" />
   </component>
-  <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 8
-}</component>
-  <component name="ProjectId" id="2oftgIYxwQgmeNotYISV949IsnF" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectId" id="2poA7cNirQFFm94gtU2RRsSXlDw" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.FlameCoordinator.executor&quot;: &quot;Run&quot;,
-    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;openjdk-19&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/ritazhang/Desktop/upenn-mcit/555/Noova/noova/crawler/src/main&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.build.tools.auto.reload&quot;: &quot;ALL&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.project.maven.ignored.files&quot;,
-    &quot;settings.editor.splitter.proportion&quot;: &quot;0.2711519&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_opened_file_path": "/Users/ritazhang/Desktop/upenn-mcit/555/24fa-cis5550-Noova",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
-  <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/noova/crawler/src/main" />
-      <recent name="$APPLICATION_CONFIG_DIR$/scratches" />
-      <recent name="$PROJECT_DIR$/noova/sample/ver3/worker3" />
-      <recent name="$PROJECT_DIR$/noova/sample2/worker2" />
-      <recent name="$PROJECT_DIR$/noova/sample2/worker1" />
-    </key>
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/noova/all-jars/worker1" />
-      <recent name="$PROJECT_DIR$/noova/indexer/src/main/resources/models" />
-      <recent name="$PROJECT_DIR$/noova/bin" />
-      <recent name="$PROJECT_DIR$/noova/sample/ver2" />
-      <recent name="$PROJECT_DIR$/noova/sample/ver1" />
-    </key>
-    <key name="CopyClassDialog.RECENTS_KEY">
-      <recent name="org.noova.flame.operation" />
-    </key>
-  </component>
-  <component name="RunManager" selected="Application.FastIndexer">
-    <configuration name="BuildProcessedTable" type="Application" factoryName="Application" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.BuildProcessedTable" />
+}]]></component>
+  <component name="RunManager" selected="Application.FastPageRank">
+    <configuration name="BuildDictionary" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.BuildDictionary" />
       <module name="crawler" />
-      <option name="PROGRAM_PARAMETERS" value="a b" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
       <extension name="coverage">
         <pattern>
@@ -140,14 +150,13 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="DirectIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.DirectIndexer" />
-      <module name="indexer" />
-      <option name="PROGRAM_PARAMETERS" value="a b" />
+    <configuration name="BuildImgDictionary" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.BuildImgDictionary" />
+      <module name="crawler" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="org.noova.indexer.*" />
+          <option name="PATTERN" value="org.noova.crawler.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -155,14 +164,13 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="DirectIndexer2" type="Application" factoryName="Application" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.DirectIndexer2" />
-      <module name="indexer" />
-      <option name="PROGRAM_PARAMETERS" value="a m" />
+    <configuration name="BuildProcessedTable" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.BuildProcessedTable" />
+      <module name="crawler" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="org.noova.indexer.*" />
+          <option name="PATTERN" value="org.noova.crawler.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -170,8 +178,8 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="DirectPageRank" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="org.noova.pagerank.DirectPageRank" />
+    <configuration name="FastBuildGraph" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.pagerank.FastBuildGraph" />
       <module name="pagerank" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
       <extension name="coverage">
@@ -184,10 +192,23 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="FastImageIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.FastImageIndexer" />
+      <module name="indexer" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.indexer.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="FastIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.noova.indexer.FastIndexer" />
       <module name="indexer" />
-      <option name="PROGRAM_PARAMETERS" value="a b" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
       <extension name="coverage">
         <pattern>
@@ -199,116 +220,13 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="FlameSubmit" type="Application" factoryName="Application" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="org.noova.flame.FlameSubmit" />
-      <module name="flame" />
-      <option name="PROGRAM_PARAMETERS" value="jar org.noova.crawler.Crawler https://www.economist.com/" />
+    <configuration name="FastPageRank" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.pagerank.FastPageRank" />
+      <module name="pagerank" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="org.noova.flame.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="GatewayServer" type="Application" factoryName="Application">
-      <option name="ALTERNATIVE_JRE_PATH" value="19" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <option name="MAIN_CLASS_NAME" value="org.noova.gateway.GatewayServer" />
-      <module name="gateway" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="KVSCoordinator" type="Application" factoryName="Application">
-      <option name="ALTERNATIVE_JRE_PATH" value="19" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <option name="MAIN_CLASS_NAME" value="org.noova.kvs.Coordinator" />
-      <module name="kvs" />
-      <option name="PROGRAM_PARAMETERS" value="8000" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="KVSWorker1" type="Application" factoryName="Application">
-      <option name="ALTERNATIVE_JRE_PATH" value="19" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <option name="MAIN_CLASS_NAME" value="org.noova.kvs.Worker" />
-      <module name="kvs" />
-      <option name="PROGRAM_PARAMETERS" value="8001 localhost:8000 " />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="KVSWorker2" type="Application" factoryName="Application">
-      <option name="ALTERNATIVE_JRE_PATH" value="19" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <option name="MAIN_CLASS_NAME" value="org.noova.kvs.Worker" />
-      <module name="kvs" />
-      <option name="PROGRAM_PARAMETERS" value="8002 localhost:8000 " />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="ParseText" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="ALTERNATIVE_JRE_PATH" value="19" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.ParseText" />
-      <module name="crawler" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="org.noova.crawler.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="StoreProcessed" type="Application" factoryName="Application" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.StoreProcessed" />
-      <module name="crawler" />
-      <option name="PROGRAM_PARAMETERS" value="a b" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="org.noova.crawler.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="URLDict" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.URLDict" />
-      <module name="indexer" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="org.noova.indexer.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="test" type="Application" factoryName="Application" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="org.noova.kvs.test" />
-      <module name="kvs" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="org.noova.kvs.*" />
+          <option name="PATTERN" value="org.noova.pagerank.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -322,64 +240,23 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <list>
-      <item itemvalue="Application.FastIndexer" />
-      <item itemvalue="Application.FlameCoordinator" />
-      <item itemvalue="Application.FlameWorker1" />
-      <item itemvalue="Application.FlameWorker2" />
-      <item itemvalue="Application.BuildProcessedTable" />
-      <item itemvalue="Application.test" />
-      <item itemvalue="Application.StoreProcessed" />
-      <item itemvalue="Application.DirectIndexer2" />
-      <item itemvalue="Application.DirectIndexer" />
-      <item itemvalue="Application.FlameSubmit" />
-      <item itemvalue="Application.KVSWorker1" />
-      <item itemvalue="Application.KVSWorker2" />
-      <item itemvalue="Application.KVSCoordinator" />
-      <item itemvalue="Application.GatewayServer" />
-      <item itemvalue="Application.ParseText" />
-      <item itemvalue="Application.URLDict" />
-      <item itemvalue="Application.DirectPageRank" />
-    </list>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Application.ParseText" />
-        <item itemvalue="Application.URLDict" />
-        <item itemvalue="Application.DirectPageRank" />
-      </list>
-    </recent_temporary>
-  </component>
-  <component name="SharedIndexes">
-    <attachedChunks>
-      <set>
-        <option value="bundled-jdk-9823dce3aa75-28b599e66164-intellij.indexing.shared.core-IU-242.23726.103" />
-        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-IU-242.23726.103" />
-      </set>
-    </attachedChunks>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="24fa-cis5550-Noova" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="f685182f-71a7-43bb-8578-6f9141222a47" name="Changes" comment="" />
-      <created>1731272569387</created>
+      <changelist id="f80438ac-a322-413c-93eb-9ece9a0ba79f" name="Changes" comment="" />
+      <created>1733421887306</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1731272569387</updated>
-      <workItem from="1731272570246" duration="996000" />
-      <workItem from="1731273587212" duration="68000" />
-      <workItem from="1731275929052" duration="54000" />
-      <workItem from="1731304633683" duration="1599000" />
-      <workItem from="1731467545698" duration="1513000" />
-      <workItem from="1731533498272" duration="6362000" />
-      <workItem from="1731539893400" duration="29033000" />
-      <workItem from="1731781630206" duration="29000" />
-      <workItem from="1731781701776" duration="70861000" />
-      <workItem from="1732321449487" duration="224000" />
-      <workItem from="1733103442015" duration="3337000" />
-      <workItem from="1733120896599" duration="1620000" />
-      <workItem from="1733258350787" duration="3595000" />
-      <workItem from="1733295158572" duration="26000" />
-      <workItem from="1733295197905" duration="3730000" />
+      <updated>1733421887306</updated>
+      <workItem from="1733421888308" duration="10808000" />
     </task>
     <servers />
   </component>
@@ -396,20 +273,5 @@
         </entry>
       </map>
     </option>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/FastIndexer.java</url>
-          <line>18</line>
-          <option name="timeStamp" value="5" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
-  </component>
-  <component name="XSLT-Support.FileAssociations.UIState">
-    <expand />
-    <select />
   </component>
 </project>

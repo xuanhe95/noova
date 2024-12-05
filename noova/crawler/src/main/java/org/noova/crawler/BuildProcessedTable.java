@@ -135,10 +135,20 @@ public class BuildProcessedTable {
 //                text = parseVisibleText(body);
 //            }
 
-            Element body = Jsoup.parse(rawPageContent).body();
-            body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
-                    ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
-            String text = Parser.processWord(parseVisibleText(body));
+//            System.out.println("rawPageContent: "+rawPageContent);
+
+            String text ="";
+            if (page.get("contentType").startsWith("application/")) {
+                // Use rawPageContent directly for PDFs
+                text = Parser.processWord(rawPageContent);
+            } else{
+                Element body = Jsoup.parse(rawPageContent).body();
+                body.select("script, style, .popup, .ad, .banner, [role=dialog], footer, nav, aside, .sponsored, " +
+                        ".advertisement, iframe, span[data-icid=body-top-marquee], div[class^=ad-]").remove();
+                text = Parser.processWord(parseVisibleText(body));
+            }
+
+
 
             // store row for pt-processed
             Row processedRow = new Row(rowKey);
