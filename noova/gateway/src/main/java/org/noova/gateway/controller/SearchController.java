@@ -667,8 +667,11 @@ public class SearchController implements IController {
         double titleDespMatchWeight = (req.queryParams("tt") == null) ? 0.16 : Double.parseDouble(req.queryParams("tt"));
 
         List<String> queryTokens = Parser.getLammelizedWords(query);
-
         log.info("[search] Searching by query: " + query);
+
+        Map<String, List<Integer>> bestPositions = SEARCH_SERVICE.calculateSortedPosition(queryTokens);
+        double phraseMatchScore = SEARCH_SERVICE.calculatePhraseMatchScore(queryTokens, bestPositions);
+
         Map<String, Row> keywordRows = new HashMap<>();
 
         Set<String> mergedUrlIds = null;
@@ -754,6 +757,16 @@ public class SearchController implements IController {
                     }
                 }, executor);
 
+//                CompletableFuture<Double> phraseMatchScoreFuture = CompletableFuture.supplyAsync(() ->
+//                {
+//                    try {
+//                        return SEARCH_SERVICE.calculatePhraseMatchScore(row, queryTokens);
+//                    } catch (IOException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }, executor);
+
+
                 CompletableFuture<Map<String, Double>> docTfidfFuture = CompletableFuture.supplyAsync(() ->
                 {
                     try {
@@ -765,6 +778,7 @@ public class SearchController implements IController {
 
                 // Get results with timeout
                 double titleOGMatchScore = titleDespMatchWeight == 0.0 ? 0 : getWithTimeout(titleOGMatchScoreFuture, 0.0);
+//                double phraseMatchScore = phraseMatchWeight == 0.0 ? 0 : getWithTimeout(phraseMatchScoreFuture, 0.0);
                 Map<String, Double> docTfidf = tfIDFWeight == 0.0 ? new HashMap<>() : getWithTimeout(docTfidfFuture, new HashMap<>());
                 Map<String, Double> queryTfidf = tfIDFWeight == 0.0 ? new HashMap<>(): getWithTimeout(queryTfidfFuture, new HashMap<>());
                 double pageRank = entry.getValue();
@@ -776,7 +790,7 @@ public class SearchController implements IController {
                 double combinedScore = tfIDFWeight * tfidfSimilarity +
                         pgrkWeight * pageRank +
                         titleDespMatchWeight * titleOGMatchScore +
-                        phraseMatchWeight * 0;
+                        phraseMatchWeight * phraseMatchScore;
 
                 // Add result
                 Map<String, Object> result = new HashMap<>();

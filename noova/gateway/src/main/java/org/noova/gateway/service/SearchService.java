@@ -41,7 +41,7 @@ public class SearchService implements IService {
     private static final String INDEX_IMAGE_TABLE = PropertyLoader.getProperty("table.image");
     private static final String PROCESSED_TABLE = PropertyLoader.getProperty("table.processed");
     private static final String ID_URL_TABLE = PropertyLoader.getProperty("table.id-url");
-    private static final Map<String, String> ID_URL_CACHE = new ConcurrentHashMap<>();
+//    private static final Map<String, String> ID_URL_CACHE = new ConcurrentHashMap<>();
 
     private static final KVS KVS = storageStrategy.getKVS();
 
@@ -49,6 +49,9 @@ public class SearchService implements IService {
 
     private static final Map<String, Double> PAGE_RANK_CACHE = new ConcurrentHashMap<>();
     private final Map<String, Row> processedTableCache = new ConcurrentHashMap<>(); // recent cache
+
+    private static Map<String, String> URL_TO_ID_CACHE = new HashMap<>();
+    private static Map<String, String> ID_TO_URL_CACHE = new HashMap<>();
 
 
 
@@ -79,11 +82,13 @@ public class SearchService implements IService {
 
         // preload caches
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        executor.submit(this::preloadIDUrlCache);
+//        executor.submit(this::preloadIDUrlCache);
         executor.submit(this::preloadPageRankCache);
         executor.shutdown();
 
         //loadWordToUrlsCache();
+        loadUrlToIdCache();
+        loadIdToUrlCache();
     }
 
 
@@ -104,24 +109,24 @@ public class SearchService implements IService {
 //        }
 //    }
 
-    public  void preloadIDUrlCache() {
-        Iterator<Row> rows = null;
-        try {
-            rows = KVS.scan(ID_URL_TABLE, null, null);
-            while (rows.hasNext()) {
-                Row row = rows.next();
-                String fromUrlId = row.key();
-                String hashedUrl = row.get("value");
-                if (fromUrlId != null && hashedUrl != null) {
-                    ID_URL_CACHE.put(fromUrlId, hashedUrl);
-                }
-            }
-            log.info("[cache] Preloaded ID_URL_TABLE with " + ID_URL_CACHE.size() + " entries.");
-        } catch (IOException e) {
-            log.error("[cache] Error preloading ID_URL_TABLE", e);
-            throw new RuntimeException(e);
-        }
-    }
+//    public  void preloadIDUrlCache() {
+//        Iterator<Row> rows = null;
+//        try {
+//            rows = KVS.scan(ID_URL_TABLE, null, null);
+//            while (rows.hasNext()) {
+//                Row row = rows.next();
+//                String fromUrlId = row.key();
+//                String hashedUrl = row.get("value");
+//                if (fromUrlId != null && hashedUrl != null) {
+//                    ID_URL_CACHE.put(fromUrlId, hashedUrl);
+//                }
+//            }
+//            log.info("[cache] Preloaded ID_URL_TABLE with " + ID_URL_CACHE.size() + " entries.");
+//        } catch (IOException e) {
+//            log.error("[cache] Error preloading ID_URL_TABLE", e);
+//            throw new RuntimeException(e);
+//        }
+//    }
 
     public void preloadPageRankCache() {
         try {
@@ -144,7 +149,7 @@ public class SearchService implements IService {
     public Row getCachedRow(String tableName, String key) {
         return processedTableCache.computeIfAbsent(key, k -> {
             try {
-                return KVS.getRow(ID_URL_TABLE, k);
+                return KVS.getRow(tableName, k);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -154,10 +159,14 @@ public class SearchService implements IService {
     public String getLinkFromID(String urlId) throws IOException {
         System.out.println("here in getLinkFromID");
         String hashedUrl = "";
-        if(ID_URL_CACHE.containsKey(urlId)){
-            hashedUrl = ID_URL_CACHE.get(urlId);
+//        if(ID_URL_CACHE.containsKey(urlId)){
+//            hashedUrl = ID_URL_CACHE.get(urlId);
+//            System.out.println("found in cache: "+hashedUrl);
+//        }
+        if(ID_TO_URL_CACHE.containsKey(urlId)){
+            hashedUrl = ID_TO_URL_CACHE.get(urlId);
             System.out.println("found in cache: "+hashedUrl);
-        }else{
+        } else{
             byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, urlId, "value");
             if(hashedUrlByte != null){
                 hashedUrl = new String(hashedUrlByte);
@@ -248,51 +257,6 @@ public class SearchService implements IService {
         return result;
     }
 
-    public String getTitle(String hashedUrl) throws IOException {
-        Row row = KVS.getRow(PROCESSED_TABLE, hashedUrl);
-        if(row==null) return "TBD";
-        return CapitalizeTitle.toTitleCase(row.get("title"));
-    }
-
-    public double calculateTitleMatchScore(String query, String title) throws IOException {
-        // [ranking] - title weight
-
-        if (title == null || title.isEmpty()) {
-            return 0.0;
-        }
-
-        List<String> titleTokens = Arrays.asList(title.toLowerCase().split("\\s+"));
-        List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
-
-        // count match
-        long matchCount = queryTokens.stream()
-                .filter(titleTokens::contains)
-                .count();
-
-        // norm weight by title size
-        return (double) matchCount / titleTokens.size();
-    }
-
-    public String getOGDescription(String hashedUrl) throws IOException {
-        Row row = KVS.getRow(PROCESSED_TABLE, hashedUrl);
-        if (row == null) return "";
-        return row.get("description");
-    }
-
-    public double calculateOGDescriptionMatch(String hashedUrl, String query) throws IOException {
-        String ogDescription = getOGDescription(hashedUrl);
-        if (ogDescription == null || ogDescription.isEmpty()) return 0.0;
-
-        List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
-        List<String> descriptionTokens = Arrays.asList(ogDescription.toLowerCase().split("\\s+"));
-
-        long matchCount = queryTokens.stream()
-                .filter(descriptionTokens::contains)
-                .count();
-
-        return (double) matchCount / queryTokens.size();
-    }
-
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 
@@ -311,7 +275,7 @@ public class SearchService implements IService {
                 System.out.println("Loading to cache");
                 KVS.scan(INDEX_TABLE, null, null).forEachRemaining(row -> {
                     String word = row.key();
-                    Set<String> urls = new HashSet<>(row.columns());
+//                    Set<String> urls = new HashSet<>(row.columns());
                     WORD_TO_URLS_CACHE.put(word, new ArrayList<>(row.columns()));
                 });
                 CacheManager.getInstance().saveCache("wordToUrlCache", WORD_TO_URLS_CACHE);
@@ -325,11 +289,56 @@ public class SearchService implements IService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-
-
-
     }
+
+    private static void loadUrlToIdCache() {
+        try {
+            // Load existing cache or initialize it
+            URL_TO_ID_CACHE = CacheManager.getInstance().getCache("urlToIdCache") == null ? new HashMap<>() :
+                    (Map<String, String>) CacheManager.getInstance().getCache("urlToIdCache");
+
+            if (URL_TO_ID_CACHE.isEmpty()) {
+                System.out.println("Loading URL to ID cache");
+                KVS.scan("pt-urltoid", null, null).forEachRemaining(row -> {
+                    String url = row.key();
+                    String id = row.get("value");
+                    if (url != null && id != null) {
+                        URL_TO_ID_CACHE.put(url, id);
+                    }
+                });
+                CacheManager.getInstance().saveCache("urlToIdCache", URL_TO_ID_CACHE);
+            }
+
+            System.out.println("Loaded URL to ID cache with size: " + URL_TO_ID_CACHE.size());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void loadIdToUrlCache() {
+        try {
+            // Load existing cache or initialize it
+            ID_TO_URL_CACHE = CacheManager.getInstance().getCache("idToUrlCache") == null ? new HashMap<>() :
+                    (Map<String, String>) CacheManager.getInstance().getCache("idToUrlCache");
+
+            if (ID_TO_URL_CACHE.isEmpty()) {
+                System.out.println("Loading ID to URL cache");
+                KVS.scan("pt-idtourl", null, null).forEachRemaining(row -> {
+                    String id = row.key();
+                    String url = row.get("value");
+                    if (id != null && url != null) {
+                        ID_TO_URL_CACHE.put(id, url);
+                    }
+                });
+                CacheManager.getInstance().saveCache("idToUrlCache", ID_TO_URL_CACHE);
+            }
+
+            System.out.println("Loaded ID to URL cache with size: " + ID_TO_URL_CACHE.size());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 //    public Map<String, Map<String, List<Integer>>> searchByKeywordsIntersection(List<String> keywords) throws IOException {}
 
@@ -424,10 +433,13 @@ public class SearchService implements IService {
             String hashedUrl = null;
 
 
-            if(ID_URL_CACHE.containsKey(fromUrlId)){
-                hashedUrl = ID_URL_CACHE.get(fromUrlId);
-            }
-            else{
+//            if(ID_URL_CACHE.containsKey(fromUrlId)){
+//                hashedUrl = ID_URL_CACHE.get(fromUrlId);
+//            }
+
+            if(ID_TO_URL_CACHE.containsKey(fromUrlId)){
+                hashedUrl = ID_TO_URL_CACHE.get(fromUrlId);
+            } else{
                 byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, fromUrlId, "value");
                 if(hashedUrlByte != null){
                     hashedUrl = new String(hashedUrlByte);
@@ -435,6 +447,8 @@ public class SearchService implements IService {
                     continue;
                 }
             }
+
+
 
             allResults.put(hashedUrl, result);
 
@@ -547,8 +561,12 @@ public class SearchService implements IService {
 
             String hashedUrl = null;
 
-            if(ID_URL_CACHE.containsKey(fromUrlId)){
-                hashedUrl = ID_URL_CACHE.get(fromUrlId);
+//            if(ID_URL_CACHE.containsKey(fromUrlId)){
+//                hashedUrl = ID_URL_CACHE.get(fromUrlId);
+//            }
+
+            if(ID_TO_URL_CACHE.containsKey(fromUrlId)){
+                hashedUrl = ID_TO_URL_CACHE.get(fromUrlId);
             }
             else{
                 byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, fromUrlId, "value");
@@ -604,15 +622,31 @@ public class SearchService implements IService {
 
         for (String fromUrlId : fromIds) {
             String texts = row.get(fromUrlId);
-            byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, fromUrlId, "value");
+
+
+//            byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, fromUrlId, "value");
 
             String hashedUrl = null;
 
-            if(hashedUrlByte != null){
-                hashedUrl = new String(hashedUrlByte);
-            } else{
-                continue;
+//            if(hashedUrlByte != null){
+//                hashedUrl = new String(hashedUrlByte);
+//            } else{
+//                continue;
+//            }
+
+            if(ID_TO_URL_CACHE.containsKey(fromUrlId)){
+                hashedUrl = ID_TO_URL_CACHE.get(fromUrlId);
             }
+            else{
+                byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, fromUrlId, "value");
+                if(hashedUrlByte != null){
+                    hashedUrl = new String(hashedUrlByte);
+                }else{
+                    continue;
+                }
+            }
+
+
 //            String hashedUrl = ID_URL_CACHE.get(fromUrlId);
             if(texts.isEmpty()){
                 continue;
@@ -1271,7 +1305,9 @@ public class SearchService implements IService {
         List<String> queryTokens = Arrays.asList(query.toLowerCase().split("\\s+"));
 
         // convert hashurl to id
-        String urlID = KVS.getRow("pt-urltoid", hashedUrl).get("value");
+//        String urlID = KVS.getRow("pt-urltoid", hashedUrl).get("value");
+        String urlID = URL_TO_ID_CACHE.get(hashedUrl);
+
         if (urlID == null) {
 //            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
             return docTf;
@@ -1352,13 +1388,15 @@ public class SearchService implements IService {
         Map<String, Double> docTf = new HashMap<>(); // doc_term:norm_tf
 
         // convert hashurl to id
-        byte[] urlIdBytes = KVS.get("pt-urltoid", hashedUrl, "value");
+//        byte[] urlIdBytes = KVS.get("pt-urltoid", hashedUrl, "value");
+//
+//        if (urlIdBytes == null) {
+////            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
+//            return docTf;
+//        }
+//        String urlID = new String(urlIdBytes);
 
-        if (urlIdBytes == null) {
-//            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
-            return docTf;
-        }
-        String urlID = new String(urlIdBytes);
+        String urlID = URL_TO_ID_CACHE.get(hashedUrl);
 
 //        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
 
@@ -1436,13 +1474,15 @@ public class SearchService implements IService {
         Map<String, Double> docTf = new HashMap<>(); // doc_term:norm_tf
 
         // convert hashurl to id
-        byte[] urlIdBytes = KVS.get("pt-urltoid", hashedUrl, "value");
+//        byte[] urlIdBytes = KVS.get("pt-urltoid", hashedUrl, "value");
+//
+//        if (urlIdBytes == null) {
+////            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
+//            return docTf;
+//        }
+//        String urlID = new String(urlIdBytes);
 
-        if (urlIdBytes == null) {
-//            log.error("[calculateDocumentTF] URL ID not found for hashed URL: " + hashedUrl);
-            return docTf;
-        }
-        String urlID = new String(urlIdBytes);
+        String urlID = URL_TO_ID_CACHE.get(hashedUrl);
 
 //        log.info("[calculateDocumentTF] Processing URL ID: " + urlID);
 

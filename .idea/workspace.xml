@@ -5,9 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8f6aa40d-a9ab-49b4-b825-cb81f8e3d12c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/FastIndexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/FastIndexer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/noova/pages_processed.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/pages_processed.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
