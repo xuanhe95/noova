@@ -1,6 +1,10 @@
 package org.noova.gateway.trie;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,10 +73,18 @@ public class TrieManager {
                 PropertyLoader.getProperty("table.default.value"),
                 json
         );
+        System.out.println("Cache saved to table." );
 
+        Path filePath = Paths.get(CACHE_DIRECTORY, "trieCache.cache");
+        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+            fos.write(json);
+        }
+
+        System.out.println("Cache saved to: " + filePath);
 
     }
 
+    private static final String CACHE_DIRECTORY = "__cache/";
 
     public Trie loadTrie(String rowName) throws IOException {
         log.info("[trie] Loading trie");
@@ -81,17 +93,26 @@ public class TrieManager {
             return TRIE_MAP.get(rowName);
         }
 
-        String json = STORAGE_STRATEGY.get(
-                PropertyLoader.getProperty("table.trie"),
-                rowName,
-                PropertyLoader.getProperty("table.default.value")
-        );
-        if(json == null){
-            return null;
+        Path filePath = Paths.get(CACHE_DIRECTORY, "trieCache.cache");
+        String json = null;
+        if (!Files.exists(filePath)) {
+            System.out.println("Trie Cache file not found");
+            json = STORAGE_STRATEGY.get(
+                    PropertyLoader.getProperty("table.trie"),
+                    rowName,
+                    PropertyLoader.getProperty("table.default.value")
+            );
+            if(json == null){
+                return null;
+            }
+        }else{
+            byte[] jsonBytes = Files.readAllBytes(filePath);
+            json = new String(jsonBytes);
+            log.info("[trie] Json loaded from Cache");
         }
 
         log.info("[trie] Json loaded");
-        Trie trie = OBJECT_MAPPER.readValue(json, DistanceTrie.class);
+        DistanceTrie trie = OBJECT_MAPPER.readValue(json, DistanceTrie.class);
         log.info("[trie] Trie loaded");
         TRIE_MAP.put(rowName, trie);
 
