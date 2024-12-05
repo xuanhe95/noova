@@ -1143,10 +1143,20 @@ public class SearchController implements IController {
                 QUERY_PAGE_CACHE.remove(token);
                 break;
             }
+            if (offset >= cachedValue.size()) {
+                offset = 0; // Reset to the first page if offset is out of range
+            }
             List<Map<String, Object>> view = cachedValue.subList(offset, Math.min(offset + limit, cachedValue.size()));
+
+            view.forEach(result -> {
+                processResult(result,snippetLimit);
+            });
+
             String json = OBJECT_MAPPER.writeValueAsString(view);
             res.body(json);
             res.type("application/json");
+            log.info("[search] Offset: " + offset + ", Limit: " + limit + ", Total Results: " + view.size());
+
             return;
         }
 
@@ -1228,18 +1238,6 @@ public class SearchController implements IController {
         long end = System.currentTimeMillis();
 
         System.out.println("End fetching page rank: " + (end - start) + " ms");
-        // Check weather
-        if (query.toLowerCase().contains("weather")) {
-            try {
-                Map<String, Object> weatherData = WeatherService.getInstance().getWeatherInfo();
-                String json = OBJECT_MAPPER.writeValueAsString(weatherData);
-                res.body(json);
-                res.type("application/json");
-                return;
-            } catch (IOException e) {
-                log.error("[search] Error fetching weather data", e);
-            }
-        }
 
         // Wait for all futures to complete with a timeout
 
@@ -1368,53 +1366,12 @@ public class SearchController implements IController {
         results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
 
 
-
         QUERY_PAGE_CACHE.put(token, new SoftReference<>(results));
 
         List<Map<String, Object>> view = results.subList(offset, Math.min(offset + limit, results.size()));
 
         view.forEach(result -> {
-            log.info("[search] URL: " + result.get("hashed") + ", Combined Score: " + result.get("combinedScore"));
-            String hashedUrl = (String) result.get("hashed");
-            try {
-                Row row = KVS_CLIENT.getRow(PropertyLoader.getProperty("table.processed"), hashedUrl);
-                String content = row.get("text");
-                String title = row.get("title");
-                String url = row.get("url");
-                String icon = row.get("icon");
-                String host = SEARCH_SERVICE.extractHostName(url);
-
-
-                result.put("title", title);
-                result.put("url", url);
-                result.put("icon", icon);
-                result.put("host", host);
-
-                //Map<String, List<Integer>> positions = SEARCH_SERVICE.getKeywordPositions(idToHashedUrl, keywordRows, hashedUrlToId.get(hashedUrl));
-
-                //List<Integer> best = SEARCH_SERVICE.getBestPositionWithSorted(queryTokens, positions, queryTokens.size() + 5, spanLimit);
-
-                //var bestPosition = (List<Integer>) result.remove("position");
-
-                //System.out.println("bestPositions: " + bestPositions.get(queryTokens.get(0)));
-
-                //var wordToPositions = urlToWordToPositions.get(hashedUrl);
-
-                List<Integer> bestPosition= result.get("position") == null ? new ArrayList<>() : (List<Integer>) result.get("position");
-
-
-
-
-                //System.out.println("bestPosition: " + bestPosition);
-
-                String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, bestPosition, snippetLimit);
-                //result.put("context", snippet);
-                result.put("context", snippet);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-
+            processResult(result,snippetLimit);
         });
 
         // Return JSON response
@@ -1423,6 +1380,41 @@ public class SearchController implements IController {
         res.type("application/json");
     }
 
+    private void processResult(Map<String, Object> result, int snippetLimit) {
+        log.info("[search] URL: " + result.get("hashed") + ", Combined Score: " + result.get("combinedScore"));
+        String hashedUrl = (String) result.get("hashed");
+
+        try {
+            // Fetch the row from the KVS client
+            Row row = KVS_CLIENT.getRow(PropertyLoader.getProperty("table.processed"), hashedUrl);
+
+            // Extract and process data
+            String content = row.get("text");
+            String title = row.get("title");
+            String url = row.get("url");
+            String icon = row.get("icon");
+            String host = SEARCH_SERVICE.extractHostName(url);
+
+            // Update the result map with processed data
+            result.put("title", title);
+            result.put("url", url);
+            result.put("icon", icon);
+            result.put("host", host);
+
+            // Get the best position for generating snippets
+            List<Integer> bestPosition = result.get("position") == null
+                    ? new ArrayList<>()
+                    : (List<Integer>) result.get("position");
+
+            // Generate a snippet and update the result
+            String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, bestPosition, snippetLimit);
+            result.put("context", snippet);
+
+        } catch (IOException e) {
+            log.error("[search] Error processing result for URL: " + hashedUrl, e);
+            throw new RuntimeException(e); // Ensure failure is propagated
+        }
+    }
 
     private double normalize(double value, double min, double max) {
         if (min == max) {

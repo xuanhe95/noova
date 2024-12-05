@@ -472,7 +472,7 @@
 
     <div id="dictionary-result" style="width:800px; margin-left:20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; display: none; position: relative;">
         <h4 style="cursor: pointer; margin-bottom: 10px;" onclick="toggleDictionary()">Dictionary
-            <span id="dictionary-toggle" style="float: right; font-size: 18px;">&#9662;</span>
+            <span id="dictionary-toggle" style="float: right; font-size: 18px; margin-right: 20px;">&#9662;</span>
         </h4>
         <pre id="dictionary-highlight" style="margin-top: 10px;"></pre>
         <pre id="dictionary-full" style="display: none; margin-top: 10px;"></pre>
@@ -811,6 +811,7 @@
             if (offset === 0) {
                 offset += adjustedLimit; // Ensure the first batch is correctly set to the limit
             }
+            console.log("offset: "+ offset + " adjustedLimit: "+ adjustedLimit);
 
             $.ajax({
                 url: route,
