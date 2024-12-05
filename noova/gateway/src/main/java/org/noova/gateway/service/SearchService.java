@@ -1608,8 +1608,29 @@ public class SearchService implements IService {
     public double calculatePhraseMatchScore(List<String> words, Map<String, List<Integer>> positions) {
         //! approximate phrase search
         List<Integer> bestPositions = getBestPositionWithSorted(words, positions, words.size() + 4, 20);
-        return 1.0 / (Collections.min(bestPositions) + 1);
+        if (bestPositions == null || bestPositions.isEmpty() || bestPositions.size() < words.size()) {
+            return 0.0;
+        }
+        int span = bestPositions.get(0)- bestPositions.get(bestPositions.size() - 1)  + 1;
+        int inversions = countInversions(bestPositions);
+        double spanWeight = 0.7; // Weight for span
+        double orderWeight = 0.3; // Weight for sequential order
+        System.out.println("(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)): "+(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)));
+        return (spanWeight / (span + 1)) + (orderWeight / (inversions + 1));
 //        return 0.0;
+    }
+
+    // Helper method to count inversions (out-of-order positions)
+    private int countInversions(List<Integer> positions) {
+        int inversions = 0;
+        for (int i = 0; i < positions.size(); i++) {
+            for (int j = i + 1; j < positions.size(); j++) {
+                if (positions.get(i) > positions.get(j)) {
+                    inversions++;
+                }
+            }
+        }
+        return inversions;
     }
 
 

@@ -33,8 +33,8 @@ public class SearchController implements IController {
     private static final SearchService SEARCH_SERVICE = SearchService.getInstance();
 
     private static final double tfIDFWeight = 0.4; // Need more analysis
-    private static final double pgrkWeight = 0.14;
-    private static final double titleDespMatchWeight = 0.16;
+    private static final double pgrkWeight = 0.1;
+    private static final double titleDespMatchWeight = 0.2;
     private static final double phraseMatchWeight = 0.3;
 
     private static final int context_view = 30; // Can be in the config file
