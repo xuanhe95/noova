@@ -52,7 +52,7 @@ public class SearchService implements IService {
 
     public static Map<String, String> URL_TO_ID_CACHE = new HashMap<>();
     public static Map<String, String> ID_TO_URL_CACHE = new HashMap<>();
-    private static final int MAX_DOMAIN = 3; // limit # of domains in top 200 pgrk page
+    private static final int MAX_DOMAIN = 2; // limit # of domains in top 200 pgrk page
 
 
 
