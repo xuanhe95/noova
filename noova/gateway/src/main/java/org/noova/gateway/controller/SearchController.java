@@ -910,8 +910,8 @@ public class SearchController implements IController {
 
         log.info("[search] Searching by query: " + query);
 
-        Map<String, List<Integer>> bestPositions = SEARCH_SERVICE.calculateSortedPosition(queryTokens);
-        double phraseMatchScore = SEARCH_SERVICE.calculatePhraseMatchScore(queryTokens, bestPositions);
+//        Map<String, List<Integer>> bestPositions = SEARCH_SERVICE.calculateSortedPosition(queryTokens);
+//        double phraseMatchScore = SEARCH_SERVICE.calculatePhraseMatchScore(queryTokens, bestPositions);
 
         Map<String, Row> keywordRows = new HashMap<>();
 
@@ -1048,8 +1048,8 @@ public class SearchController implements IController {
                 // Combine scores
                 double combinedScore = tfIDFWeight * tfidfSimilarity +
                         pgrkWeight * pageRank +
-                        titleDespMatchWeight * titleOGMatchScore +
-                        phraseMatchWeight * phraseMatchScore;
+                        titleDespMatchWeight * titleOGMatchScore ;
+                        //phraseMatchWeight * phraseMatchScore;
 
                 // Add result
                 Map<String, Object> result = new HashMap<>();
