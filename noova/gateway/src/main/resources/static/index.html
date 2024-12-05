@@ -627,7 +627,7 @@
             $('.search-buttons').addClass('no-margin');
             $('#searchForm').removeClass('vertical-layout').addClass('horizontal-layout');            // Perform AJAX request to fetch results
 
-            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v4';
+            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v5';
             $('#dictionary-result').hide();
             if (searchMode !== 'Image' && query.split('-').length === 1) {
                 // Fetch dictionary definition if it's a single word and not in Image mode
