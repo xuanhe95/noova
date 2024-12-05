@@ -9,6 +9,9 @@ import org.noova.tools.PropertyLoader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.io.FileNotFoundException;
 
 public class FastPageRank implements Serializable {
     private static final double DECAY_RATE = 0.85;
@@ -22,6 +25,9 @@ public class FastPageRank implements Serializable {
     private static final Map<String, Row> INCOMING_GRAPH_CACHE = new HashMap<>();
 
     static double convergenceRatioInPercentage = 100.0;
+    //    static final Double SELF_LINK_PENALTY = 0.0;
+    static final Double SELF_DOMAIN_PENALTY = 0.3;
+
 
     private static final Logger log = Logger.getLogger(FastPageRank.class);
 
@@ -96,43 +102,47 @@ public class FastPageRank implements Serializable {
             Row reversedPage = INCOMING_GRAPH_CACHE.getOrDefault(hashedUrl, null);
 
             double rankSum = 0;
-                    //totalSourcePages * DECAY_RATE / totalPages;
+            //totalSourcePages * DECAY_RATE / totalPages;
             double sinkPR = 0;
 
             // all pages link to this page, without source page
             if(reversedPage != null){
                 //System.out.println("No incoming graph for " + hashedUrl);
 
-            var links = reversedPage.columns();
+                var links = reversedPage.columns();
 
-            // each link i contributes to the page PR(i)/L(i)
-            for(String hashedLink : links){
+                // each link i contributes to the page PR(i)/L(i)
+                for(String hashedLink : links){
 //                if(!prevPageRanks.containsKey(hashedLink)){
 //                    continue;
 //                }                if(!prevPageRanks.containsKey(hashedLink)){
 //                    continue;
 //                }
-                Row linkRow = OUTGOING_GRAPH_CACHE.getOrDefault(hashedLink, null);
-                Set<String> linkToOthers;
-                if(linkRow == null){
-                    sinkPR += prevPageRanks.get(hashedLink);
-                } else{
-                    linkToOthers = linkRow.columns();
-                    if(linkToOthers.isEmpty()){
-                        // apply sink node
+                    Row linkRow = OUTGOING_GRAPH_CACHE.getOrDefault(hashedLink, null);
+                    Set<String> linkToOthers;
+                    if(linkRow == null){
                         sinkPR += prevPageRanks.get(hashedLink);
                     } else{
-                        // each link i contributes to the page PR(i)/L(i)
-                        rankSum += prevPageRanks.get(hashedLink) / linkToOthers.size();
+                        linkToOthers = linkRow.columns();
+                        if(linkToOthers.isEmpty()){
+                            // apply sink node
+                            sinkPR += prevPageRanks.get(hashedLink);
+                        } else if(hashedUrl.equals(hashedLink)){
+                            continue; // ignore direct self link
+                        } else if (getDomain(hashedUrl).equals(getDomain(hashedLink))) {
+                            rankSum += SELF_DOMAIN_PENALTY * prevPageRanks.get(hashedLink) / linkToOthers.size();
+                        } else{
+                            // each link i contributes to the page PR(i)/L(i)
+                            rankSum += prevPageRanks.get(hashedLink) / linkToOthers.size();
 //                        if(rankSum== 1.0){
 //                            System.out.println("rankSum: " + rankSum);
 //                            System.out.println("sinkPR: " + sinkPR);
 //                            System.out.println("linktoothers: " + linkToOthers.size());
 //                        }
 
+                        }
                     }
                 }
-            }
             }
 //            else{
 //                sinkPR = prevPageRanks.get(hashedUrl);
@@ -154,6 +164,17 @@ public class FastPageRank implements Serializable {
         }
 
         return pageRanks;
+    }
+
+    private static String getDomain(String hashedUrl) throws FileNotFoundException, IOException {
+        try {
+            String url = KVS_CLIENT.getRow(PROCESSED_TABLE, hashedUrl).get("url");
+            URI uri = new URI(url);
+            String host = uri.getHost();
+            return host != null ? host.replaceFirst("^www\\.", "") : url;
+        } catch (URISyntaxException e) {
+            return hashedUrl; // Fallback to the full URL if parsing fails
+        }
     }
 
 
