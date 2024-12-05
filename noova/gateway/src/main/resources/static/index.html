@@ -565,9 +565,9 @@
             query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
             if (query.length >= 1) { // Start suggesting after 1 or more characters
                 $.ajax({
-                    url: '/autocomplete',
+                    url: '/correction',
                     method: 'GET',
-                    data: { prefix: query },
+                    data: { query: query },
                     success: function(suggestions) {
                         displaySuggestions(suggestions);
                     },
@@ -741,7 +741,7 @@
             let query = $('#search-query').val();
             query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').trim();
 
-            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v4';
+            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v6';
             const adjustedLimit = searchMode === 'Image' ? 50 : limit; // Set limit to 50 for image search
 
             if (offset === 0) {

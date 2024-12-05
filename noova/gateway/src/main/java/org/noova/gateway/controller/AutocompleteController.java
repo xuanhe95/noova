@@ -47,6 +47,7 @@ public class AutocompleteController implements IController {
             return;
         }
 
+        List<String> wordTokens = Parser.getLammelizedWords(prefix);
         String[] words = prefix.trim().split("\\s+"); // Split by spaces
         String lastWord = words[words.length - 1]; // Get the last word
 
@@ -85,7 +86,7 @@ public class AutocompleteController implements IController {
         int limit = Integer.parseInt(limitParam); //TBD hardcoded 10
 
         if (query == null || query.isEmpty()) {
-            log.warn("[autocomplete] Empty prefix received");
+            log.warn("[correction] Empty prefix received");
             res.body("[]");
             res.type("application/json");
             return;
@@ -98,11 +99,19 @@ public class AutocompleteController implements IController {
 
         List<String> result = SearchService.getInstance().getCorrection(lastWord, limit);
 
-
+        List<String> fullSuggestions = new ArrayList<>();
+        String prefixWithoutLastWord = String.join(" ", Arrays.copyOf(words, words.length - 1)).trim();
+        for (String suggestion : result) {
+            if (!prefixWithoutLastWord.isEmpty()) {
+                fullSuggestions.add(prefixWithoutLastWord + " " + suggestion);
+            } else {
+                fullSuggestions.add(suggestion);
+            }
+        }
 
 
         // Return JSON response
-        String json = OBJECT_MAPPER.writeValueAsString(result);
+        String json = OBJECT_MAPPER.writeValueAsString(fullSuggestions);
         res.body(json);
         res.type("application/json");
     }
