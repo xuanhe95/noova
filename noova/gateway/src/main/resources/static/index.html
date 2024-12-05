@@ -32,6 +32,7 @@
             flex-direction: column;
             transition: all 0.3s ease;
             width: 100%;
+            margin-bottom: 50px;
         }
 
         .logo-large img {
@@ -390,7 +391,7 @@
             justify-content: space-between;
             border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
-            width: 600px;
+            width: 800px;
         }
 
         #dictionary-toggle {
@@ -419,6 +420,25 @@
             box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.3);
         }
 
+        #guess-result {
+            margin-top: 10px;
+            padding: 10px;
+            display: none;
+            position: relative;
+        }
+
+        .suggestion {
+            font-weight: bold;
+            color: blue;
+            cursor: pointer;
+        }
+
+        .search-heading {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
     </style>
 </head>
 <body>
@@ -443,11 +463,14 @@
             </div>
         </form>
     </div>
+    <div id="spacer" style="margin-bottom: 70px;"> </div>
     <div id="loading-spinner" style="display: none;">
         <div class="spinner"></div>
     </div>
 
-    <div id="dictionary-result" style="margin-top: 60px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; display: none; position: relative;">
+    <div id="guess-result"></div>
+
+    <div id="dictionary-result" style="width:800px; margin-left:20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; display: none; position: relative;">
         <h4 style="cursor: pointer; margin-bottom: 10px;" onclick="toggleDictionary()">Dictionary
             <span id="dictionary-toggle" style="float: right; font-size: 18px;">&#9662;</span>
         </h4>
@@ -543,6 +566,9 @@
             searchMode = $(this).val();
         });
 
+        const resultDiv = $('#guess-result');
+        resultDiv.hide().empty();
+
         $('#search-query').on('input', function () {
             const originalValue = $(this).val();
 
@@ -581,24 +607,6 @@
             }
         });
 
-        function displaySuggestions(suggestions) {
-            $suggestionsBox.empty(); // Clear previous suggestions
-            if (suggestions.length === 0) {
-                $suggestionsBox.hide();
-                return;
-            }
-            suggestions.forEach(function(suggestion) {
-                const suggestionItem = $('<div>').text(suggestion).addClass('suggestion-item');
-                suggestionItem.on('click', function() {
-                    $searchBox.val(suggestion);
-                    $suggestionsBox.empty().hide();
-                });
-                $suggestionsBox.append(suggestionItem);
-            });
-
-            $suggestionsBox.show();
-        }
-
         $(document).on('click', function(e) {
             if (!$(e.target).closest('#search-query, #suggestions').length) {
                 $suggestionsBox.hide();
@@ -634,6 +642,20 @@
                 fetchDictionaryDefinition(query);
             }
 
+            $.ajax({
+                url: '/correction/v3', // Replace with your actual endpoint
+                method: 'GET',
+                data: { query: query.replace(/-/g, ' ') },
+                success: function (guess) {
+                    console.log("guess "+guess)
+                    displayGuess(query, guess);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error fetching suggestions:", error);
+                    resultDiv.hide().empty();
+                }
+            });
+
             $('#weather-widget').hide();
             if (searchMode !== 'Image' && query.includes('weather')) {
                 // Example: Fetch weather for New York by default, or detect a zip code dynamically
@@ -664,6 +686,48 @@
                 }
             });
         });
+
+        function displaySuggestions(suggestions) {
+            $suggestionsBox.empty(); // Clear previous suggestions
+            if (suggestions.length === 0) {
+                $suggestionsBox.hide();
+                return;
+            }
+            suggestions.forEach(function(suggestion) {
+                const suggestionItem = $('<div>').text(suggestion).addClass('suggestion-item');
+                suggestionItem.on('click', function() {
+                    $searchBox.val(suggestion);
+                    $suggestionsBox.empty().hide();
+                });
+                $suggestionsBox.append(suggestionItem);
+            });
+
+            $suggestionsBox.show();
+        }
+
+        function displayGuess(query, guess) {
+            const resultDiv = $('#guess-result');
+            resultDiv.empty(); // Clear previous results
+
+            if (guess && guess !== query) {
+                resultDiv.html(`
+                    <h2 class="search-heading">
+                        Search instead for <span class="suggestion" data-guess="${guess}">${guess}</span>?
+                    </h2>
+                `);
+
+                // Add click handler to the suggestion
+                $('.suggestion').on('click', function () {
+                    const suggestedQuery = $(this).data('guess'); // Get the suggested query from data attribute
+                    $('#search-query').val(suggestedQuery); // Update the search box with the suggestion
+                    $('#searchForm').submit(); // Resubmit the form with the suggested query
+                });
+
+                resultDiv.show(); // Make the div visible
+            } else {
+                resultDiv.hide(); // Hide the div if no suggestion or guess matches the query
+            }
+        }
 
         async function fetchWeather(zipCode) {
             try {
