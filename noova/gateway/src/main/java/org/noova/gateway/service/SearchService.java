@@ -228,6 +228,21 @@ public class SearchService implements IService {
         return result;
     }
 
+    private List<Integer> parseUrlWithPositionsList(String urlsWithPositions) {
+        List<Integer> result = new ArrayList<>();
+        String rawPosition = urlsWithPositions.split(":")[0];
+//        System.out.println(rawPosition);
+        String[] positions = rawPosition.split("\\s+");
+//        System.out.println(positions.length);
+        for (String position : positions) {
+            position = Parser.extractNumber(position);
+            if (!position.isEmpty()) {
+                result.add(Integer.parseInt(position));
+            }
+        }
+        return result;
+    }
+
     private List<Integer> parseUrlWithSortedPositions(String urlsWithPositions) {
 //        List<Integer> result = new ArrayList<>();
 //        String rawPosition = urlsWithPositions.split(":")[0];
@@ -344,6 +359,44 @@ public class SearchService implements IService {
 
 
 //    public Map<String, Map<String, List<Integer>>> searchByKeywordsIntersection(List<String> keywords) throws IOException {}
+
+
+    public Map<String, Map<String, List<Integer>>> getHashedUrlPositions(List<String> hashedUrls, int pageLimit){
+        return hashedUrls.parallelStream()
+                .map(url -> {
+                    try {
+                        Map<String, List<Integer>> positions = searchByKeywordV2(url);
+                        if (!positions.isEmpty()) {
+                            return Map.entry(url, positions);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue
+                ));
+    }
+
+
+//    public Map<String, List<Integer>> getHashedUrlPositions(String hashedUrl, int pageLimit) {
+//        Map<String, List<Integer>> result = new HashMap<>();
+//        try {
+//            Map<String, List<Integer>> positions = searchByKeywordV2(hashedUrl);
+//            if (!positions.isEmpty()) {
+//                result.put(hashedUrl, positions);
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
+
+
+
 
 
 
@@ -590,6 +643,128 @@ public class SearchService implements IService {
 
     }
 
+    public Map<String, List<Integer>> searchByKeywordV2(String keyword) throws IOException {
+        // uses HASHED_URL as key
+
+        if (keyword == null || keyword.isEmpty()) {
+            log.warn("[search] Empty keyword");
+            return new HashMap<>();
+        }
+
+        Map<String, List<Integer>> result = new HashMap<>();
+        Row row = KVS.getRow(INDEX_TABLE, keyword);
+        if (row == null) {
+            log.warn("[search] No row found for keyword: " + keyword);
+            return result;
+        }
+
+        Set<String> fromIds = row.columns();
+
+        for (String fromUrlId : fromIds) {
+            String texts = row.get(fromUrlId);
+            String hashedUrl = null;
+
+            if(ID_TO_URL_CACHE.containsKey(fromUrlId)){
+                hashedUrl = ID_TO_URL_CACHE.get(fromUrlId);
+            }
+            else{
+                byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, fromUrlId, "value");
+                if(hashedUrlByte != null){
+                    hashedUrl = new String(hashedUrlByte);
+                }else{
+                    continue;
+                }
+            }
+
+            if(texts.isEmpty()){
+                continue;
+            }
+            List<Integer> positions = parseUrlWithPositionsList(texts);
+            if(result.containsKey(hashedUrl)){
+                result.get(hashedUrl).addAll(positions);
+            } else{
+                result.put(hashedUrl, positions);
+            }
+        }
+        return result;
+    }
+
+    public Map<String, List<Integer>> searchByKeywordV2(Row keywordRow) throws IOException {
+        // uses HASHED_URL as key
+
+        Map<String, List<Integer>> result = new HashMap<>();
+
+
+        Set<String> fromIds = keywordRow.columns();
+
+        for (String fromUrlId : fromIds) {
+            String texts = keywordRow.get(fromUrlId);
+            String hashedUrl = null;
+
+            if(ID_TO_URL_CACHE.containsKey(fromUrlId)){
+                hashedUrl = ID_TO_URL_CACHE.get(fromUrlId);
+            }
+            else{
+                byte[] hashedUrlByte = KVS.get(ID_URL_TABLE, fromUrlId, "value");
+                if(hashedUrlByte != null){
+                    hashedUrl = new String(hashedUrlByte);
+                }else{
+                    continue;
+                }
+            }
+
+            if(texts.isEmpty()){
+                continue;
+            }
+            List<Integer> positions = parseUrlWithPositionsList(texts);
+            if(result.containsKey(hashedUrl)){
+                result.get(hashedUrl).addAll(positions);
+            } else{
+                result.put(hashedUrl, positions);
+            }
+        }
+        return result;
+    }
+
+
+    public Map<String, Map<String, List<Integer>>> searchByKeywordsIntersectionV2(Map<String, String> idToUrlMap, Map<String, Row> keywordRows, List<String> keywords, int pageLimit) throws IOException {
+        // urls to words to positions
+
+        if (keywords == null || keywords.isEmpty()) {
+            log.warn("[search] Empty keyword or too less");
+            return new HashMap<>();
+        }
+
+
+        Map<String, Map<String, List<Integer>>> allResults = new HashMap<>();
+
+        Set<String> allFromIds = idToUrlMap.keySet();
+
+        if (allFromIds == null || allFromIds.isEmpty()) {
+            log.warn("[search] No row found for keyword: " + keywords);
+            return allResults;
+        }
+        for (String fromUrlId : allFromIds) {
+            Map<String, List<Integer>> result = new HashMap<>();
+
+            for (String keyword : keywordRows.keySet()) {
+
+                Row keywordRow = keywordRows.get(keyword);
+                String rawPositions = keywordRow.get(fromUrlId);
+                List<Integer> positions = parseUrlWithSortedPositions(rawPositions);
+
+                System.out.println("positions: "+positions.size());
+                result.put(keyword, positions);
+            }
+            allResults.put(idToUrlMap.get(fromUrlId), result);
+
+            if(allResults.size() >= pageLimit){
+                break;
+            }
+        }
+        return allResults;
+
+    }
 
 
 
@@ -1424,7 +1599,8 @@ public class SearchService implements IService {
         String[] words = content.split("\\s+");
 
         if(positions == null || positions.isEmpty()){
-            return String.join(" ", Arrays.copyOfRange(words, 0, Math.min(words.length, wordLimit)));
+            //return String.join(" ", Arrays.copyOfRange(words, 0, Math.min(words.length, wordLimit)));
+            return "";
         }
 
         int start = Math.max(0, positions.get(0) - wordLimit / 2);
@@ -1797,14 +1973,75 @@ public class SearchService implements IService {
 //        return true;
 //    }
 
+//    public double calculatePhraseMatchScore(List<String> queryTokens, Map<String, Map<String, List<Integer>>> wordToUrlToPositions, String firstToken) {
+//        // url -> positions
+//
+//
+//        //! approximate phrase search
+//        List<Integer> bestPositions = getBestPositionWithSorted(queryTokens, , wordToUrlToPositions.keySet().size() + 20, 20);
+//        if (bestPositions == null || bestPositions.isEmpty() || bestPositions.size() < wordToUrlToPositions.keySet().size()) {
+//            return 0.0;
+//        }
+//        int span = bestPositions.get(0)- bestPositions.get(bestPositions.size() - 1)  + 1;
+//        int inversions = countInversions(bestPositions);
+//        double spanWeight = 0.7; // Weight for span
+//        double orderWeight = 0.3; // Weight for sequential order
+//        System.out.println("(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)): "+(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)));
+//        return (spanWeight / (span + 1)) + (orderWeight / (inversions + 1));
+////        return 0.0;
+//    }
+
     public double calculatePhraseMatchScore(List<String> words, Map<String, List<Integer>> positions) {
+        // url -> positions
+        if(positions == null || positions.isEmpty()){
+            return 0.0;
+        }
+
         //! approximate phrase search
-        List<Integer> bestPositions = getBestPositionWithSorted(words, positions, words.size() + 4, 20);
+        List<Integer> bestPositions = getBestPositionWithSorted(words, positions, words.size() + 10, 20);
         if (bestPositions == null || bestPositions.isEmpty() || bestPositions.size() < words.size()) {
             return 0.0;
         }
         int span = bestPositions.get(0)- bestPositions.get(bestPositions.size() - 1)  + 1;
         int inversions = countInversions(bestPositions);
+        double spanWeight = 0.7; // Weight for span
+        double orderWeight = 0.3; // Weight for sequential order
+        System.out.println("(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)): "+(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)));
+        return (spanWeight / (span + 1)) + (orderWeight / (inversions + 1));
+//        return 0.0;
+    }
+
+    public Map<List<Integer>, Double> calculatePhraseMatchScoreV2(List<String> words, Map<String, List<Integer>> positions) {
+        // url -> positions
+        if(positions == null || positions.isEmpty()){
+            return new HashMap<>();
+        }
+
+        //! approximate phrase search
+        List<Integer> bestPositions = getBestPositionWithSorted(words, positions, words.size() + 10, 20);
+        if (bestPositions == null || bestPositions.isEmpty() || bestPositions.size() < words.size()) {
+            return new HashMap<>();
+        }
+        int span = bestPositions.get(0)- bestPositions.get(bestPositions.size() - 1)  + 1;
+        int inversions = countInversions(bestPositions);
+        double spanWeight = 0.7; // Weight for span
+        double orderWeight = 0.3; // Weight for sequential order
+        System.out.println("(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)): "+(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)));
+        double score=  (spanWeight / (span + 1)) + (orderWeight / (inversions + 1));
+
+        Map<List<Integer>, Double> result = new HashMap<>();
+        result.put(bestPositions, score);
+        return result;
+
+//        return 0.0;
+    }
+
+
+    public double calculatePhraseMatchScore(List<Integer> bestPosition) {
+        //! approximate phrase search
+
+        int span = bestPosition.get(0)- bestPosition.get(bestPosition.size() - 1)  + 1;
+        int inversions = countInversions(bestPosition);
         double spanWeight = 0.7; // Weight for span
         double orderWeight = 0.3; // Weight for sequential order
         System.out.println("(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)): "+(spanWeight / (span + 1)) + (orderWeight / (inversions + 1)));

@@ -2,6 +2,7 @@ package org.noova.gateway.controller;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jdk.jshell.Snippet;
 import org.noova.gateway.service.SearchService;
 import org.noova.gateway.service.Service;
 import org.noova.gateway.service.WeatherService;
@@ -1127,9 +1128,10 @@ public class SearchController implements IController {
         int spanLimit = (req.queryParams("span") == null) ? 50 : Integer.parseInt(req.queryParams("context"));
         int snippetLimit = (req.queryParams("snippet") == null) ? 60 : Integer.parseInt(req.queryParams("snippet"));
 
-        double tfIDFWeight = (req.queryParams("tf") == null) ? 0.4 : Double.parseDouble(req.queryParams("tf"));
-        double pgrkWeight = (req.queryParams("pr") == null) ? 0.14 : Double.parseDouble(req.queryParams("pg"));
-        double titleDespMatchWeight = (req.queryParams("tt") == null) ? 0.16 : Double.parseDouble(req.queryParams("tt"));
+        double tfIDFWeight = (req.queryParams("tf") == null) ? 1 : Double.parseDouble(req.queryParams("tf"));
+        double pgrkWeight = (req.queryParams("pr") == null) ? 0.5 : Double.parseDouble(req.queryParams("pg"));
+        double titleDespMatchWeight = (req.queryParams("tt") == null) ? 2 : Double.parseDouble(req.queryParams("tt"));
+        double phraseMatchWeight = (req.queryParams("pm") == null) ? 20 : Double.parseDouble(req.queryParams("pm"));
 
         List<String> queryTokens = Parser.getLammelizedWords(query);
         String token = String.join(" ", queryTokens);
@@ -1243,6 +1245,8 @@ public class SearchController implements IController {
 
         List<Map<String, Object>> results = new ArrayList<>();
 
+        var urlToWordToPositions = SEARCH_SERVICE.searchByKeywordsIntersectionV2(idToHashedUrl, keywordRows, queryTokens, 100);
+
         // Process each URL in parallel
         sortedUrlsMap.entrySet().parallelStream().forEach(entry -> {
             String hashedUrl = entry.getKey();
@@ -1269,16 +1273,6 @@ public class SearchController implements IController {
                     }
                 }, executor);
 
-//                CompletableFuture<Double> phraseMatchScoreFuture = CompletableFuture.supplyAsync(() ->
-//                {
-//                    try {
-//                        return SEARCH_SERVICE.calculatePhraseMatchScore(row, queryTokens);
-//                    } catch (IOException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                }, executor);
-
-
                 CompletableFuture<Map<String, Double>> docTfidfFuture = CompletableFuture.supplyAsync(() ->
                 {
                     try {
@@ -1298,17 +1292,62 @@ public class SearchController implements IController {
                 // Calculate TF-IDF similarity
                 double tfidfSimilarity = SEARCH_SERVICE.calculateTFIDF(queryTfidf, docTfidf);
 
-                // Combine scores
-                double combinedScore = tfIDFWeight * tfidfSimilarity +
-                        pgrkWeight * pageRank +
-                        titleDespMatchWeight * titleOGMatchScore ;
-                //phraseMatchWeight * phraseMatchScore;
+
+                //Map<String, Map<String, List<Integer>>> keywordToUrlToPositions = new ConcurrentHashMap<>();
+
+
+                    // ONE WORD LOGIC
+//                for(String keyword : keywordRows.keySet()){
+//                   var urlToPosition = SEARCH_SERVICE.searchByKeywordV2(keywordRows.get(keyword));
+//                     keywordToUrlToPositions.put(keyword, urlToPosition);
+//                }
+
+
+
+                Map<List<Integer>, Double> phraseMatchScorePair = SEARCH_SERVICE.calculatePhraseMatchScoreV2(queryTokens, urlToWordToPositions.get(hashedUrl));
+
+                double phraseMatchScore = phraseMatchScorePair.values().stream().mapToDouble(Double::doubleValue).sum();
+
+
+//                if(urlToWordToPositions.get(hashedUrl).get(queryTokens.get(0)).size() == queryTokens.size()){
+//                    phraseMatchScore *= 200;
+//                }
+
+                double combinedScore = calculateCombinedScore(tfidfSimilarity, 1.0,
+                        pageRank, 1.0,
+                        titleOGMatchScore, 1.0,
+                        phraseMatchScore, 1.0,
+                        tfIDFWeight,
+                        pgrkWeight,
+                        titleDespMatchWeight,
+                        phraseMatchWeight);
+
+
+                //SEARCH_SERVICE.generateSnippetFromPositions(content, bestPosition, snippetLimit);
 
                 // Add result
                 Map<String, Object> result = new HashMap<>();
 //                result.put("title", title);
 //                result.put("url", url);
+
+
+                Optional<List<Integer>> optionalPosition = phraseMatchScorePair.keySet().stream().findFirst();
+                if (optionalPosition.isPresent()) {
+                    result.put("position", optionalPosition.get());
+                } else {
+                    // 如果找不到值，可以处理默认值或抛出异常
+                    result.put("position", new ArrayList<>());
+                }
+
                 result.put("combinedScore", combinedScore);
+
+
+                //String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, bestPositions.get(queryTokens.get(0)), snippetLimit);
+
+
+                //result.put("position", urlToPositions.get(hashedUrl));
+
+
 //                result.put("host", host);
 //                result.put("icon", icon);
                 //result.put("context", snippet);
@@ -1320,6 +1359,10 @@ public class SearchController implements IController {
                 log.error("[search] Error processing URL: " + hashedUrl, e);
             }
         });
+
+
+
+
 
         // Sort results by combined score
         results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
@@ -1347,13 +1390,26 @@ public class SearchController implements IController {
                 result.put("icon", icon);
                 result.put("host", host);
 
-                Map<String, List<Integer>> positions = SEARCH_SERVICE.getKeywordPositions(idToHashedUrl, keywordRows, hashedUrlToId.get(hashedUrl));
+                //Map<String, List<Integer>> positions = SEARCH_SERVICE.getKeywordPositions(idToHashedUrl, keywordRows, hashedUrlToId.get(hashedUrl));
 
-                List<Integer> best = SEARCH_SERVICE.getBestPositionWithSorted(queryTokens, positions, queryTokens.size() + 5, spanLimit);
-                String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, best, snippetLimit);
+                //List<Integer> best = SEARCH_SERVICE.getBestPositionWithSorted(queryTokens, positions, queryTokens.size() + 5, spanLimit);
 
-                result.put("context", snippet);
+                //var bestPosition = (List<Integer>) result.remove("position");
+
+                //System.out.println("bestPositions: " + bestPositions.get(queryTokens.get(0)));
+
+                //var wordToPositions = urlToWordToPositions.get(hashedUrl);
+
+                List<Integer> bestPosition= result.get("position") == null ? new ArrayList<>() : (List<Integer>) result.get("position");
+
+
+
+
+                //System.out.println("bestPosition: " + bestPosition);
+
+                String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, bestPosition, snippetLimit);
                 //result.put("context", snippet);
+                result.put("context", snippet);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -1368,6 +1424,49 @@ public class SearchController implements IController {
     }
 
 
+    private double normalize(double value, double min, double max) {
+        if (min == max) {
+            return 0.5; // 防止分母为 0，返回中间值
+        }
+        return (value - min) / (max - min);
+    }
+
+    public double calculateCombinedScore(
+            double tfidfSimilarity, double maxTfidfSimilarity,
+            double pageRank, double maxPageRank,
+            double titleOGMatchScore, double maxTitleOGMatchScore,
+            double phraseMatchScore, double maxPhraseMatchScore,
+            double tfIDFWeight, double pgrkWeight, double titleDespMatchWeight, double phraseMatchWeight) {
+
+        // Normalize each score
+        double normalizedTfidf = normalize(tfidfSimilarity, 0, maxTfidfSimilarity);
+        double normalizedPageRank = normalize(pageRank, 0, maxPageRank);
+        double normalizedTitleOGMatchScore = normalize(titleOGMatchScore, 0, maxTitleOGMatchScore);
+        double normalizedPhraseMatchScore = normalize(phraseMatchScore, 0, maxPhraseMatchScore);
+
+        double smoothTfidf = sigmoid(normalizedTfidf);
+        double smoothPageRank = sigmoid(normalizedPageRank);
+        double smoothTitleOGMatchScore = sigmoid(normalizedTitleOGMatchScore);
+        double smoothPhraseMatchScore = sigmoid(normalizedPhraseMatchScore);
+
+
+        // Normalize weights to ensure the sum is 1
+        double totalWeight = tfIDFWeight + pgrkWeight + titleDespMatchWeight + phraseMatchWeight;
+        tfIDFWeight /= totalWeight;
+        pgrkWeight /= totalWeight;
+        titleDespMatchWeight /= totalWeight;
+        phraseMatchWeight /= totalWeight;
+
+        // Combine normalized scores with weights
+        return tfIDFWeight * smoothTfidf +
+                pgrkWeight * smoothPageRank +
+                titleDespMatchWeight * smoothTitleOGMatchScore +
+                phraseMatchWeight * smoothPhraseMatchScore;
+    }
+
+    private double sigmoid(double value) {
+        return 1 / (1 + Math.exp(-value));
+    }
 
     // Helper method to handle timeout
     private <T> T getWithTimeout(CompletableFuture<T> future, T defaultValue) {
