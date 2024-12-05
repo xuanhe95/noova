@@ -47,11 +47,12 @@ public class SearchService implements IService {
 
     private static final int totalDocuments = 8692; //! TBD, hardcoded for now
 
-    private static final Map<String, Double> PAGE_RANK_CACHE = new ConcurrentHashMap<>();
+//    private static final Map<String, Double> PAGE_RANK_CACHE = new ConcurrentHashMap<>();
     private final Map<String, Row> processedTableCache = new ConcurrentHashMap<>(); // recent cache
 
     public static Map<String, String> URL_TO_ID_CACHE = new HashMap<>();
     public static Map<String, String> ID_TO_URL_CACHE = new HashMap<>();
+    private static final int MAX_DOMAIN = 3; // limit # of domains in top 200 pgrk page
 
 
 
@@ -81,10 +82,10 @@ public class SearchService implements IService {
         }
 
         // preload caches
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-//        executor.submit(this::preloadIDUrlCache);
-        executor.submit(this::preloadPageRankCache);
-        executor.shutdown();
+//        ExecutorService executor = Executors.newFixedThreadPool(2);
+////        executor.submit(this::preloadIDUrlCache);
+//        executor.submit(this::preloadPageRankCache);
+//        executor.shutdown();
 
         //loadWordToUrlsCache();
         loadUrlToIdCache();
@@ -128,23 +129,23 @@ public class SearchService implements IService {
 //        }
 //    }
 
-    public void preloadPageRankCache() {
-        try {
-            Iterator<Row> rows = KVS.scan(PGRK_TABLE, null, null);
-            while (rows.hasNext()) {
-                Row row = rows.next();
-                String url = row.key();
-                String rankStr = row.get("rank");
-                if (url != null && rankStr != null) {
-                    PAGE_RANK_CACHE.put(url, Double.parseDouble(rankStr));
-                }
-            }
-            log.info("[cache] Preloaded PAGERANK_TABLE with " + PAGE_RANK_CACHE.size() + " entries.");
-        } catch (IOException e) {
-            log.error("[cache] Error preloading PGRK_TABLE", e);
-            throw new RuntimeException(e);
-        }
-    }
+//    public void preloadPageRankCache() {
+//        try {
+//            Iterator<Row> rows = KVS.scan(PGRK_TABLE, null, null);
+//            while (rows.hasNext()) {
+//                Row row = rows.next();
+//                String url = row.key();
+//                String rankStr = row.get("rank");
+//                if (url != null && rankStr != null) {
+//                    PAGE_RANK_CACHE.put(url, Double.parseDouble(rankStr));
+//                }
+//            }
+//            log.info("[cache] Preloaded PAGERANK_TABLE with " + PAGE_RANK_CACHE.size() + " entries.");
+//        } catch (IOException e) {
+//            log.error("[cache] Error preloading PGRK_TABLE", e);
+//            throw new RuntimeException(e);
+//        }
+//    }
 
     public Row getCachedRow(String tableName, String key) {
         return processedTableCache.computeIfAbsent(key, k -> {
@@ -719,38 +720,115 @@ public class SearchService implements IService {
     }
 
 
+    public String extractRootUrl(String url) {
+        try {
+            URL parsedUrl = new URL(url);
+            String path = parsedUrl.getPath();
+            // rm query param
+            if (path.contains("?")) {
+                path = path.substring(0, path.indexOf('?'));
+            }
+            return parsedUrl.getProtocol() + "://" + parsedUrl.getHost() + path;
+        } catch (Exception e) {
+            return url; // fallback to original url
+        }
+    }
 
-
+    public String extractHostName(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            String host = url.getHost();
+            return host.startsWith("www.") ? CapitalizeTitle.toTitleCase(host.substring(4))
+                    : CapitalizeTitle.toTitleCase(host);
+        } catch (Exception e) {
+            return "Unknown";
+        }
+    }
 
 
     public SortedMap<String, Double> getPageRanks(Set<String> hashedUrls, int limit) throws IOException {
         Map<String, Double> result = new HashMap<>();
+        Map<String, List<String>> domainToUrls = new HashMap<>();
 
-        for(String hashedUrl : hashedUrls){
+        // get pgrk pages
+        for (String hashedUrl : hashedUrls) {
             byte[] rankByte = KVS.get(PGRK_TABLE, hashedUrl, "rank");
-            if(rankByte != null){
-                result.put(hashedUrl, Double.parseDouble(new String(rankByte)));
+            if (rankByte != null) {
+                double pageRank = Double.parseDouble(new String(rankByte));
+                result.put(hashedUrl, pageRank);
+
+                String domain = extractHostName(SearchService.ID_TO_URL_CACHE.get(hashedUrl));
+                domainToUrls.computeIfAbsent(domain, k -> new ArrayList<>()).add(hashedUrl);
             }
         }
 
-        // 按值降序排序
-        var sortedEntries = result.entrySet().stream()
-                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // 倒序排序
-                .limit(limit) // 只保留前 limit 个
+        // sort pgrk descending
+        List<Map.Entry<String, Double>> sortedEntries = result.entrySet().stream()
+                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
                 .toList();
 
-        // 创建一个有序的 TreeMap
-        var limitedMap = new TreeMap<String, Double>((a, b) -> {
-            int cmp = result.get(b).compareTo(result.get(a)); // 按值排序
-            return cmp == 0 ? a.compareTo(b) : cmp; // 如果值相同，按键排序
-        });
+        // limit pgrk pages by limit(200) and MAX_DOMAIN(3)
+        Map<String, Integer> domainCounts = new HashMap<>();
+        Map<String, Double> limitedResults = new LinkedHashMap<>();
+        Map<String, Set<String>> rootInDomain = new HashMap<>(); // diff root within same domain
+        int count = 0;
 
-        // 将排序结果放入 TreeMap
-        for (var entry : sortedEntries) {
-            limitedMap.put(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, Double> entry : sortedEntries) {
+            if (count >= limit) break;
+
+            String hashedUrl = entry.getKey();
+//            String url = KVS.getRow(PROCESSED_TABLE, hashedUrl).get("url");
+            String url = getCachedRow(PROCESSED_TABLE,hashedUrl).get("url");
+            String domain = extractHostName(url);
+            String root = extractRootUrl(url);
+            rootInDomain.computeIfAbsent(domain, k -> new HashSet<>());
+
+            if(rootInDomain.containsKey(domain) && !rootInDomain.get(domain).add(root)){
+                continue; // seen domain+root
+            }
+
+            domainCounts.put(domain, domainCounts.getOrDefault(domain, 0) + 1);
+            if (domainCounts.get(domain) <= MAX_DOMAIN) {
+                limitedResults.put(hashedUrl, entry.getValue());
+                count++;
+            }
         }
 
-        return limitedMap;
+        // sort in treemap
+        SortedMap<String, Double> sortedMap = new TreeMap<>((a, b) -> {
+            int cmp = Double.compare(limitedResults.get(b), limitedResults.get(a));
+            return cmp == 0 ? a.compareTo(b) : cmp;
+        });
+        sortedMap.putAll(limitedResults);
+        return sortedMap;
+
+
+//        Map<String, Double> result = new HashMap<>();
+//
+//        for(String hashedUrl : hashedUrls){
+//            byte[] rankByte = KVS.get(PGRK_TABLE, hashedUrl, "rank");
+//            if(rankByte != null){
+//                result.put(hashedUrl, Double.parseDouble(new String(rankByte)));
+//            }
+//        }
+//        // 按值降序排序
+//        var sortedEntries = result.entrySet().stream()
+//                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // 倒序排序
+//                .limit(limit) // 只保留前 limit 个
+//                .toList();
+//
+//        // 创建一个有序的 TreeMap
+//        var limitedMap = new TreeMap<String, Double>((a, b) -> {
+//            int cmp = result.get(b).compareTo(result.get(a)); // 按值排序
+//            return cmp == 0 ? a.compareTo(b) : cmp; // 如果值相同，按键排序
+//        });
+//
+//        // 将排序结果放入 TreeMap
+//        for (var entry : sortedEntries) {
+//            limitedMap.put(entry.getKey(), entry.getValue());
+//        }
+//
+//        return limitedMap;
     }
 
 
@@ -1683,16 +1761,6 @@ public class SearchService implements IService {
 //        );
 //    }
 
-    public String extractHostName(String urlString) {
-        try {
-            URL url = new URL(urlString);
-            String host = url.getHost();
-            return host.startsWith("www.") ? CapitalizeTitle.toTitleCase(host.substring(4))
-                    : CapitalizeTitle.toTitleCase(host);
-        } catch (Exception e) {
-            return "Unknown";
-        }
-    }
 
     public List<String> getAutocompleteSuggestions(String inputWords, int limit) {
         return trie.getWordsWithPrefix(inputWords,10);
