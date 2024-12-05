@@ -698,19 +698,29 @@ public class SearchController implements IController {
         Map<String, String> idToHashedUrl = new HashMap<>();
         Map<String, String> hashedUrlToId = new HashMap<>();
 
-        // NOTICE: ADD CACHE FOR THIS PART LATER!
-
-        mergedUrlIds.forEach(urlId -> {
-            //System.out.println("urlId: " + urlId);
-            try {
-                byte[] rowByte = KVS_CLIENT.get(PropertyLoader.getProperty("table.id-url"), urlId, "value");
-                String hashedUrl = new String(rowByte);
+        // load urlid idurl cache from SearchService
+        for (String urlId : mergedUrlIds) {
+            String hashedUrl = SearchService.ID_TO_URL_CACHE.get(urlId);
+            if (hashedUrl != null) {
                 idToHashedUrl.put(urlId, hashedUrl);
                 hashedUrlToId.put(hashedUrl, urlId);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } else {
+                log.warn("[search] ID not found in cache: " + urlId);
             }
-        });
+        }
+
+        // NOTICE: ADD CACHE FOR THIS PART LATER!
+//        mergedUrlIds.forEach(urlId -> {
+//            //System.out.println("urlId: " + urlId);
+//            try {
+//                byte[] rowByte = KVS_CLIENT.get(PropertyLoader.getProperty("table.id-url"), urlId, "value");
+//                String hashedUrl = new String(rowByte);
+//                idToHashedUrl.put(urlId, hashedUrl);
+//                hashedUrlToId.put(hashedUrl, urlId);
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+//        });
 
         SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanks(hashedUrlToId.keySet(),200);
 

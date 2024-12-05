@@ -50,8 +50,8 @@ public class SearchService implements IService {
     private static final Map<String, Double> PAGE_RANK_CACHE = new ConcurrentHashMap<>();
     private final Map<String, Row> processedTableCache = new ConcurrentHashMap<>(); // recent cache
 
-    private static Map<String, String> URL_TO_ID_CACHE = new HashMap<>();
-    private static Map<String, String> ID_TO_URL_CACHE = new HashMap<>();
+    public static Map<String, String> URL_TO_ID_CACHE = new HashMap<>();
+    public static Map<String, String> ID_TO_URL_CACHE = new HashMap<>();
 
 
 
@@ -1607,9 +1607,9 @@ public class SearchService implements IService {
 
     public double calculatePhraseMatchScore(List<String> words, Map<String, List<Integer>> positions) {
         //! approximate phrase search
-//        List<Integer> bestPositions = getBestPositionWithSorted(words, positions, words.size() + 4, 20);
-//        return 1.0 / (Collections.min(bestPositions) + 1);
-        return 0.0;
+        List<Integer> bestPositions = getBestPositionWithSorted(words, positions, words.size() + 4, 20);
+        return 1.0 / (Collections.min(bestPositions) + 1);
+//        return 0.0;
     }
 
 
