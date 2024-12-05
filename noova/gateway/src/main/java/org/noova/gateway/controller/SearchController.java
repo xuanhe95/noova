@@ -722,8 +722,16 @@ public class SearchController implements IController {
 //            }
 //        });
 
+        long start = System.currentTimeMillis();
+        System.out.println("Start fetching page rank");
+
         SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanks(hashedUrlToId.keySet(),200);
 
+        System.out.println("sortedUrlsMap: " + sortedUrlsMap.size());
+
+        long end = System.currentTimeMillis();
+
+        System.out.println("End fetching page rank: " + (end - start) + " ms");
         // Check weather
         if (query.toLowerCase().contains("weather")) {
             try {
@@ -861,6 +869,225 @@ public class SearchController implements IController {
         res.body(json);
         res.type("application/json");
     }
+
+
+
+
+    @Route(path = "/search/v5", method = "GET")
+    private void searchByKeywordsV5(Request req, Response res) throws IOException {
+        log.info("[search] Searching by query");
+        String query = req.queryParams("query");
+        int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
+        int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
+        double tfIDFWeight = (req.queryParams("tf") == null) ? 0.4 : Double.parseDouble(req.queryParams("tf"));
+        double pgrkWeight = (req.queryParams("pr") == null) ? 0.14 : Double.parseDouble(req.queryParams("pg"));
+        double titleDespMatchWeight = (req.queryParams("tt") == null) ? 0.16 : Double.parseDouble(req.queryParams("tt"));
+
+        List<String> queryTokens = Parser.getLammelizedWords(query);
+        log.info("[search] Searching by query: " + query);
+
+        Map<String, List<Integer>> bestPositions = SEARCH_SERVICE.calculateSortedPosition(queryTokens);
+        double phraseMatchScore = SEARCH_SERVICE.calculatePhraseMatchScore(queryTokens, bestPositions);
+
+        Map<String, Row> keywordRows = new HashMap<>();
+
+        Set<String> mergedUrlIds = null;
+
+        for(String keyword : queryTokens){
+            System.out.println("keyword: " + keyword);
+            Row row = KVS_CLIENT.getRow(PropertyLoader.getProperty("table.index"), keyword);
+            if(row == null){
+                log.warn("[search] No results found for keyword: " + keyword);
+                continue;
+            }
+            keywordRows.put(keyword, row);
+            if(mergedUrlIds == null){
+                mergedUrlIds = row.columns() == null ? new HashSet<>() : row.columns();
+            }else{
+                mergedUrlIds.retainAll(row.columns());
+            }
+        }
+        if(mergedUrlIds == null || mergedUrlIds.isEmpty()){
+            log.warn("[search] No results found for keyword: " + query);
+            return;
+        }
+
+        Map<String, String> idToHashedUrl = new HashMap<>();
+        Map<String, String> hashedUrlToId = new HashMap<>();
+
+        // load urlid idurl cache from SearchService
+        for (String urlId : mergedUrlIds) {
+            String hashedUrl = SearchService.ID_TO_URL_CACHE.get(urlId);
+            if (hashedUrl != null) {
+                idToHashedUrl.put(urlId, hashedUrl);
+                hashedUrlToId.put(hashedUrl, urlId);
+            } else {
+                log.warn("[search] ID not found in cache: " + urlId);
+            }
+        }
+
+        // NOTICE: ADD CACHE FOR THIS PART LATER!
+//        mergedUrlIds.forEach(urlId -> {
+//            //System.out.println("urlId: " + urlId);
+//            try {
+//                byte[] rowByte = KVS_CLIENT.get(PropertyLoader.getProperty("table.id-url"), urlId, "value");
+//                String hashedUrl = new String(rowByte);
+//                idToHashedUrl.put(urlId, hashedUrl);
+//                hashedUrlToId.put(hashedUrl, urlId);
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+//        });
+
+        long start = System.currentTimeMillis();
+        System.out.println("Start fetching page rank");
+
+        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),2000);
+
+        System.out.println("sortedUrlsMap: " + sortedUrlsMap.size());
+
+        long end = System.currentTimeMillis();
+
+        System.out.println("End fetching page rank: " + (end - start) + " ms");
+        // Check weather
+        if (query.toLowerCase().contains("weather")) {
+            try {
+                Map<String, Object> weatherData = WeatherService.getInstance().getWeatherInfo();
+                String json = OBJECT_MAPPER.writeValueAsString(weatherData);
+                res.body(json);
+                res.type("application/json");
+                return;
+            } catch (IOException e) {
+                log.error("[search] Error fetching weather data", e);
+            }
+        }
+
+        // Wait for all futures to complete with a timeout
+
+        List<Map<String, Object>> results = new ArrayList<>();
+
+        // Process each URL in parallel
+        sortedUrlsMap.entrySet().parallelStream().forEach(entry -> {
+            String hashedUrl = entry.getKey();
+
+            try {
+                Row row = KVS_CLIENT.getRow(PropertyLoader.getProperty("table.processed"), hashedUrl);
+
+                // Calculate query TF-IDF
+                CompletableFuture<Map<String, Double>> queryTfidfFuture = CompletableFuture.supplyAsync(
+                        () -> {
+                            try {
+                                return SEARCH_SERVICE.calculateQueryTF(keywordRows);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }, executor);
+
+                CompletableFuture<Double> titleOGMatchScoreFuture = CompletableFuture.supplyAsync(() ->
+                {
+                    try {
+                        return SEARCH_SERVICE.calculateTitleAndOGMatchScore(row, queryTokens);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }, executor);
+
+//                CompletableFuture<Double> phraseMatchScoreFuture = CompletableFuture.supplyAsync(() ->
+//                {
+//                    try {
+//                        return SEARCH_SERVICE.calculatePhraseMatchScore(row, queryTokens);
+//                    } catch (IOException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }, executor);
+
+
+                CompletableFuture<Map<String, Double>> docTfidfFuture = CompletableFuture.supplyAsync(() ->
+                {
+                    try {
+                        return SEARCH_SERVICE.calculateDocumentTF(hashedUrl, keywordRows);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }, executor);
+
+                // Get results with timeout
+                double titleOGMatchScore = titleDespMatchWeight == 0.0 ? 0 : getWithTimeout(titleOGMatchScoreFuture, 0.0);
+//                double phraseMatchScore = phraseMatchWeight == 0.0 ? 0 : getWithTimeout(phraseMatchScoreFuture, 0.0);
+                Map<String, Double> docTfidf = tfIDFWeight == 0.0 ? new HashMap<>() : getWithTimeout(docTfidfFuture, new HashMap<>());
+                Map<String, Double> queryTfidf = tfIDFWeight == 0.0 ? new HashMap<>(): getWithTimeout(queryTfidfFuture, new HashMap<>());
+                double pageRank = entry.getValue();
+
+                // Calculate TF-IDF similarity
+                double tfidfSimilarity = SEARCH_SERVICE.calculateTFIDF(queryTfidf, docTfidf);
+
+                // Combine scores
+                double combinedScore = tfIDFWeight * tfidfSimilarity +
+                        pgrkWeight * pageRank +
+                        titleDespMatchWeight * titleOGMatchScore +
+                        phraseMatchWeight * phraseMatchScore;
+
+                // Add result
+                Map<String, Object> result = new HashMap<>();
+//                result.put("title", title);
+//                result.put("url", url);
+                result.put("combinedScore", combinedScore);
+//                result.put("host", host);
+//                result.put("icon", icon);
+                //result.put("context", snippet);
+                result.put("hashed", hashedUrl);
+                results.add(result);
+
+                log.info("[search] URL: " + hashedUrl + ", Combined Score: " + combinedScore);
+            } catch (Exception e) {
+                log.error("[search] Error processing URL: " + hashedUrl, e);
+            }
+        });
+
+        // Sort results by combined score
+        results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
+
+
+        List<Map<String, Object>> view = results.subList(offset, Math.min(offset + limit, results.size()));
+
+        view.forEach(result -> {
+            log.info("[search] URL: " + result.get("hashed") + ", Combined Score: " + result.get("combinedScore"));
+            String hashedUrl = (String) result.get("hashed");
+            try {
+                Row row = KVS_CLIENT.getRow(PropertyLoader.getProperty("table.processed"), hashedUrl);
+                String content = row.get("text");
+                String title = row.get("title");
+                String url = row.get("url");
+                String icon = row.get("icon");
+                String host = SEARCH_SERVICE.extractHostName(url);
+
+
+                result.put("title", title);
+                result.put("url", url);
+                result.put("icon", icon);
+                result.put("host", host);
+
+                Map<String, List<Integer>> positions = SEARCH_SERVICE.getKeywordPositions(idToHashedUrl, keywordRows, hashedUrlToId.get(hashedUrl));
+
+                List<Integer> best = SEARCH_SERVICE.getBestPositionWithSorted(queryTokens, positions, queryTokens.size() + 5, 50);
+                String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, best, context_view);
+
+                result.put("context", snippet);
+                //result.put("context", snippet);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+
+        });
+
+        // Return JSON response
+        String json = OBJECT_MAPPER.writeValueAsString(view);
+        res.body(json);
+        res.type("application/json");
+    }
+
+
 
 
 

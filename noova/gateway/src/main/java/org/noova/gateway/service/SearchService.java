@@ -746,12 +746,89 @@ public class SearchService implements IService {
     }
 
 
+    public SortedMap<String, Double> getPageRanksParallel(Set<String> hashedUrls, int limit) throws IOException {
+        Map<String, Double> result = new HashMap<>();
+
+
+        System.out.println("hashedUrls size: "+hashedUrls.size());
+        ExecutorService executor = Executors.newFixedThreadPool(10); // 最大并发请求数为 2
+        try {
+            result = hashedUrls.parallelStream()
+                    .map(hashedUrl -> {
+                        try {
+                            byte[] rankByte = KVS.get(PGRK_TABLE, hashedUrl, "rank");
+                            if (rankByte != null) {
+                                return Map.entry(hashedUrl, Double.parseDouble(new String(rankByte)));
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toConcurrentMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (v1, v2) -> v1, // 冲突时保留第一个值
+                            ConcurrentHashMap::new
+                    ));
+        } finally {
+            executor.shutdown();
+        }
+
+
+        System.out.println("result size: "+result.size());
+
+        Map<String, Double> limitedMap = result.entrySet().parallelStream()
+                .sorted((e1, e2) -> Double.compare(e2.getValue(), e1.getValue()))
+                .limit(limit)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1, // for same key, keep the first one
+                        LinkedHashMap::new //keep order
+                ));
+
+        return new TreeMap<>(Comparator.comparingDouble(limitedMap::get).reversed());
+
+//        for(String hashedUrl : hashedUrls){
+//            byte[] rankByte = KVS.get(PGRK_TABLE, hashedUrl, "rank");
+//            if(rankByte != null){
+//                result.put(hashedUrl, Double.parseDouble(new String(rankByte)));
+//            }
+//        }
+//
+//        // 按值降序排序
+//        var sortedEntries = result.entrySet().stream()
+//                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // 倒序排序
+//                .limit(limit) // 只保留前 limit 个
+//                .toList();
+//
+//        // 创建一个有序的 TreeMap
+//        var limitedMap = new TreeMap<String, Double>((a, b) -> {
+//            int cmp = result.get(b).compareTo(result.get(a)); // 按值排序
+//            return cmp == 0 ? a.compareTo(b) : cmp; // 如果值相同，按键排序
+//        });
+//
+//        // 将排序结果放入 TreeMap
+//        for (var entry : sortedEntries) {
+//            limitedMap.put(entry.getKey(), entry.getValue());
+//        }
+//
+//        return limitedMap;
+    }
+
+
+
     public SortedMap<String, Double> getPageRanks(Set<String> hashedUrls, int limit) throws IOException {
         Map<String, Double> result = new HashMap<>();
         Map<String, List<String>> domainToUrls = new HashMap<>();
 
         // get pgrk pages
-        for (String hashedUrl : hashedUrls) {
+        System.out.println("hashedUrls size: "+hashedUrls.size());
+
+
+        for(String hashedUrl : hashedUrls){
             byte[] rankByte = KVS.get(PGRK_TABLE, hashedUrl, "rank");
             if (rankByte != null) {
                 double pageRank = Double.parseDouble(new String(rankByte));
@@ -1148,7 +1225,7 @@ public class SearchService implements IService {
             }
 
             int span = Collections.max(best) - Collections.min(best);
-            System.out.println("best: " + best + ", span: " + span);
+            //System.out.println("best: " + best + ", span: " + span);
 
             result.put(url, best);
             urlToSpan.put(url, span);
@@ -1195,7 +1272,7 @@ public class SearchService implements IService {
             }
 
             int span = Collections.max(best) - Collections.min(best);
-            System.out.println("best: " + best + ", span: " + span);
+            //System.out.println("best: " + best + ", span: " + span);
 
             result.put(url, best);
             urlToSpan.put(url, span);
