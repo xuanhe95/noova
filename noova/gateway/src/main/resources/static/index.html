@@ -390,6 +390,7 @@
             justify-content: space-between;
             border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
+            width: 600px;
         }
 
         #dictionary-toggle {
@@ -399,6 +400,23 @@
 
         #dictionary-toggle.expanded {
             transform: rotate(180deg); /* Rotate the arrow when expanded */
+        }
+
+        #weather-widget {
+            font-family: Arial, sans-serif;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
+        #weather-widget h3 {
+            font-weight: bold;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        #weather-widget:hover {
+            transform: scale(1.05); /* Slight zoom effect on hover */
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.3);
         }
 
     </style>
@@ -429,19 +447,31 @@
         <div class="spinner"></div>
     </div>
 
-    <div id="dictionary-result" style="margin-top: 50px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; display: none; position: relative;">
-        <h4 style="cursor: pointer; margin-bottom: 10px;" onclick="toggleDictionary()">Word Definition
+    <div id="dictionary-result" style="margin-top: 60px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; display: none; position: relative;">
+        <h4 style="cursor: pointer; margin-bottom: 10px;" onclick="toggleDictionary()">Dictionary
             <span id="dictionary-toggle" style="float: right; font-size: 18px;">&#9662;</span>
         </h4>
         <pre id="dictionary-highlight" style="margin-top: 10px;"></pre>
         <pre id="dictionary-full" style="display: none; margin-top: 10px;"></pre>
     </div>
 
+    <div id="weather-widget" style="display: none; max-width: 400px; padding: 15px; border-radius: 12px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); background-color: #ffffff; position: absolute; right: 20px; top: 90px;">
+        <h3 style="text-align: center; margin-bottom: 10px; font-size: 1.5rem; color: #333;">Weather</h3>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="text-align: left;">
+                <h4 id="weather-location" style="margin: 0; font-size: 1.2rem; color: #555;"></h4>
+                <p id="weather-temperature" style="margin: 5px 0; font-size: 1.1rem; color: #007bff;">Temperature: --°C</p>
+                <p id="weather-conditions" style="margin: 0; font-size: 1rem; color: #888;">Conditions: --</p>
+            </div>
+            <img id="weather-icon" src="" alt="Weather Icon" style="width: 80px; height: 80px; object-fit: contain;">
+        </div>
+    </div>
+
     <div id="results">
     </div>
-    <div id="loading-indicator" style="display: none; text-align: center; margin-top: 20px;">Loading...</div>
+    <div id="loading-indicator" style="display: none; text-align: center; margin-top: 20px;"></div>
 
-    <div id="pagination-controls" class="text-center mt-3"></div>
+<!--    <div id="pagination-controls" class="text-center mt-3"></div>-->
 </div>
 
 <footer>
@@ -604,6 +634,15 @@
                 fetchDictionaryDefinition(query);
             }
 
+            $('#weather-widget').hide();
+            if (searchMode !== 'Image' && query.includes('weather')) {
+                // Example: Fetch weather for New York by default, or detect a zip code dynamically
+                const zipCodeMatch = query.match(/\b\d{5}\b/); // Match 5-digit zip code
+                const zipCode = zipCodeMatch ? zipCodeMatch[0] : '19104'; // Default to 90210 if no zip code
+                fetchWeather(zipCode);
+            }
+
+
             $.ajax({
                 url: route,
                 method: 'GET',
@@ -625,6 +664,61 @@
                 }
             });
         });
+
+        async function fetchWeather(zipCode) {
+            try {
+                const API_URL = `https://api.open-meteo.com/v1/forecast?latitude=40.71&longitude=-74.01&current_weather=true`;
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                const weather = data.current_weather;
+
+                // Determine weather condition and icon
+                const weatherConditions = {
+                    0: "Clear Sky",
+                    1: "Mainly Clear",
+                    2: "Partly Cloudy",
+                    3: "Overcast",
+                    45: "Fog",
+                    48: "Rime Fog",
+                    51: "Light Drizzle",
+                    53: "Moderate Drizzle",
+                    55: "Dense Drizzle",
+                    56: "Freezing Drizzle",
+                    61: "Light Rain",
+                    63: "Moderate Rain",
+                    65: "Heavy Rain",
+                    80: "Rain Showers",
+                };
+
+                const iconMapping = {
+                    0: "https://openweathermap.org/img/wn/01d.png", // Clear Sky (Day)
+                    1: "https://openweathermap.org/img/wn/02d.png", // Mainly Clear (Day)
+                    2: "https://openweathermap.org/img/wn/03d.png", // Partly Cloudy
+                    3: "https://openweathermap.org/img/wn/04d.png", // Overcast
+                    45: "https://openweathermap.org/img/wn/50d.png", // Fog
+                    61: "https://openweathermap.org/img/wn/09d.png", // Light Rain
+                    80: "https://openweathermap.org/img/wn/10d.png", // Rain Showers
+                    default: "https://openweathermap.org/img/wn/01n.png", // Default Icon (Clear Night)
+                };
+
+                const condition = weather.weathercode;
+                const conditionText = weatherConditions[condition] || "Unknown";
+                const conditionIcon = iconMapping[condition] || "https://path-to-icons/default.png";
+
+                // Update widget content
+                $('#weather-location').text(`Weather for ${zipCode}`);
+                $('#weather-temperature').text(`Temperature: ${weather.temperature}°C`);
+                $('#weather-conditions').text(`Conditions: ${conditionText}`);
+                $('#weather-icon').attr('src', conditionIcon);
+
+                $('#weather-widget').fadeIn(); // Smoothly show the widget
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                $('#weather-widget').hide();
+            }
+        }
+
 
         function handleScroll() {
             const scrollableHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
