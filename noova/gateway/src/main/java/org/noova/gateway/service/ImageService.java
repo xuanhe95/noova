@@ -8,6 +8,10 @@ import org.noova.tools.PropertyLoader;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ImageService implements IService{
     private static final StorageStrategy STORAGE_STRATEGY = StorageStrategy.getInstance();
@@ -91,6 +95,56 @@ public class ImageService implements IService{
             for(String keyword : keywords){
                 processImage(result, localCache.get(keyword), fromUrlId, start, limit);
             }
+        }
+        return result;
+    }
+
+    public Map<String, Set<String>> searchByKeywordsIntersectionAsync(List<String> keywords, int start, int limit) throws IOException {
+
+        Map<String, Set<String>> result = new ConcurrentHashMap<>();
+        Map<String, Row> localCache = new HashMap<>();
+
+        Set<String> fromIds = null;
+
+        for (String keyword : keywords) {
+            Row row = KVS_CLIENT.getRow(IMAGE_TABLE, keyword);
+            if (row == null) {
+                return new HashMap<>();
+            }
+            localCache.put(keyword, row);
+            if (fromIds == null) {
+                fromIds = row.columns() == null ? new HashSet<>() : row.columns();
+            } else {
+                fromIds.retainAll(row.columns());
+            }
+        }
+
+        if(fromIds == null){
+            return new HashMap<>();
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+        try {
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+            for (String fromUrlId : fromIds) {
+                for (String keyword : keywords) {
+                    CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                        try {
+                            processImage(result, localCache.get(keyword), fromUrlId, start, limit);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, executor);
+                    futures.add(future);
+                }
+            }
+
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        } finally {
+            executor.shutdown();
         }
         return result;
     }

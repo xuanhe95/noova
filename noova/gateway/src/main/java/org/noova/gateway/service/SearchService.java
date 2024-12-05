@@ -2,6 +2,7 @@ package org.noova.gateway.service;
 
 //import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.checkerframework.checker.units.qual.A;
 import org.noova.gateway.storage.StorageStrategy;
 import org.noova.gateway.trie.CacheManager;
 import org.noova.gateway.trie.DistanceTrie;
@@ -932,9 +933,17 @@ public class SearchService implements IService {
         return trie.getWordsWithPrefix(prefix, limit);
     }
 
+
+    public List<List<String>> getCorrectionWords(List<String> listOfWord, int limit){
+        List<List<String>> result = Collections.synchronizedList(new ArrayList<>());
+
+        listOfWord.stream().map(word -> trie.getWordsWithinEditDistancePriority(word, 1, limit)).forEach(result::add);
+
+        return result;
+    }
     public List<String> getCorrection(String lastWord,   int limit) {
 
-        return trie.getWordsWithinEditDistancePriority(lastWord, 10, limit);
+        return trie.getWordsWithinEditDistancePriority(lastWord, 2, limit);
     }
 
     static class Node implements Comparable<Node> {
