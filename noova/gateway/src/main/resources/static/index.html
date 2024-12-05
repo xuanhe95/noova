@@ -737,7 +737,9 @@
             document.getElementById('loading-indicator').style.display = 'block'; // Show loading indicator
 
             // Perform AJAX request to fetch the next set of results
-            const query = $('#search-query').val();
+            let query = $('#search-query').val();
+            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').trim();
+
             const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v4';
             if (offset === 0) {
                 offset += limit; // Ensure the first batch is correctly set to the limit
