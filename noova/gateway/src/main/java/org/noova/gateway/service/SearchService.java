@@ -781,45 +781,57 @@ public class SearchService implements IService {
 
         System.out.println("result size: "+result.size());
 
+        // 对结果进行排序，并限制返回前 `limit` 个
+        Map<String, Double> finalResult = result;
+        return result.entrySet().stream()
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed()) // 按值降序排序
+                .limit(limit) // 限制返回数量
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (v1, v2) -> v1, // 冲突时保留第一个值（实际上不应该有冲突）
+                        () -> new TreeMap<>(Comparator.comparingDouble(finalResult::get).reversed()) // 返回有序的 TreeMap
+                ));
+
         // sort pgrk descending
-        List<Map.Entry<String, Double>> sortedEntries = result.entrySet().stream()
-                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
-                .toList();
-
-        // limit pgrk pages by limit(200) and MAX_DOMAIN(3)
-        Map<String, Integer> domainCounts = new HashMap<>();
-        Map<String, Double> limitedResults = new LinkedHashMap<>();
-        Map<String, Set<String>> rootInDomain = new HashMap<>(); // diff root within same domain
-        int count = 0;
-
-        for (Map.Entry<String, Double> entry : sortedEntries) {
-            if (count >= limit) break;
-
-            String hashedUrl = entry.getKey();
-//            String url = KVS.getRow(PROCESSED_TABLE, hashedUrl).get("url");
-            String url = getCachedRow(PROCESSED_TABLE,hashedUrl).get("url");
-            String domain = extractHostName(url);
-            String root = extractRootUrl(url);
-            rootInDomain.computeIfAbsent(domain, k -> new HashSet<>());
-
-            if(rootInDomain.containsKey(domain) && !rootInDomain.get(domain).add(root)){
-                continue; // seen domain+root
-            }
-
-            domainCounts.put(domain, domainCounts.getOrDefault(domain, 0) + 1);
-            if (domainCounts.get(domain) <= MAX_DOMAIN) {
-                limitedResults.put(hashedUrl, entry.getValue());
-                count++;
-            }
-        }
-
-        // sort in treemap
-        SortedMap<String, Double> sortedMap = new TreeMap<>((a, b) -> {
-            int cmp = Double.compare(limitedResults.get(b), limitedResults.get(a));
-            return cmp == 0 ? a.compareTo(b) : cmp;
-        });
-        sortedMap.putAll(limitedResults);
-        return sortedMap;
+//        List<Map.Entry<String, Double>> sortedEntries = result.entrySet().stream()
+//                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+//                .toList();
+//
+//        // limit pgrk pages by limit(200) and MAX_DOMAIN(3)
+//        Map<String, Integer> domainCounts = new HashMap<>();
+//        Map<String, Double> limitedResults = new LinkedHashMap<>();
+//        Map<String, Set<String>> rootInDomain = new HashMap<>(); // diff root within same domain
+//        int count = 0;
+//
+//        for (Map.Entry<String, Double> entry : sortedEntries) {
+//            if (count >= limit) break;
+//
+//            String hashedUrl = entry.getKey();
+////            String url = KVS.getRow(PROCESSED_TABLE, hashedUrl).get("url");
+//            String url = getCachedRow(PROCESSED_TABLE,hashedUrl).get("url");
+//            String domain = extractHostName(url);
+//            String root = extractRootUrl(url);
+//            rootInDomain.computeIfAbsent(domain, k -> new HashSet<>());
+//
+//            if(rootInDomain.containsKey(domain) && !rootInDomain.get(domain).add(root)){
+//                continue; // seen domain+root
+//            }
+//
+//            domainCounts.put(domain, domainCounts.getOrDefault(domain, 0) + 1);
+//            if (domainCounts.get(domain) <= MAX_DOMAIN) {
+//                limitedResults.put(hashedUrl, entry.getValue());
+//                count++;
+//            }
+//        }
+//
+//        // sort in treemap
+//        SortedMap<String, Double> sortedMap = new TreeMap<>((a, b) -> {
+//            int cmp = Double.compare(limitedResults.get(b), limitedResults.get(a));
+//            return cmp == 0 ? a.compareTo(b) : cmp;
+//        });
+//        sortedMap.putAll(limitedResults);
+//        return sortedMap;
 
 
 //        Map<String, Double> result = new HashMap<>();
