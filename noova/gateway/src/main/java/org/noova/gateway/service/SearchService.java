@@ -4,6 +4,7 @@ package org.noova.gateway.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.noova.gateway.storage.StorageStrategy;
 import org.noova.gateway.trie.CacheManager;
+import org.noova.gateway.trie.DistanceTrie;
 import org.noova.gateway.trie.Trie;
 import org.noova.gateway.trie.TrieManager;
 import org.noova.kvs.KVS;
@@ -26,7 +27,7 @@ public class SearchService implements IService {
 
     private static final Logger log = Logger.getLogger(SearchService.class);
 
-    private static Trie trie;
+    private static DistanceTrie trie;
 
     private static SearchService instance = null;
 
@@ -69,10 +70,10 @@ public class SearchService implements IService {
                         PropertyLoader.getProperty("table.default.value")
                 )){
                     log.info("[search] Trie found");
-                    trie = trieManager.loadTrie(trieName);
+                    trie = (DistanceTrie) trieManager.loadTrie(trieName);
                 } else{
                     log.info("[search] Trie not found, building trie...");
-                    trie = trieManager.buildTrie(PropertyLoader.getProperty("table.index"));
+                    trie = (DistanceTrie) trieManager.buildTrie(PropertyLoader.getProperty("table.index"));
                     trieManager.saveTrie(trie, trieName);
                 }
 
@@ -929,6 +930,11 @@ public class SearchService implements IService {
 
     public List<String> predict(String prefix, int limit) {
         return trie.getWordsWithPrefix(prefix, limit);
+    }
+
+    public List<String> getCorrection(String lastWord,   int limit) {
+
+        return trie.getWordsWithinEditDistancePriority(lastWord, 10, limit);
     }
 
     static class Node implements Comparable<Node> {

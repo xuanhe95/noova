@@ -38,7 +38,7 @@ public class TrieManager {
         }
         log.info("[trie] Scanned table: " + originalTableName);
 
-        Trie trie = new Trie();
+        Trie trie = new DistanceTrie();
 
         it.forEachRemaining(row -> {
             log.info("[trie] Inserting row: " + row.key());
@@ -91,7 +91,7 @@ public class TrieManager {
         }
 
         log.info("[trie] Json loaded");
-        Trie trie = OBJECT_MAPPER.readValue(json, Trie.class);
+        Trie trie = OBJECT_MAPPER.readValue(json, DistanceTrie.class);
         log.info("[trie] Trie loaded");
         TRIE_MAP.put(rowName, trie);
 

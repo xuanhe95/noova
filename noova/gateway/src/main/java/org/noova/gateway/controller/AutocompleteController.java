@@ -3,6 +3,7 @@ package org.noova.gateway.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.noova.gateway.service.SearchService;
 import org.noova.tools.Logger;
+import org.noova.tools.Parser;
 import org.noova.webserver.Request;
 import org.noova.webserver.Response;
 
@@ -35,7 +36,7 @@ public class AutocompleteController implements IController {
         log.info("[autocomplete] Autocomplete request received");
 
         String prefix = req.queryParams("prefix");
-        String limitParam = "10"; //TBD hardcoded 10
+        String limitParam = "2"; //TBD hardcoded 10
         int limit = Integer.parseInt(limitParam); //TBD hardcoded 10
 
         if (prefix == null || prefix.isEmpty()) {
@@ -69,6 +70,38 @@ public class AutocompleteController implements IController {
 
         // Return JSON response
         String json = OBJECT_MAPPER.writeValueAsString(fullSuggestions);
+        res.body(json);
+        res.type("application/json");
+    }
+
+
+
+    @Route(path = "/correction", method = "GET")
+    private void getCorrection(Request req, Response res) throws IOException {
+
+        String query = req.queryParams("query");
+        String limitParam = req.queryParams("limit") == null ? "10" : req.queryParams("limit");
+        int limit = Integer.parseInt(limitParam); //TBD hardcoded 10
+
+        if (query == null || query.isEmpty()) {
+            log.warn("[autocomplete] Empty prefix received");
+            res.body("[]");
+            res.type("application/json");
+            return;
+        }
+
+        List<String> wordTokens = Parser.getLammelizedWords(query);
+
+        String[] words = query.trim().split("\\s+"); // Split by spaces
+        String lastWord = words[words.length - 1]; // Get the last word
+
+        List<String> result = SearchService.getInstance().getCorrection(lastWord, limit);
+
+
+
+
+        // Return JSON response
+        String json = OBJECT_MAPPER.writeValueAsString(result);
         res.body(json);
         res.type("application/json");
     }

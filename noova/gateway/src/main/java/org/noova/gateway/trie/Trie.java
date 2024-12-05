@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Trie implements Serializable {
+public class Trie implements Serializable, ITrie {
     private static class TrieNode implements Serializable {
         @JsonProperty
         private final Map<Character, TrieNode> children = new HashMap<>();
