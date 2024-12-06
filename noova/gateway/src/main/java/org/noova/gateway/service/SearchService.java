@@ -89,7 +89,7 @@ public class SearchService implements IService {
 //        executor.submit(this::preloadPageRankCache);
 //        executor.shutdown();
 
-        //loadWordToUrlsCache();
+        loadWordToUrlsCache();
         loadUrlToIdCache();
         loadIdToUrlCache();
     }
@@ -915,14 +915,14 @@ public class SearchService implements IService {
         try {
             URL url = new URL(urlString);
             String host = url.getHost();
-            return host.startsWith("www.") ? CapitalizeTitle.toTitleCase(host.substring(4))
-                    : CapitalizeTitle.toTitleCase(host);
+            return host.startsWith("www.") ? host.substring(4) : host;
         } catch (Exception e) {
             return "Unknown";
         }
     }
 
 
+    //! optimize, filter- hashed url last alphabet,
     public SortedMap<String, Double> getPageRanksParallel(Set<String> hashedUrls, int limit) throws IOException {
         Map<String, Double> result = new HashMap<>();
 

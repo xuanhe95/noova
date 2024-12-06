@@ -25,7 +25,7 @@ public class TopPages {
     private static final String INDEX_TABLE = PropertyLoader.getProperty("table.index");
 
 
-    private static final int LIMIT = 20;
+    private static final int LIMIT = 200;
 
 
     //private static final Map<PageRankPair, Row> PAGERANK_CACHE = new TreeMap<>();
