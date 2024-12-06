@@ -1129,6 +1129,7 @@ public class SearchController implements IController {
 
 
 
+
     @Route(path = "/search/v6", method = "GET")
     private void searchByKeywordsV6(Request req, Response res) throws IOException {
         log.info("[search] Searching by query");
@@ -1139,12 +1140,12 @@ public class SearchController implements IController {
         int pageLimit = (req.queryParams("pageLimit") == null) ? 200 : Integer.parseInt(req.queryParams("pageLimit"));
         int spanLimit = (req.queryParams("span") == null) ? 50 : Integer.parseInt(req.queryParams("context"));
         int snippetLimit = (req.queryParams("snippet") == null) ? 60 : Integer.parseInt(req.queryParams("snippet"));
-        int forceDrop = (req.queryParams("forceDrop") == null) ? 500 : Integer.parseInt(req.queryParams("forceDrop"));
+        int forceDrop = (req.queryParams("forceDrop") == null) ? 300 : Integer.parseInt(req.queryParams("forceDrop"));
 
         double tfIDFWeight = (req.queryParams("tf") == null) ? 1 : Double.parseDouble(req.queryParams("tf"));
-        double pgrkWeight = (req.queryParams("pr") == null) ? 0.5 : Double.parseDouble(req.queryParams("pg"));
+        double pgrkWeight = (req.queryParams("pr") == null) ? 1 : Double.parseDouble(req.queryParams("pg"));
         double titleDespMatchWeight = (req.queryParams("tt") == null) ? 2 : Double.parseDouble(req.queryParams("tt"));
-        double phraseMatchWeight = (req.queryParams("pm") == null) ? 20 : Double.parseDouble(req.queryParams("pm"));
+        double phraseMatchWeight = (req.queryParams("pm") == null) ? 4 : Double.parseDouble(req.queryParams("pm"));
 
 
         List<String> queryTokens = Parser.getLammelizedWords(query);
@@ -1241,7 +1242,7 @@ public class SearchController implements IController {
         long start = System.currentTimeMillis();
         System.out.println("Start fetching page rank");
 
-        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),pageLimit, forceDrop);
+        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallelWithCache(queryTokens, hashedUrlToId.keySet(),pageLimit, forceDrop);
 
         System.out.println("sortedUrlsMap: " + sortedUrlsMap.size());
 

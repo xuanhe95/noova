@@ -262,12 +262,10 @@ public class SearchService implements IService {
 
         String[] positions = urlsWithPositions.split(":")[0].trim().split("\\s+");
         for (String position : positions) {
-            // 提取数字后直接检查并转换
             if (position != null && !position.isEmpty()) {
                 try {
                     result.add(Integer.parseInt(position.replaceAll("[^0-9]", "")));
                 } catch (NumberFormatException e) {
-                    // 如果解析失败，跳过该位置
                     System.err.println("Failed to parse position: " + position);
                 }
             }
@@ -753,7 +751,6 @@ public class SearchService implements IService {
                 String rawPositions = keywordRow.get(fromUrlId);
                 List<Integer> positions = parseUrlWithSortedPositions(rawPositions);
 
-                System.out.println("positions: "+positions.size());
                 result.put(keyword, positions);
             }
             allResults.put(idToUrlMap.get(fromUrlId), result);
@@ -1027,6 +1024,77 @@ public class SearchService implements IService {
 
     }
 
+
+
+    public SortedMap<String, Double> getPageRanksParallelWithCache(List<String> queryTokens, Set<String> hashedUrls, int limit, int forceDrop) throws IOException {
+        Map<String, Double> result = new HashMap<>();
+
+        System.out.println("hashedUrls size: "+hashedUrls.size());
+
+
+        List<String> urlList = new ArrayList<>(hashedUrls);
+
+        for(String token : queryTokens){
+            Row top = KVS.getRow("pt-toppage", token);
+            Set<String> urls = top.columns();
+
+            if(urls != null){
+                urlList.addAll(urls);
+            }
+        }
+
+        if(urlList.size() > forceDrop){
+            Random random = new Random(0);
+
+            Collections.shuffle(urlList, random);
+
+            hashedUrls = urlList.stream()
+                    .limit(forceDrop)
+                    .collect(Collectors.toSet());
+        } else{
+            hashedUrls = new HashSet<>(urlList);
+        }
+
+        System.out.println("hashedUrls size: "+hashedUrls.size());
+        ExecutorService executor = Executors.newFixedThreadPool(20);
+        try {
+            result = hashedUrls.parallelStream()
+                    .map(hashedUrl -> {
+                        try {
+                            byte[] rankByte = KVS.get(PGRK_TABLE, hashedUrl, "rank");
+                            if (rankByte != null) {
+                                return Map.entry(hashedUrl, Double.parseDouble(new String(rankByte)));
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toConcurrentMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (v1, v2) -> v1, // 冲突时保留第一个值
+                            ConcurrentHashMap::new
+                    ));
+        } finally {
+            executor.shutdown();
+        }
+
+
+        System.out.println("result size: "+result.size());
+
+        Map<String, Double> finalResult = result;
+        return result.entrySet().stream()
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed()) // 按值降序排序
+                .limit(limit) // 限制返回数量
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (v1, v2) -> v1, // 冲突时保留第一个值（实际上不应该有冲突）
+                        () -> new TreeMap<>(Comparator.comparingDouble(finalResult::get).reversed()) // 返回有序的 TreeMap
+                ));
+    }
 
 
     public SortedMap<String, Double> getPageRanks(Set<String> hashedUrls, int limit) throws IOException {
