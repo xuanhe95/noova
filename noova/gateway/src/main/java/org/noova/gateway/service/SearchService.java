@@ -2125,8 +2125,7 @@ public class SearchService implements IService {
 //            log.warn("[search] No row found for URL: " + hashedUrl);
 //            return null;
 //        }
-
-        byte[] b = KVS.get(PropertyLoader.getProperty("table.processed"), hashedUrl, PropertyLoader.getProperty("table.processed.text"));
+        byte[] b = KVS.get("pt-snapshot", hashedUrl, "page");
         if(b == null){
             return "";
         }
