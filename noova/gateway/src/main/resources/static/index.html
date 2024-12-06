@@ -717,7 +717,17 @@
             $.ajax({
                 url: route,
                 method: 'GET',
-                data: {query: query},
+                data: route === '/search/v6' ? {
+                    query: query,
+                    pageLimit: 200,
+                    forceDrop: 500,
+                    tf: 2,
+                    pr: 0.5,
+                    tt: 4,
+                    pm: 15
+                } : {
+                    query: query
+                },
                 success: function (response) {
                     resultsData = response;
                     currentPage = 1;
