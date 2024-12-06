@@ -1034,9 +1034,16 @@ public class SearchService implements IService {
 
         for(String token : queryTokens){
             Row top = KVS.getRow("pt-toppage", token);
+
+            if(top == null){
+                System.out.println("No top page for token: "+token);
+                continue;
+            }
+
             Set<String> urls = top.columns();
 
             if(urls != null){
+                System.out.println("urls size: "+urls.size());
                 urlList.addAll(urls);
             }
         }
