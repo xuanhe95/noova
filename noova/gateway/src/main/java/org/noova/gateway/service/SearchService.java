@@ -1062,7 +1062,7 @@ public class SearchService implements IService {
 
         System.out.println("hashedUrls size: "+hashedUrls.size());
 
-        //ExecutorService executor = Executors.newFixedThreadPool(20);
+        ExecutorService executor = Executors.newFixedThreadPool(20);
         try {
             result = hashedUrls.parallelStream()
                     .map(hashedUrl -> {
