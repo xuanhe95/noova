@@ -1030,39 +1030,16 @@ public class SearchService implements IService {
         System.out.println("hashedUrls size: "+hashedUrls.size());
 
 
-        //List<String> urlList = new ArrayList<>(hashedUrls);
+        List<String> urlList = new ArrayList<>(hashedUrls);
 
-        List<String> urlList = Collections.synchronizedList(new ArrayList<>()); // 线程安全的集合
-        ExecutorService executor = Executors.newFixedThreadPool(20); // 自定义线程池
+        for(String token : queryTokens){
+            Row top = KVS.getRow("pt-toppage", token);
+            Set<String> urls = top.columns();
 
-        try {
-            // 使用 CompletableFuture 异步处理每个 token
-            List<CompletableFuture<Void>> futures = queryTokens.stream()
-                    .map(token -> CompletableFuture.runAsync(() -> {
-                        Row top = null; // 异步获取 Row
-                        try {
-                            synchronized (KVS.class) {
-                                top = KVS.getRow("pt-toppage", token);
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                        if (top != null) {
-                            Set<String> urls = top.columns();
-                            if (urls != null) {
-                                urlList.addAll(urls); // 添加到线程安全的集合中
-                            }
-                        }
-                    }, executor))
-                    .collect(Collectors.toList());
-
-            // 等待所有异步任务完成
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-        } finally {
-            executor.shutdown();
+            if(urls != null){
+                urlList.addAll(urls);
+            }
         }
-
 
         if(urlList.size() > forceDrop){
             Random random = new Random(0);
