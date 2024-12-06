@@ -1,8 +1,8 @@
 <component name="libraryTable">
   <library name="test">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/project/out/production/HW7/cis5550/test/flame-cogroup.jar!/" />
       <root url="jar://$PROJECT_DIR$/project/out/production/HW7/cis5550/test/flame-map-partitions.jar!/" />
+      <root url="jar://$PROJECT_DIR$/project/out/production/HW7/cis5550/test/flame-cogroup.jar!/" />
       <root url="jar://$PROJECT_DIR$/project/out/production/HW7/cis5550/test/flame-filter.jar!/" />
     </CLASSES>
     <JAVADOC />

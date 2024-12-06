@@ -21,6 +21,7 @@ public class Controller implements IController {
         registerRoutes(AutocompleteController.class);
         registerRoutes(LocationController.class);
         registerRoutes(ImageController.class);
+        registerRoutes(PDFController.class);
 
         SearchService.getInstance();
     }

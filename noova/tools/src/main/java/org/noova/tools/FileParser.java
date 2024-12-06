@@ -27,27 +27,31 @@ public class FileParser {
         return ICON_MAP.getOrDefault(contentType, DEFAULT_ICON_URL);
     }
 
-    public static String getIconHtml(String contentType) {
-        // Get the icon URL based on content type
-        String iconUrl = getIconUrl(contentType);
-
-        // Return the HTML snippet with fallback handling
-        return "<img src=\"" + iconUrl + "\" alt=\"icon\" title=\"icon\" onerror=\"this.style.display='none';\" />";
-    }
-
     public static String getTitle(Metadata metadata, String fallbackUrl, String contentType) {
         String title = metadata.get("title");
         if (title != null && !title.isEmpty()) {
             return title;
-        } else{
+        } else {
             title = fallbackUrl.substring(fallbackUrl.lastIndexOf('/') + 1).replaceAll("\\.\\w+$", "");
         }
+
+        String domain = "";
+        try {
+            java.net.URL url = new java.net.URL(fallbackUrl);
+            domain = url.getHost().replace("www.", "");
+        } catch (Exception e) {
+            domain = "unknown domain";
+        }
+
+
         String fileType = getFileTypeKeyword(contentType);
         if (fileType != null) {
             title += " " + fileType;
         }
-        return title;
 
+        title += " from " + domain;
+
+        return title;
     }
 
     private static String getFileTypeKeyword(String contentType) {

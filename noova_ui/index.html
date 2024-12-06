@@ -92,6 +92,7 @@
 						<button class="btn" type="button"
 							onclick="window.location.href='/random'">Recommendation</button>
 						<button class="btn" type="button" onclick="handleImage()">Image</button>
+						<button class="btn" type="button" onclick="handlePDF()"></button>
 					</div>
 				</form>
 			</div>
@@ -117,10 +118,15 @@
 			document.getElementById("search-form").action = `/search/image?keyword=${encodeURIComponent(query)}`;
 			return true;
 		}
+
+		function handlePDF() {
+			const query = document.getElementById("query").value;
+
+			document.getElementById("search-form").action = `/search/pdf?query=${encodeURIComponent(query)}`;
+			return true;
+		}
 	</script>
 
 </body>
-
-</html>
 
 </html>

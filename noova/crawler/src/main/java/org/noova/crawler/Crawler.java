@@ -31,6 +31,7 @@ public class Crawler implements Serializable {
     private static final Logger log = Logger.getLogger(Crawler.class);
     public static final String TABLE_PREFIX = "pt-";
     public static final String CRAWLER_TABLE = TABLE_PREFIX + "crawl";
+    public static final String PDF_TABLE = TABLE_PREFIX + "pdf";
     private static final String HOSTS_TABLE = TABLE_PREFIX + "hosts";
     private static final String LAST_ACCESS_TABLE = "last-access";
     // this is to reduce the pages that have been accessed
@@ -555,19 +556,18 @@ public class Crawler implements Serializable {
                 try (InputStream fileStream = conn.getInputStream()) {
                     FileParser.ParsedFile parsedFile = FileParser.extractTextAndMetadata(fileStream , contentType);
                     Metadata metadata = parsedFile.getMetadata();
-                    String iconUrl = FileParser.getIconHtml(contentType);
+                    String iconUrl = FileParser.getIconUrl(contentType);
                     String title = FileParser.getTitle(metadata , normalizedUrl, contentType);
                     String text = parsedFile.getText();
 
 //                    System.out.println("text: "+parsedFile.getText());
-                    row.put("text" , text);
-                    row.put("page" , text); // file text are usually clean enough to put in text column tho
+                    row.put("text" , text); // file text are usually clean enough to put in text column tho
                     row.put("url" , normalizedUrl);
                     row.put("icon" , iconUrl);
                     row.put("title" , title);
                     row.put(PropertyLoader.getProperty("table.crawler.timestamp") , String.valueOf(LocalDateTime.now()));
 
-                    ctx.getKVS().putRow(CRAWLER_TABLE , row);
+                    ctx.getKVS().putRow(PDF_TABLE , row);
                     updateAccessedTable(ctx , normalizedUrl);
 
                     return new ArrayList<>(); // Skip link parsing for non-HTML

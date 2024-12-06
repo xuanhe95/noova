@@ -1,8 +1,8 @@
 <component name="libraryTable">
   <library name="target1">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/noova/webserver/target/webserver-1.0-SNAPSHOT.jar!/" />
-      <root url="jar://$PROJECT_DIR$/noova/webserver/target/original-webserver-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/gateway/target/original-gateway-1.0-SNAPSHOT.jar!/" />
+      <root url="jar://$PROJECT_DIR$/noova/gateway/target/gateway-1.0-SNAPSHOT.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

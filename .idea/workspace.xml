@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f80438ac-a322-413c-93eb-9ece9a0ba79f" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/PDFController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/PDFService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/noova/indexer/src/main/java/org/noova/indexer/FastPDFIndexer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/all_jars.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/all_jars.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/crawler_1_0_SNAPSHOT.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/crawler_1_0_SNAPSHOT.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/flame_1_0_SNAPSHOT.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/flame_1_0_SNAPSHOT.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/project.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/project.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/target.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/target.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/target1.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/target1.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/test.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/test.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/tests.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/tests.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/24fa-cis5550-Noova.iml" beforeDir="false" afterPath="$PROJECT_DIR$/24fa-cis5550-Noova.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/all-jars/config.properties" beforeDir="false" afterPath="$PROJECT_DIR$/noova/all-jars/config.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/config.properties" beforeDir="false" afterPath="$PROJECT_DIR$/noova/config.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler/src/main/java/org/noova/crawler/Crawler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/crawler_url.properties" beforeDir="false" afterPath="$PROJECT_DIR$/noova/crawler_url.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/Controller.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/controller/Controller.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/gateway/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/noova/gateway/src/main/resources/static/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/tools/src/main/java/org/noova/tools/FileParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/noova/tools/src/main/java/org/noova/tools/FileParser.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova/tools/src/main/resources/models/words.txt" beforeDir="false" afterPath="$PROJECT_DIR$/noova/tools/src/main/resources/models/words.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/noova_ui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/noova_ui/index.html" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CodeStyleSettingsInfer">
+    <option name="done" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="useMavenConfig" value="true" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectCodeStyleSettingsMigration">
+    <option name="version" value="2" />
+  </component>
+  <component name="ProjectId" id="2poA7cNirQFFm94gtU2RRsSXlDw" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "jdk.selected.JAVA_MODULE": "19",
+    "last_opened_file_path": "/Users/ritazhang/Desktop/upenn-mcit/555/24fa-cis5550-Noova",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="org.noova.gateway.service" />
+      <recent name="org.noova.gateway.controller" />
+      <recent name="org.noova.indexer" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Application.FastPDFIndexer">
+    <configuration name="BuildDictionary" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.BuildDictionary" />
+      <module name="crawler" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.crawler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="BuildImgDictionary" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.BuildImgDictionary" />
+      <module name="crawler" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.crawler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="BuildProcessedTable" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.crawler.BuildProcessedTable" />
+      <module name="crawler" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.crawler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="FastBuildGraph" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.pagerank.FastBuildGraph" />
+      <module name="pagerank" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.pagerank.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="FastImageIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.FastImageIndexer" />
+      <module name="indexer" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.indexer.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="FastIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.FastIndexer" />
+      <module name="indexer" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.indexer.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="FastPDFIndexer" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.indexer.FastPDFIndexer" />
+      <module name="indexer" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.indexer.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="FastPageRank" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.pagerank.FastPageRank" />
+      <module name="pagerank" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.pagerank.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TopPages" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="org.noova.pagerank.TopPages" />
+      <module name="pagerank" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/noova" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.noova.pagerank.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="24fa-cis5550-Noova" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="24fa-cis5550-Noova" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Application.FastPDFIndexer" />
+      <item itemvalue="Application.FlameCoordinator" />
+      <item itemvalue="Application.FlameWorker1" />
+      <item itemvalue="Application.FlameWorker2" />
+      <item itemvalue="Application.BuildDictionary" />
+      <item itemvalue="Application.BuildImgDictionary" />
+      <item itemvalue="Application.BuildProcessedTable" />
+      <item itemvalue="Application.FastBuildGraph" />
+      <item itemvalue="Application.FastImageIndexer" />
+      <item itemvalue="Application.FastIndexer" />
+      <item itemvalue="Application.FastPageRank" />
+      <item itemvalue="Application.TopPages" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.TopPages" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f80438ac-a322-413c-93eb-9ece9a0ba79f" name="Changes" comment="" />
+      <created>1733421887306</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1733421887306</updated>
+      <workItem from="1733421888308" duration="46653000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/noova/gateway/src/main/java/org/noova/gateway/service/SearchService.java</url>
+          <line>987</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

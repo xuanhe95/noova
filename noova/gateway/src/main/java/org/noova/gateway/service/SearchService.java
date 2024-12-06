@@ -975,7 +975,8 @@ public class SearchService implements IService {
                         () -> new TreeMap<>(Comparator.comparingDouble(finalResult::get).reversed()) // 返回有序的 TreeMap
                 ));
 
-        // sort pgrk descending
+
+//        // sort pgrk descending
 //        List<Map.Entry<String, Double>> sortedEntries = result.entrySet().stream()
 //                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
 //                .toList();
@@ -991,7 +992,7 @@ public class SearchService implements IService {
 //
 //            String hashedUrl = entry.getKey();
 ////            String url = KVS.getRow(PROCESSED_TABLE, hashedUrl).get("url");
-//            String url = getCachedRow(PROCESSED_TABLE,hashedUrl).get("url");
+//            String url = getCachedRow(PROCESSED_TABLE,hashedUrl).get("url"); // check if it's cached?
 //            String domain = extractHostName(url);
 //            String root = extractRootUrl(url);
 //            rootInDomain.computeIfAbsent(domain, k -> new HashSet<>());
