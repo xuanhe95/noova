@@ -1134,19 +1134,33 @@ public class SearchController implements IController {
     private void searchByKeywordsV6(Request req, Response res) throws IOException {
         log.info("[search] Searching by query");
         String query = req.queryParams("query");
-        int offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
-        int limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
+        int offset = 0;
+        int limit = 10;
+        int pageLimit = 200;
+        int spanLimit = 50;
+        int snippetLimit = 60;
+        int forceDrop = 300;
+        double tfIDFWeight = 1;
+        double pgrkWeight = 0.5;
+        double titleDespMatchWeight = 2;
+        double phraseMatchWeight = 20;
 
-        int pageLimit = (req.queryParams("pageLimit") == null) ? 200 : Integer.parseInt(req.queryParams("pageLimit"));
-        int spanLimit = (req.queryParams("span") == null) ? 50 : Integer.parseInt(req.queryParams("context"));
-        int snippetLimit = (req.queryParams("snippet") == null) ? 60 : Integer.parseInt(req.queryParams("snippet"));
-        int forceDrop = (req.queryParams("forceDrop") == null) ? 300 : Integer.parseInt(req.queryParams("forceDrop"));
+        try {
+            offset = (req.queryParams("offset") == null) ? 0 : Integer.parseInt(req.queryParams("offset"));
+            limit = (req.queryParams("limit") == null) ? 10 : Integer.parseInt(req.queryParams("limit"));
 
-        double tfIDFWeight = (req.queryParams("tf") == null) ? 1 : Double.parseDouble(req.queryParams("tf"));
-        double pgrkWeight = (req.queryParams("pr") == null) ? 0.5 : Double.parseDouble(req.queryParams("pg"));
-        double titleDespMatchWeight = (req.queryParams("tt") == null) ? 2 : Double.parseDouble(req.queryParams("tt"));
-        double phraseMatchWeight = (req.queryParams("pm") == null) ? 20 : Double.parseDouble(req.queryParams("pm"));
+            pageLimit = (req.queryParams("pageLimit") == null) ? 200 : Integer.parseInt(req.queryParams("pageLimit"));
+            spanLimit= (req.queryParams("span") == null) ? 50 : Integer.parseInt(req.queryParams("context"));
+            snippetLimit = (req.queryParams("snippet") == null) ? 60 : Integer.parseInt(req.queryParams("snippet"));
+            forceDrop = (req.queryParams("forceDrop") == null) ? 300 : Integer.parseInt(req.queryParams("forceDrop"));
 
+            tfIDFWeight = (req.queryParams("tf") == null) ? 1 : Double.parseDouble(req.queryParams("tf"));
+            pgrkWeight = (req.queryParams("pr") == null) ? 0.5 : Double.parseDouble(req.queryParams("pr"));
+            titleDespMatchWeight = (req.queryParams("tt") == null) ? 2 : Double.parseDouble(req.queryParams("tt"));
+            phraseMatchWeight = (req.queryParams("pm") == null) ? 20 : Double.parseDouble(req.queryParams("pm"));
+        } catch (Exception e) {
+            System.out.println("input error, use default");
+        }
 
         List<String> queryTokens = Parser.getLammelizedWords(query);
         String token = String.join(" ", queryTokens);
@@ -1163,8 +1177,9 @@ public class SearchController implements IController {
             }
             List<Map<String, Object>> view = cachedValue.subList(offset, Math.min(offset + limit, cachedValue.size()));
 
+            int finalSnippetLimit1 = snippetLimit;
             view.forEach(result -> {
-                processResult(result,snippetLimit);
+                processResult(result, finalSnippetLimit1);
             });
 
             String json = OBJECT_MAPPER.writeValueAsString(view);
@@ -1257,6 +1272,10 @@ public class SearchController implements IController {
         var urlToWordToPositions = SEARCH_SERVICE.searchByKeywordsIntersectionV2(idToHashedUrl, keywordRows, queryTokens, 100);
 
         // Process each URL in parallel
+        double finalTitleDespMatchWeight = titleDespMatchWeight;
+        double finalTfIDFWeight = tfIDFWeight;
+        double finalPgrkWeight = pgrkWeight;
+        double finalPhraseMatchWeight = phraseMatchWeight;
         sortedUrlsMap.entrySet().parallelStream().forEach(entry -> {
             String hashedUrl = entry.getKey();
 
@@ -1292,10 +1311,10 @@ public class SearchController implements IController {
                 }, executor);
 
                 // Get results with timeout
-                double titleOGMatchScore = titleDespMatchWeight == 0.0 ? 0 : getWithTimeout(titleOGMatchScoreFuture, 0.0);
+                double titleOGMatchScore = finalTitleDespMatchWeight == 0.0 ? 0 : getWithTimeout(titleOGMatchScoreFuture, 0.0);
 //                double phraseMatchScore = phraseMatchWeight == 0.0 ? 0 : getWithTimeout(phraseMatchScoreFuture, 0.0);
-                Map<String, Double> docTfidf = tfIDFWeight == 0.0 ? new HashMap<>() : getWithTimeout(docTfidfFuture, new HashMap<>());
-                Map<String, Double> queryTfidf = tfIDFWeight == 0.0 ? new HashMap<>(): getWithTimeout(queryTfidfFuture, new HashMap<>());
+                Map<String, Double> docTfidf = finalTfIDFWeight == 0.0 ? new HashMap<>() : getWithTimeout(docTfidfFuture, new HashMap<>());
+                Map<String, Double> queryTfidf = finalTfIDFWeight == 0.0 ? new HashMap<>(): getWithTimeout(queryTfidfFuture, new HashMap<>());
                 double pageRank = entry.getValue();
 
                 // Calculate TF-IDF similarity
@@ -1317,10 +1336,10 @@ public class SearchController implements IController {
                         pageRank, 1.0,
                         titleOGMatchScore, 1.0,
                         phraseMatchScore, 1.0,
-                        tfIDFWeight,
-                        pgrkWeight,
-                        titleDespMatchWeight,
-                        phraseMatchWeight);
+                        finalTfIDFWeight,
+                        finalPgrkWeight,
+                        finalTitleDespMatchWeight,
+                        finalPhraseMatchWeight);
 
 
 
@@ -1353,8 +1372,9 @@ public class SearchController implements IController {
 
         List<Map<String, Object>> view = results.subList(offset, Math.min(offset + limit, results.size()));
 
+        int finalSnippetLimit = snippetLimit;
         view.forEach(result -> {
-            processResult(result,snippetLimit);
+            processResult(result, finalSnippetLimit);
         });
 
         // Return JSON response
