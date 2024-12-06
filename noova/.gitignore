@@ -42,3 +42,4 @@ sample/
 /worker*/
 /all-jars/
 !all-jars/config.properties
+pages_processed.txt
