@@ -86,7 +86,7 @@ public class SearchService implements IService {
 //        executor.submit(this::preloadPageRankCache);
 //        executor.shutdown();
 
-        loadWordToUrlsCache();
+        // loadWordToUrlsCache();
         loadUrlToIdCache();
         loadIdToUrlCache();
     }
