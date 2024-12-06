@@ -49,11 +49,11 @@ public class EfficientMarkovWord implements IMarkovModel {
 
     public String newGetRandomText(int numWords){
         StringBuilder sb = new StringBuilder();
-        int startIndex = myRandom.nextInt(myText.length - myOrder);  // 随机选择起始索引
+        int startIndex = myRandom.nextInt(myText.length - myOrder);
 
         // 构建起始 WordGram
         WordGram wg = new WordGram(Arrays.copyOfRange(myText, startIndex, startIndex + myOrder), 0, myOrder);
-        sb.append(wg.toString()).append(" ");  // 将起始 n-gram 添加到输出文本中
+        sb.append(wg.toString()).append(" ");
 
         // 生成随机文本
         for (int k = 0; k < numWords - myOrder; k++) {
@@ -62,9 +62,9 @@ public class EfficientMarkovWord implements IMarkovModel {
                     break;
             }
 
-            String nextWord = follows.get(myRandom.nextInt(follows.size()));  // 随机选择下一个单词
+            String nextWord = follows.get(myRandom.nextInt(follows.size()));
             sb.append(nextWord).append(" ");
-            wg = wg.shiftAdd(nextWord);  // 更新 WordGram
+            wg = wg.shiftAdd(nextWord);
         }
 
         return sb.toString().trim();
@@ -75,14 +75,12 @@ public class EfficientMarkovWord implements IMarkovModel {
         WordGram inputGram = new WordGram(inputWords, 0, myOrder);
         List<String> follows = getFollows(inputGram);
 
-        // 如果没有后继单词，返回空列表
         if (follows.isEmpty()) {
             return Collections.emptySet();
         }
 
         Set<String> recommendations = new HashSet<>();
 
-        // 随机选择多个推荐单词
 //        for (int i = 0; i < numRecommendations; i++) {
 //            String recommendation = follows.get(myRandom.nextInt(follows.size()));
 //            recommendations.add(recommendation);
@@ -142,24 +140,20 @@ public class EfficientMarkovWord implements IMarkovModel {
 
     public void newBuildMap(){
         for (int i = 0; i <= myText.length - myOrder; i++) {
-            // 提取当前的 n-gram 词组
+
             String[] source = new String[myOrder];
             System.arraycopy(myText, i, source, 0, myOrder);
             WordGram wg = new WordGram(source, 0, myOrder);
             Integer hashCode = wg.hashCode();
 
-            // 获取当前 n-gram 的后继单词
             String nextWord = (i + myOrder < myText.length) ? myText[i + myOrder] : null;
 
-            // 从 N_GRAM_TRANSITIONS_MAP 中获取当前 n-gram 的后继列表，若不存在则新建一个
             List<String> follows = N_GRAM_TRANSITIONS_MAP.computeIfAbsent(hashCode, k -> new ArrayList<>());
 
-            // 如果有后继单词，则添加到后继列表中
             if (nextWord != null) {
                 follows.add(nextWord);
             }
 
-            // 更新当前 WordGram 对象，生成新的 n-gram
             if (nextWord != null) {
                 wg = wg.shiftAdd(nextWord);
             }

@@ -350,7 +350,7 @@ public class SearchController implements IController {
                     }
                 }, executor);
 
-// Step 2: Use the results of queryTfidfFuture and urlsWithPositionsFuture
+        // Step 2: Use the results of queryTfidfFuture and urlsWithPositionsFuture
         CompletableFuture<Map<String, List<Integer>>> bestPositionsFuture = urlsWithPositionsFuture.thenCompose(urlsWithPositions -> {
             return queryTfidfFuture.thenApplyAsync(queryTfidf -> {
                 try {
@@ -1193,7 +1193,6 @@ public class SearchController implements IController {
                 }))
                 .toList();
 
-// 等待所有任务完成
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         if (mergedUrlIds[0] == null || mergedUrlIds[0].isEmpty()) {
@@ -1418,7 +1417,7 @@ public class SearchController implements IController {
 
     private double normalize(double value, double min, double max) {
         if (min == max) {
-            return 0.5; // 防止分母为 0，返回中间值
+            return 0.5;
         }
         return (value - min) / (max - min);
     }

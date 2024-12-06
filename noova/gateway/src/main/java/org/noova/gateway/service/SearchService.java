@@ -1087,7 +1087,7 @@ public class SearchService implements IService {
 //                result.put(hashedUrl, Double.parseDouble(new String(rankByte)));
 //            }
 //        }
-//        // 按值降序排序
+//
 //        var sortedEntries = result.entrySet().stream()
 //                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue())) // 倒序排序
 //                .limit(limit) // 只保留前 limit 个
@@ -1099,7 +1099,6 @@ public class SearchService implements IService {
 //            return cmp == 0 ? a.compareTo(b) : cmp; // 如果值相同，按键排序
 //        });
 //
-//        // 将排序结果放入 TreeMap
 //        for (var entry : sortedEntries) {
 //            limitedMap.put(entry.getKey(), entry.getValue());
 //        }
@@ -1134,9 +1133,9 @@ public class SearchService implements IService {
     }
 
     static class Node implements Comparable<Node> {
-        int value; // 当前距离
-        int index; // 列表索引
-        int listIndex; // 所属列表的索引
+        int value;
+        int index;
+        int listIndex;
 
         Node(int value, int index, int listIndex) {
             this.value = value;
@@ -1146,7 +1145,7 @@ public class SearchService implements IService {
 
         @Override
         public int compareTo(Node other) {
-            return Integer.compare(this.value, other.value); // 按值升序排列
+            return Integer.compare(this.value, other.value);
         }
     }
 
@@ -1154,7 +1153,6 @@ public class SearchService implements IService {
         List<List<Integer>> allPositions = new ArrayList<>();
         PriorityQueue<Node> pq = new PriorityQueue<>();
 
-        // 初始化所有位置列表，并将每个列表的第一个元素加入优先队列
         for (String word : words) {
             if (positions.containsKey(word)) {
                 List<Integer> posSortedList = positions.get(word);
@@ -1162,24 +1160,22 @@ public class SearchService implements IService {
                 allPositions.add(posSortedList);
                 pq.offer(new Node(posSortedList.get(0), 0, allPositions.size() - 1));
             } else {
-                return new ArrayList<>(); // 如果某个单词没有位置，返回空
+                return new ArrayList<>();
             }
         }
 
         int minDistance = Integer.MAX_VALUE;
-        int maxPos = Integer.MIN_VALUE; // 记录当前窗口的最大位置
+        int maxPos = Integer.MIN_VALUE;
         List<Integer> result = new ArrayList<>();
 
-        // 初始化最大位置
         for (List<Integer> posList : allPositions) {
             maxPos = Math.max(maxPos, posList.get(0));
         }
 
         while (true) {
-            Node minNode = pq.poll(); // 获取当前最小位置
+            Node minNode = pq.poll();
             int minPos = minNode.value;
 
-            // 更新最小距离和结果
             int currentDistance = maxPos - minPos;
             if (currentDistance < minDistance) {
                 minDistance = currentDistance;
@@ -1187,22 +1183,20 @@ public class SearchService implements IService {
                 for (Node node : pq) {
                     result.add(allPositions.get(node.listIndex).get(node.index));
                 }
-                result.add(minPos); // 加入当前最小值
+                result.add(minPos);
             }
 
-            // 提前终止条件
             if (currentDistance <= spanTolerance) {
                 return result;
             }
 
-            // 移动指针到下一个位置
             List<Integer> currentList = allPositions.get(minNode.listIndex);
             if (minNode.index + 1 < currentList.size()) {
                 int nextValue = currentList.get(minNode.index + 1);
                 pq.offer(new Node(nextValue, minNode.index + 1, minNode.listIndex));
-                maxPos = Math.max(maxPos, nextValue); // 更新最大位置
+                maxPos = Math.max(maxPos, nextValue);
             } else {
-                break; // 如果某个列表已耗尽，结束
+                break;
             }
         }
 
@@ -1219,39 +1213,32 @@ public class SearchService implements IService {
         List<List<Integer>> allPositions = new ArrayList<>();
         PriorityQueue<Node> pq = new PriorityQueue<>();
 
-        // 初始化所有位置列表，并将每个列表的第一个元素加入优先队列
+
         for (String word : words) {
             if (positions.containsKey(word)) {
                 Set<Integer> posSet = positions.get(word);
-
-
-
-
-
 
                 List<Integer> posList = new ArrayList<>(positions.get(word));
                 Collections.sort(posList);
                 allPositions.add(posList);
                 pq.offer(new Node(posList.get(0), 0, allPositions.size() - 1));
             } else {
-                return new ArrayList<>(); // 如果某个单词没有位置，返回空
+                return new ArrayList<>();
             }
         }
 
         int minDistance = Integer.MAX_VALUE;
-        int maxPos = Integer.MIN_VALUE; // 记录当前窗口的最大位置
+        int maxPos = Integer.MIN_VALUE;
         List<Integer> result = new ArrayList<>();
 
-        // 初始化最大位置
         for (List<Integer> posList : allPositions) {
             maxPos = Math.max(maxPos, posList.get(0));
         }
 
         while (true) {
-            Node minNode = pq.poll(); // 获取当前最小位置
+            Node minNode = pq.poll();
             int minPos = minNode.value;
 
-            // 更新最小距离和结果
             int currentDistance = maxPos - minPos;
             if (currentDistance < minDistance) {
                 minDistance = currentDistance;
@@ -1259,22 +1246,20 @@ public class SearchService implements IService {
                 for (Node node : pq) {
                     result.add(allPositions.get(node.listIndex).get(node.index));
                 }
-                result.add(minPos); // 加入当前最小值
+                result.add(minPos);
             }
 
-            // 提前终止条件
             if (currentDistance <= spanTolerance) {
                 return result;
             }
 
-            // 移动指针到下一个位置
             List<Integer> currentList = allPositions.get(minNode.listIndex);
             if (minNode.index + 1 < currentList.size()) {
                 int nextValue = currentList.get(minNode.index + 1);
                 pq.offer(new Node(nextValue, minNode.index + 1, minNode.listIndex));
                 maxPos = Math.max(maxPos, nextValue); // 更新最大位置
             } else {
-                break; // 如果某个列表已耗尽，结束
+                break;
             }
         }
 
@@ -1289,9 +1274,8 @@ public class SearchService implements IService {
         List<List<Integer>> allPositions = new ArrayList<>();
         PriorityQueue<Node> pq = new PriorityQueue<>();
 
-        int globalMinPos = Integer.MAX_VALUE; // 全局最小位置
+        int globalMinPos = Integer.MAX_VALUE;
 
-        // 初始化所有位置列表，并将最小位置加入优先队列
         for (String word : words) {
             if (positions.containsKey(word)) {
                 List<Integer> posList = new ArrayList<>(positions.get(word));
@@ -1299,24 +1283,22 @@ public class SearchService implements IService {
                 allPositions.add(posList);
                 pq.offer(new Node(posList.get(0), 0, allPositions.size() - 1));
 
-                // 更新全局最小位置
                 globalMinPos = Math.min(globalMinPos, posList.get(0));
             } else {
-                return new ArrayList<>(); // 如果某个单词没有位置，返回空
+                return new ArrayList<>();
             }
         }
 
         int minDistance = Integer.MAX_VALUE;
-        int maxPos = globalMinPos; // 从全局最小位置开始
+        int maxPos = globalMinPos;
         List<Integer> result = new ArrayList<>();
 
-        // 初始化最大位置
         for (List<Integer> posList : allPositions) {
             maxPos = Math.max(maxPos, posList.get(0));
         }
 
         while (!pq.isEmpty()) {
-            Node minNode = pq.poll(); // 获取当前最小位置
+            Node minNode = pq.poll();
             int minPos = minNode.value;
 
             // 更新最小距离和结果
@@ -1327,22 +1309,20 @@ public class SearchService implements IService {
                 for (Node node : pq) {
                     result.add(allPositions.get(node.listIndex).get(node.index));
                 }
-                result.add(minPos); // 加入当前最小值
+                result.add(minPos);
             }
 
-            // 提前终止条件：如果最小跨度满足要求
             if (currentDistance <= maxSpan) {
                 return result;
             }
 
-            // 移动指针到下一个位置
             List<Integer> currentList = allPositions.get(minNode.listIndex);
             if (minNode.index + 1 < currentList.size()) {
                 int nextValue = currentList.get(minNode.index + 1);
                 pq.offer(new Node(nextValue, minNode.index + 1, minNode.listIndex));
-                maxPos = Math.max(maxPos, nextValue); // 更新最大位置
+                maxPos = Math.max(maxPos, nextValue);
             } else {
-                break; // 如果某个列表已耗尽，结束
+                break;
             }
         }
 
@@ -1353,7 +1333,6 @@ public class SearchService implements IService {
     public List<Integer> getBestPosition(List<String> words, Map<String, Set<Integer>> positions){
         List<Integer> result = new ArrayList<>();
 
-        // 将 positions 转换成列表形式，方便操作
         List<List<Integer>> allPositions = new ArrayList<>();
         for (String word : words) {
             if (positions.containsKey(word)) {
@@ -1366,8 +1345,7 @@ public class SearchService implements IService {
             }
         }
 
-        // 使用指针方法查找最小跨度
-        int[] indices = new int[allPositions.size()]; // 指针数组，表示每个列表当前访问的位置
+        int[] indices = new int[allPositions.size()];
         int minDistance = Integer.MAX_VALUE;
 
         while (true) {
@@ -1375,7 +1353,6 @@ public class SearchService implements IService {
             int maxPos = Integer.MIN_VALUE;
             int minListIndex = -1;
 
-            // 找到当前指针对应的最小和最大位置
             for (int i = 0; i < allPositions.size(); i++) {
                 int currentPos = allPositions.get(i).get(indices[i]);
                 if (currentPos < minPos) {
@@ -1387,7 +1364,6 @@ public class SearchService implements IService {
                 }
             }
 
-            // 更新最小距离
             int currentDistance = maxPos - minPos;
             if (currentDistance < minDistance) {
                 minDistance = currentDistance;
@@ -1397,10 +1373,9 @@ public class SearchService implements IService {
                 }
             }
 
-            // 移动指针：最小位置的指针前进
             indices[minListIndex]++;
             if (indices[minListIndex] >= allPositions.get(minListIndex).size()) {
-                break; // 如果某个列表到达末尾，退出循环
+                break;
             }
         }
 
@@ -1493,12 +1468,12 @@ public class SearchService implements IService {
         }
 
         return urlToSpan.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue()) // 按 span 值排序
+                .sorted(Map.Entry.comparingByValue())
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        entry -> result.get(entry.getKey()), // 获取对应的最佳位置
-                        (e1, e2) -> e1, // 合并策略
-                        LinkedHashMap::new // 使用 LinkedHashMap 保持排序后的顺序
+                        entry -> result.get(entry.getKey()),
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new
                 ));
     }
 
@@ -1539,15 +1514,15 @@ public class SearchService implements IService {
 
 //        // Sort the map by span and return a LinkedHashMap to preserve the order
 //        return urlToSpan.entrySet().stream()
-//                .filter(entry -> urlToPositions.containsKey(entry.getKey())) // 确保 key 存在
-//                .filter(entry -> urlToPositions.get(entry.getKey()) != null) // 确保值非空
-//                .filter(entry -> !urlToPositions.get(entry.getKey()).isEmpty()) // 确保列表非空
+//                .filter(entry -> urlToPositions.containsKey(entry.getKey()))
+//                .filter(entry -> urlToPositions.get(entry.getKey()) != null)
+//                .filter(entry -> !urlToPositions.get(entry.getKey()).isEmpty())
 //                .sorted(Map.Entry.comparingByValue()) // 按跨度排序
 //                .collect(Collectors.toMap(
 //                        Map.Entry::getKey,
-//                        entry -> urlToPositions.get(entry.getKey()), // 安全获取值
+//                        entry -> urlToPositions.get(entry.getKey()),
 //                        (e1, e2) -> e1,
-//                        LinkedHashMap::new // 保持顺序
+//                        LinkedHashMap::new
 //                ));
 //    }
 >>>>>>> 3bbdb4acc (make position better)

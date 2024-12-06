@@ -134,27 +134,23 @@ public class LocationController implements IController {
                 if (zipRow != null ) {
                     try {
                         int userZipInt = Integer.parseInt(userZip);
-                        // 获取文档的ZIP
                         String docZip = hashedUrlToId.get(hashedUrl);
                         if (docZip != null) {
                             int docZipInt = Integer.parseInt(docZip);
 
-                            // 计算ZIP差值的绝对值
                             int diff = Math.abs(userZipInt - docZipInt);
-
-                            // 根据差值计算分数
                             if (diff == 0) {
-                                locationScore = 1.0;  // 完全相同
+                                locationScore = 1.0;
                             } else if (diff < 100) {
-                                locationScore = 0.8;  // 非常接近
+                                locationScore = 0.8;
                             } else if (diff < 500) {
-                                locationScore = 0.6;  // 较接近
+                                locationScore = 0.6;
                             } else if (diff < 1000) {
-                                locationScore = 0.4;  // 有点远
+                                locationScore = 0.4;
                             } else if (diff < 2000) {
-                                locationScore = 0.2;  // 很远
+                                locationScore = 0.2;
                             } else {
-                                locationScore = 0.1;  // 非常远
+                                locationScore = 0.1;
                             }
                         }
                     } catch (NumberFormatException e) {
