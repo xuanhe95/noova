@@ -34,36 +34,6 @@ OR
     java -cp "kvs-1.0-SNAPSHOT.jar:generic-1.0-SNAPSHOT.jar:tools-1.0-SNAPSHOT.jar:webserver-1.0-SNAPSHOT.jar:flame-1.0-SNAPSHOT.jar" org.noova.flame.FlameSubmit localhost:9000 pagerank-1.0-SNAPSHOT.jar org.noova.pagerank.PageRank 0.01
  ```
 
-### TODO List
-
-1. **Ensure Key-Value Store (KVS) Functionality**
-   - Verify that the KVS operates as expected.
-   - Implement conversions between `pt-table` and memory tables to optimize storage and retrieval.
-
-2. **Add Web Server Functionality**
-   - Enhance the web server to handle user inputs via webpage forms.
-   - Ensure seamless communication between the frontend and backend, enabling effective user interactions with the search engine.
-
-3. **Improve Crawler Efficiency**
-   - Optimize the crawler's performance to make it more efficient in retrieving and processing web pages.
-   - Address current bottlenecks and refine algorithms to speed up data collection and indexing.
-  
-4. **我们可以基于session做个用户登陆 然后每个用户基于历史搜索做推荐/个性化排名**
-
-### Potential Optimization Ideas
-- WebServer: use before filter to halt downstream index&rank process for cached query search
-### EC Ideas
-1. phrase search - add n-grams score
-2. autofill/spell check/other nlp-related tasks - [Stanford's CoreNLP library](https://stanfordnlp.github.io/CoreNLP/)
-3. Recommendation / surprise me /search suggestion based on mru cached query
-4. Infinite scrolling vs Pagination (w/ skips)
-5. extracts text content from files such as PDF, DOC(X), XLS(X), etc. - [Apache Tika](https://tika.apache.org/)
-6. Multilanguage support
-
-
-## Timeline 
-TBD
-
 ## Team members
 - Full Name: Yuan Ding  
    SEAS Login: yding42@seas.upenn.edu  
