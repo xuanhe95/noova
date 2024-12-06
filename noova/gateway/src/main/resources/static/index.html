@@ -439,6 +439,41 @@
             margin: 10px 0;
         }
 
+        #popup-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50%;
+            max-width: 600px;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        #popup-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        #close-popup {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
     </style>
 </head>
 <body>
@@ -588,7 +623,7 @@
 
         $searchBox.on('input', function() {
             let query = $(this).val();
-            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
             if (query.length >= 1) { // Start suggesting after 1 or more characters
                 $.ajax({
                     url: '/correction',
@@ -620,7 +655,7 @@
         $('#searchForm').submit(function (event) {
             event.preventDefault();
             let query = $('#search-query').val();
-            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').trim();
+            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').trim().toLowerCase();
             console.log(`Processed Query: "${query}"`);
             showLoadingSpinner();
 
@@ -635,7 +670,7 @@
             $('.search-buttons').addClass('no-margin');
             $('#searchForm').removeClass('vertical-layout').addClass('horizontal-layout');            // Perform AJAX request to fetch results
 
-            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v5';
+            const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v6';
             $('#dictionary-result').hide();
             if (searchMode !== 'Image' && query.split('-').length === 1) {
                 // Fetch dictionary definition if it's a single word and not in Image mode
@@ -803,7 +838,7 @@
 
             // Perform AJAX request to fetch the next set of results
             let query = $('#search-query').val();
-            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').trim();
+            query = query.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').trim().toLowerCase();
 
             const route = searchMode === 'Image' ? '/image/fuzzy' : '/search/v6';
             const adjustedLimit = searchMode === 'Image' ? 50 : limit; // Set limit to 50 for image search
@@ -1041,14 +1076,14 @@
                     console.log(`Result at index ${i}:`, result);
 
                     resultItem.html(`
-                        <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-                            <!-- Icon -->
-                            <div style="margin-right: 10px;">
-                                ${renderIcon(result.icon,result.host)}
-                            </div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                            <!-- Main Content -->
+                            <div style="flex: 1; margin-right: 10px;">
+                                <!-- Icon -->
+                                <div style="margin-bottom: 10px;">
+                                    ${renderIcon(result.icon, result.host)}
+                                </div>
 
-                            <!-- Content -->
-                            <div>
                                 <!-- Host name (clickable) -->
                                 <p style="margin: 0; color: #555; font-size: 14px;">
                                     <a href="https://${result.host}" target="_blank" style="text-decoration: none; color: #555;">${result.host}</a>
@@ -1062,6 +1097,9 @@
                                 <!-- URL -->
                                 <p style="margin: 0; font-size: 14px; color: #006621;">
                                     ${result.url.length > 50 ? result.url.substring(0, 50) + '...' : result.url}
+                                    ${result.host.includes('upenn.edu') ? `
+                                        <a href="#" class="keyword-snapshot-link" data-host="${result.host}" style="color: #1a0dab; text-decoration: underline; margin-left: 10px;">Page Snapshot</a>
+                                    ` : ''}
                                 </p>
 
                                 <!-- Context or Description -->
@@ -1075,8 +1113,16 @@
                         </div>
                     `);
                     resultsContainer.append(resultItem);
+
+                    resultItem.find('.keyword-snapshot-link').on('click', function (e) {
+                        console.log("key clicked")
+                        e.preventDefault(); // Prevent the default link behavior
+                        const host = $(this).data('host');
+                        showPopupModal(result.url); // Show the popup modal with the snapshot
+                    });
                 }
             }
+
         }
         function renderIcon(iconHtml, host) {
             // Create a temporary DOM element to parse the HTML
@@ -1099,6 +1145,103 @@
                 return `<img src="https://i.ibb.co/BBPHLJP/logo.png" alt="No Icon" style="width: 16px; height: 16px;">`;
             }
         }
+
+        function showPopupModal(host) {
+            const modal = $(`
+        <div id="popup-modal" style="
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 800px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            overflow: hidden;
+        ">
+            <h4 style="margin: 0 0 20px; font-size: 18px; text-align: center;" Snapshot for ${host}</h4>
+            <div id="popup-content-container" style="
+                width: 100%;
+                height: calc(100% - 40px);
+                overflow: hidden;
+                position: relative;
+            ">
+                <iframe id="popup-content" style="
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    transform-origin: top left;
+                "></iframe>
+            </div>
+            <button id="close-popup" style="
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: none;
+                border: none;
+                font-size: 18px;
+                cursor: pointer;
+            ">&times;</button>
+        </div>
+        <div id="popup-backdrop" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        "></div>
+    `);
+
+            $('body').append(modal);
+
+            $('#close-popup, #popup-backdrop').on('click', function () {
+                $('#popup-modal').remove();
+                $('#popup-backdrop').remove();
+            });
+
+            fetch(`/snapshot`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: host }),
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`获取快照失败: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    const iframe = document.getElementById('popup-content');
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                    iframeDoc.open();
+                    iframeDoc.write(data);
+                    iframeDoc.close();
+
+                    const iframeWidth = iframeDoc.documentElement.scrollWidth;
+                    const iframeHeight = iframeDoc.documentElement.scrollHeight;
+
+                    const scaleX = 600 / iframeWidth;
+                    const scaleY = 800 / iframeHeight;
+                    const scale = Math.min(scaleX, scaleY);
+
+                    iframe.style.transform = `scale(${scale})`;
+                    iframe.style.width = `${iframeWidth}px`;
+                    iframe.style.height = `${iframeHeight}px`;
+                })
+                .catch(error => {
+                    console.error('Error on snapshot:', error);
+                    $('#popup-content-container').html('<p>Try again later</p>');
+                });
+        }
+
 
         function showLoadingSpinner() {
             document.getElementById('loading-spinner').style.display = 'flex';

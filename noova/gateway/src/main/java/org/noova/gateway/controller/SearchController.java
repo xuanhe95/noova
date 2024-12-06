@@ -2,6 +2,8 @@ package org.noova.gateway.controller;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.openjson.JSONException;
+import com.github.openjson.JSONObject;
 import jdk.jshell.Snippet;
 import org.noova.gateway.service.SearchService;
 import org.noova.gateway.service.Service;
@@ -9,6 +11,7 @@ import org.noova.gateway.service.WeatherService;
 import org.noova.kvs.KVS;
 import org.noova.kvs.KVSClient;
 import org.noova.kvs.Row;
+import org.noova.tools.Hasher;
 import org.noova.tools.Logger;
 import org.noova.tools.Parser;
 import org.noova.tools.PropertyLoader;
@@ -105,11 +108,21 @@ public class SearchController implements IController {
         //res.body(urls.toString());
     }
 
-    @Route(path = "/snapshot", method = "GET")
+    @Route(path = "/snapshot", method = "POST")
     private void getSnapshot(Request req, Response res) throws IOException {
         log.info("[search] Getting snapshot");
-        String normalizedUrl = req.body();
-
+        String requestBody = req.body();
+        String normalizedUrl;
+        try {
+            JSONObject json = new JSONObject(requestBody); // Assuming JSON body
+            normalizedUrl = Hasher.hash(json.getString("url"));
+        } catch (JSONException e) {
+            log.error("[search] Invalid request payload", e);
+            res.status(400,"Bad Request"); // Bad Request
+            res.body("Error: Invalid request payload");
+            return;
+        }
+        System.out.println("normalizedUrl"+normalizedUrl);
         String page = SEARCH_SERVICE.getSnapshot(normalizedUrl);
         res.type("text/html");
         res.body(page);
