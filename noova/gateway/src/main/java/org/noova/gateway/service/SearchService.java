@@ -1656,8 +1656,8 @@ public class SearchService implements IService {
         String[] words = content.split("\\s+");
 
         if(positions == null || positions.isEmpty()){
-            //return String.join(" ", Arrays.copyOfRange(words, 0, Math.min(words.length, wordLimit)));
-            return "";
+            return String.join(" ", Arrays.copyOfRange(words, 0, Math.min(words.length, wordLimit)));
+            //return "";
         }
 
         int start = Math.max(0, positions.get(0) - wordLimit / 2);
