@@ -926,6 +926,7 @@ public class SearchService implements IService {
     public SortedMap<String, Double> getPageRanksParallel(Set<String> hashedUrls, int limit, int forceDrop) throws IOException {
         Map<String, Double> result = new HashMap<>();
 
+        System.out.println("hashedUrls size: "+hashedUrls.size());
 
         List<String> urlList = new ArrayList<>(hashedUrls);
 
@@ -938,7 +939,7 @@ public class SearchService implements IService {
                 .collect(Collectors.toSet());
 
         System.out.println("hashedUrls size: "+hashedUrls.size());
-        ExecutorService executor = Executors.newFixedThreadPool(10); // 最大并发请求数为 2
+        ExecutorService executor = Executors.newFixedThreadPool(20);
         try {
             result = hashedUrls.parallelStream()
                     .map(hashedUrl -> {
@@ -966,7 +967,6 @@ public class SearchService implements IService {
 
         System.out.println("result size: "+result.size());
 
-        // 对结果进行排序，并限制返回前 `limit` 个
         Map<String, Double> finalResult = result;
         return result.entrySet().stream()
                 .sorted(Map.Entry.<String, Double>comparingByValue().reversed()) // 按值降序排序

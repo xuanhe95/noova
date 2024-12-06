@@ -4,7 +4,6 @@ package org.noova.gateway.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.openjson.JSONException;
 import com.github.openjson.JSONObject;
-import jdk.jshell.Snippet;
 import org.noova.gateway.service.SearchService;
 import org.noova.gateway.service.Service;
 import org.noova.gateway.service.WeatherService;
@@ -1140,11 +1139,13 @@ public class SearchController implements IController {
         int pageLimit = (req.queryParams("pageLimit") == null) ? 200 : Integer.parseInt(req.queryParams("pageLimit"));
         int spanLimit = (req.queryParams("span") == null) ? 50 : Integer.parseInt(req.queryParams("context"));
         int snippetLimit = (req.queryParams("snippet") == null) ? 60 : Integer.parseInt(req.queryParams("snippet"));
+        int forceDrop = (req.queryParams("forceDrop") == null) ? 500 : Integer.parseInt(req.queryParams("forceDrop"));
 
         double tfIDFWeight = (req.queryParams("tf") == null) ? 1 : Double.parseDouble(req.queryParams("tf"));
         double pgrkWeight = (req.queryParams("pr") == null) ? 0.5 : Double.parseDouble(req.queryParams("pg"));
         double titleDespMatchWeight = (req.queryParams("tt") == null) ? 2 : Double.parseDouble(req.queryParams("tt"));
         double phraseMatchWeight = (req.queryParams("pm") == null) ? 20 : Double.parseDouble(req.queryParams("pm"));
+
 
         List<String> queryTokens = Parser.getLammelizedWords(query);
         String token = String.join(" ", queryTokens);
@@ -1176,13 +1177,10 @@ public class SearchController implements IController {
 
         log.info("[search] Searching by query: " + query);
 
-//        Map<String, List<Integer>> bestPositions = SEARCH_SERVICE.calculateSortedPosition(queryTokens);
-//        double phraseMatchScore = SEARCH_SERVICE.calculatePhraseMatchScore(queryTokens, bestPositions);
 
         Map<String, Row> keywordRows = new ConcurrentHashMap<>();
         final Set<String>[] mergedUrlIds = new Set[]{null};
 
-// 创建异步任务列表
         List<CompletableFuture<Void>> futures = queryTokens.stream()
                 .map(keyword -> CompletableFuture.runAsync(() -> {
                     System.out.println("keyword: " + keyword);
@@ -1243,7 +1241,7 @@ public class SearchController implements IController {
         long start = System.currentTimeMillis();
         System.out.println("Start fetching page rank");
 
-        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),pageLimit, 500);
+        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),pageLimit, forceDrop);
 
         System.out.println("sortedUrlsMap: " + sortedUrlsMap.size());
 
@@ -1303,9 +1301,6 @@ public class SearchController implements IController {
                 double tfidfSimilarity = SEARCH_SERVICE.calculateTFIDF(queryTfidf, docTfidf);
 
 
-                //Map<String, Map<String, List<Integer>>> keywordToUrlToPositions = new ConcurrentHashMap<>();
-
-
                     // ONE WORD LOGIC
 //                for(String keyword : keywordRows.keySet()){
 //                   var urlToPosition = SEARCH_SERVICE.searchByKeywordV2(keywordRows.get(keyword));
@@ -1313,15 +1308,9 @@ public class SearchController implements IController {
 //                }
 
 
-
                 Map<List<Integer>, Double> phraseMatchScorePair = SEARCH_SERVICE.calculatePhraseMatchScoreV2(queryTokens, urlToWordToPositions.get(hashedUrl));
 
                 double phraseMatchScore = phraseMatchScorePair.values().stream().mapToDouble(Double::doubleValue).sum();
-
-
-//                if(urlToWordToPositions.get(hashedUrl).get(queryTokens.get(0)).size() == queryTokens.size()){
-//                    phraseMatchScore *= 200;
-//                }
 
                 double combinedScore = calculateCombinedScore(tfidfSimilarity, 1.0,
                         pageRank, 1.0,
@@ -1333,12 +1322,9 @@ public class SearchController implements IController {
                         phraseMatchWeight);
 
 
-                //SEARCH_SERVICE.generateSnippetFromPositions(content, bestPosition, snippetLimit);
 
                 // Add result
                 Map<String, Object> result = new HashMap<>();
-//                result.put("title", title);
-//                result.put("url", url);
 
 
                 Optional<List<Integer>> optionalPosition = phraseMatchScorePair.keySet().stream().findFirst();
@@ -1350,16 +1336,6 @@ public class SearchController implements IController {
 
                 result.put("combinedScore", combinedScore);
 
-
-                //String snippet = SEARCH_SERVICE.generateSnippetFromPositions(content, bestPositions.get(queryTokens.get(0)), snippetLimit);
-
-
-                //result.put("position", urlToPositions.get(hashedUrl));
-
-
-//                result.put("host", host);
-//                result.put("icon", icon);
-                //result.put("context", snippet);
                 result.put("hashed", hashedUrl);
                 results.add(result);
 
@@ -1368,10 +1344,6 @@ public class SearchController implements IController {
                 log.error("[search] Error processing URL: " + hashedUrl, e);
             }
         });
-
-
-
-
 
         // Sort results by combined core
         results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
