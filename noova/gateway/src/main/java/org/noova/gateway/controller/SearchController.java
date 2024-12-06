@@ -980,7 +980,7 @@ public class SearchController implements IController {
         long start = System.currentTimeMillis();
         System.out.println("Start fetching page rank");
 
-        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),pageLimit);
+        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),pageLimit, 500);
 
         System.out.println("sortedUrlsMap: " + sortedUrlsMap.size());
 
@@ -1243,7 +1243,7 @@ public class SearchController implements IController {
         long start = System.currentTimeMillis();
         System.out.println("Start fetching page rank");
 
-        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),pageLimit);
+        SortedMap<String, Double> sortedUrlsMap = SEARCH_SERVICE.getPageRanksParallel(hashedUrlToId.keySet(),pageLimit, 500);
 
         System.out.println("sortedUrlsMap: " + sortedUrlsMap.size());
 
@@ -1345,7 +1345,6 @@ public class SearchController implements IController {
                 if (optionalPosition.isPresent()) {
                     result.put("position", optionalPosition.get());
                 } else {
-                    // 如果找不到值，可以处理默认值或抛出异常
                     result.put("position", new ArrayList<>());
                 }
 
@@ -1374,9 +1373,8 @@ public class SearchController implements IController {
 
 
 
-        // Sort results by combined score
+        // Sort results by combined core
         results.sort((a, b) -> Double.compare((Double) b.get("combinedScore"), (Double) a.get("combinedScore")));
-
 
         QUERY_PAGE_CACHE.put(token, new SoftReference<>(results));
 

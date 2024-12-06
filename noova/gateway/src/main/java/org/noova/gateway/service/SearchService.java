@@ -923,9 +923,19 @@ public class SearchService implements IService {
 
 
     //! optimize, filter- hashed url last alphabet,
-    public SortedMap<String, Double> getPageRanksParallel(Set<String> hashedUrls, int limit) throws IOException {
+    public SortedMap<String, Double> getPageRanksParallel(Set<String> hashedUrls, int limit, int forceDrop) throws IOException {
         Map<String, Double> result = new HashMap<>();
 
+
+        List<String> urlList = new ArrayList<>(hashedUrls);
+
+        Random random = new Random(0);
+
+        Collections.shuffle(urlList, random);
+
+        hashedUrls = urlList.stream()
+                .limit(forceDrop)
+                .collect(Collectors.toSet());
 
         System.out.println("hashedUrls size: "+hashedUrls.size());
         ExecutorService executor = Executors.newFixedThreadPool(10); // 最大并发请求数为 2

@@ -17,17 +17,5 @@
         <module name="generic" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="crawler" target="17" />
-      <module name="flame" target="17" />
-      <module name="gateway" target="17" />
-      <module name="generic" target="17" />
-      <module name="indexer" target="17" />
-      <module name="kvs" target="17" />
-      <module name="noova" target="1.5" />
-      <module name="pagerank" target="17" />
-      <module name="tools" target="17" />
-      <module name="webserver" target="17" />
-    </bytecodeTargetLevel>
   </component>
 </project>
