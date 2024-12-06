@@ -1143,9 +1143,9 @@ public class SearchController implements IController {
         int forceDrop = (req.queryParams("forceDrop") == null) ? 300 : Integer.parseInt(req.queryParams("forceDrop"));
 
         double tfIDFWeight = (req.queryParams("tf") == null) ? 1 : Double.parseDouble(req.queryParams("tf"));
-        double pgrkWeight = (req.queryParams("pr") == null) ? 1 : Double.parseDouble(req.queryParams("pg"));
+        double pgrkWeight = (req.queryParams("pr") == null) ? 0.5 : Double.parseDouble(req.queryParams("pg"));
         double titleDespMatchWeight = (req.queryParams("tt") == null) ? 2 : Double.parseDouble(req.queryParams("tt"));
-        double phraseMatchWeight = (req.queryParams("pm") == null) ? 4 : Double.parseDouble(req.queryParams("pm"));
+        double phraseMatchWeight = (req.queryParams("pm") == null) ? 20 : Double.parseDouble(req.queryParams("pm"));
 
 
         List<String> queryTokens = Parser.getLammelizedWords(query);
