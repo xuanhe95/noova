@@ -1147,98 +1147,77 @@
         }
 
         function showPopupModal(host) {
+            // Create a modal container dynamically with fixed dimensions
             const modal = $(`
-        <div id="popup-modal" style="
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 600px;
-            height: 800px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            overflow: hidden;
-        ">
-            <h4 style="margin: 0 0 20px; font-size: 18px; text-align: center;" Snapshot for ${host}</h4>
-            <div id="popup-content-container" style="
-                width: 100%;
-                height: calc(100% - 40px);
-                overflow: hidden;
-                position: relative;
-            ">
-                <iframe id="popup-content" style="
+                <div id="popup-modal" style="
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 600px;
+                    height: 800px;
+                    padding: 20px;
+                    background-color: #fff;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                    z-index: 1000;
+                    overflow-y: auto;
+                ">
+                    <h3 style="margin: 0 0 20px; font-size: 18px;">Page Snapshot for ${host}</h3>
+                    <div id="popup-content" style="font-size: 14px; color: #333; word-wrap: break-word;">
+                        Loading...
+                    </div>
+                    <button id="close-popup" style="
+                        position: absolute;
+                        top: 10px;
+                        right: 10px;
+                        background: none;
+                        border: none;
+                        font-size: 18px;
+                        cursor: pointer;
+                    ">&times;</button>
+                </div>
+                <div id="popup-backdrop" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
                     width: 100%;
                     height: 100%;
-                    border: none;
-                    transform-origin: top left;
-                "></iframe>
-            </div>
-            <button id="close-popup" style="
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: none;
-                border: none;
-                font-size: 18px;
-                cursor: pointer;
-            ">&times;</button>
-        </div>
-        <div id="popup-backdrop" style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        "></div>
-    `);
+                    background-color: rgba(0, 0, 0, 0.5);
+                    z-index: 999;
+                "></div>
+            `);
 
+            // Append the modal and backdrop to the body
             $('body').append(modal);
 
+            // Close the modal when the close button or backdrop is clicked
             $('#close-popup, #popup-backdrop').on('click', function () {
                 $('#popup-modal').remove();
                 $('#popup-backdrop').remove();
             });
 
+            // Fetch the snapshot content via AJAX
             fetch(`/snapshot`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ url: host }),
+                body: JSON.stringify({ url: host }), // Send the host as the request payload
             })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`获取快照失败: ${response.statusText}`);
+                        throw new Error(`Failed to fetch snapshot: ${response.statusText}`);
                     }
-                    return response.text();
+                    return response.text(); // Expect HTML content as response
                 })
                 .then(data => {
-                    const iframe = document.getElementById('popup-content');
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-
-                    iframeDoc.open();
-                    iframeDoc.write(data);
-                    iframeDoc.close();
-
-                    const iframeWidth = iframeDoc.documentElement.scrollWidth;
-                    const iframeHeight = iframeDoc.documentElement.scrollHeight;
-
-                    const scaleX = 600 / iframeWidth;
-                    const scaleY = 800 / iframeHeight;
-                    const scale = Math.min(scaleX, scaleY);
-
-                    iframe.style.transform = `scale(${scale})`;
-                    iframe.style.width = `${iframeWidth}px`;
-                    iframe.style.height = `${iframeHeight}px`;
+                    $('#popup-content').html(data); // Inject the snapshot HTML into the modal
                 })
                 .catch(error => {
-                    console.error('Error on snapshot:', error);
-                    $('#popup-content-container').html('<p>Try again later</p>');
+                    console.error('Error fetching snapshot:', error);
+                    $('#popup-content').html('<p>Error loading snapshot. Please try again later.</p>');
                 });
         }
 
